@@ -1,0 +1,44 @@
+# IDE-specific files
+.vscode/
+.idea/
+*.code-workspace
+.aider*
+/aider.conf.yaml
+bmad-agent/
+
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.vscode/
+.github/
+specs/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.env
+
+# Project-specific folders
+/logs/
+/reports/
+/data/cache/
+/state/
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+vibe.yaml

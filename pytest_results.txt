@@ -1,0 +1,17 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-8.3.5, pluggy-1.6.0
+cachedir: \tmp\pytest_cache
+rootdir: D:\Code\simplest
+configfile: pyproject.toml
+collected 154 items
+
+tests\test_backtest.py ............                                      [  7%]
+tests\test_cli.py ..................                                     [ 19%]
+tests\test_cli_comprehensive.py .......................                  [ 34%]
+tests\test_cli_enhanced.py ..................................            [ 56%]
+tests\test_config.py ............                                        [ 64%]
+tests\test_data.py .......                                               [ 68%]
+tests\test_float_handling.py s......                                     [ 73%]
+tests\test_reporting.py ................................s........        [100%]
+
+======================= 152 passed, 2 skipped in 20.26s =======================

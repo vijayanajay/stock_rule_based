@@ -1,0 +1,87 @@
+# Sample configuration for Indian stock analysis
+# MEQSAP - Indian Stock Example Configuration
+#
+# This file demonstrates all available configuration options for running
+# backtests on Indian stocks using the MEQSAP platform.
+
+# TICKER SYMBOL
+# -------------
+# For Indian stocks, use the NSE/BSE ticker symbol followed by .NS or .BO
+# Examples:
+#   - Reliance Industries: RELIANCE.NS
+#   - Tata Consultancy Services: TCS.NS
+#   - HDFC Bank: HDFCBANK.NS
+#   - Infosys: INFY.NS
+#   - State Bank of India: SBIN.NS
+#   - Bharti Airtel: BHARTIARTL.NS
+#   - ITC Limited: ITC.NS
+ticker: RELIANCE.NS
+
+# DATE RANGE
+# ----------
+# Both dates are INCLUSIVE (as per ADR-002)
+# Format: YYYY-MM-DD
+# Recommendation: Use at least 2+ years of data for meaningful backtests
+start_date: 2022-01-01
+end_date: 2024-12-31
+
+# STRATEGY TYPE
+# -------------
+# Currently supported strategies:
+#   - MovingAverageCrossover: Classic golden cross/death cross strategy
+strategy_type: MovingAverageCrossover
+
+# STRATEGY PARAMETERS
+# -------------------
+# Parameters specific to the chosen strategy type
+strategy_params:
+  # Fast Moving Average Period (days)
+  # Typical values: 5, 10, 20
+  # Shorter periods = more signals, more noise
+  fast_ma: 20
+  
+  # Slow Moving Average Period (days)
+  # Typical values: 50, 100, 200
+  # Longer periods = fewer signals, more stable trends
+  # Must be greater than fast_ma
+  slow_ma: 50
+
+# NOTES FOR INDIAN MARKETS
+# ------------------------
+# 1. Market Hours: NSE/BSE trade Monday-Friday, 9:15 AM - 3:30 PM IST
+# 2. Holidays: Indian stock exchanges observe various Indian holidays
+# 3. Currency: All prices will be in Indian Rupees (INR)
+# 4. Liquidity: Use well-traded stocks for better backtest accuracy
+# 5. Corporate Actions: Be aware of stock splits, bonuses, dividends
+#
+# POPULAR INDIAN STOCKS FOR BACKTESTING:
+# --------------------------------------
+# Large Cap:
+#   - RELIANCE.NS (Reliance Industries)
+#   - TCS.NS (Tata Consultancy Services)
+#   - HDFCBANK.NS (HDFC Bank)
+#   - INFY.NS (Infosys)
+#   - HINDUNILVR.NS (Hindustan Unilever)
+#   - BHARTIARTL.NS (Bharti Airtel)
+#   - ITC.NS (ITC Limited)
+#   - SBIN.NS (State Bank of India)
+#   - LT.NS (Larsen & Toubro)
+#   - KOTAKBANK.NS (Kotak Mahindra Bank)
+#
+# Mid Cap:
+#   - BAJFINANCE.NS (Bajaj Finance)
+#   - ADANIPORTS.NS (Adani Ports)
+#   - TATASTEEL.NS (Tata Steel)
+#   - AXISBANK.NS (Axis Bank)
+#   - WIPRO.NS (Wipro)
+#
+# PARAMETER RECOMMENDATIONS BY TIMEFRAME:
+# ---------------------------------------
+# Short-term (1-3 months):
+#   fast_ma: 5-10, slow_ma: 20-30
+#
+# Medium-term (3-12 months):
+#   fast_ma: 10-20, slow_ma: 50-100
+#
+# Long-term (1+ years):
+#   fast_ma: 20-50, slow_ma: 100-200

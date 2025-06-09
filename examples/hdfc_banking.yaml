@@ -1,0 +1,9 @@
+# Banking Sector Strategy
+# Stock: HDFC Bank - Leading private sector bank
+ticker: HDFCBANK.NS
+start_date: 2021-01-01
+end_date: 2024-12-31
+strategy_type: MovingAverageCrossover
+strategy_params:
+  fast_ma: 15  # Medium-term momentum
+  slow_ma: 50  # Trend confirmation

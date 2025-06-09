@@ -1,0 +1,8 @@
+# Sample MovingAverageCrossover strategy configuration
+ticker: AAPL
+start_date: 2022-01-01
+end_date: 2022-12-31
+strategy_type: MovingAverageCrossover
+strategy_params:
+  fast_ma: 10
+  slow_ma: 30

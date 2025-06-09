@@ -1,0 +1,10 @@
+# Conservative Long-term Strategy for Indian Blue-chip Stock
+# Suitable for: Long-term investors, low-risk tolerance
+# Stock: Tata Consultancy Services (TCS) - IT Giant
+ticker: TCS.NS
+start_date: 2020-01-01
+end_date: 2024-12-31
+strategy_type: MovingAverageCrossover
+strategy_params:
+  fast_ma: 50   # Longer fast MA for stability
+  slow_ma: 200  # Classic 200-day long-term trend

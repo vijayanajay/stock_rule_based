@@ -1,0 +1,10 @@
+# Aggressive Short-term Strategy for Volatile Indian Stock
+# Suitable for: Active traders, high-risk tolerance
+# Stock: Adani Enterprises - High volatility stock
+ticker: ADANIENT.NS
+start_date: 2023-01-01
+end_date: 2024-12-31
+strategy_type: MovingAverageCrossover
+strategy_params:
+  fast_ma: 5   # Very short fast MA for quick signals
+  slow_ma: 20  # Short slow MA for frequent trades
