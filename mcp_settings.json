@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "github.com/supermemoryai/supermemory-mcp": {
+      "url": "http://localhost:5174",
+      "type": "sse"
+    }
+  }
+}

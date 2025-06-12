@@ -5,7 +5,7 @@ Of course. Here is the complete architecture document for MEQSAP in markdown for
 
 ## Technical Summary
 
-This document outlines the architecture for the Minimum Viable Quantitative Strategy Analysis Pipeline (MEQSAP). The system is designed as a command-line tool that orchestrates a suite of powerful, existing Python libraries to provide an end-to-end backtesting and analysis workflow. It takes a simple YAML configuration file as input, runs a backtest, performs a series of validation and robustness checks, and presents a clear verdict in the terminal. The primary goal is to validate a high-level orchestration approach, prioritizing rapid development and reliability by leveraging battle-tested components like `vectorbt`, `pyfolio`, and `pydantic`.
+This document outlines the architecture for the Automated Technical Analyst Assistant v1.0. The system is designed as a command-line tool that orchestrates a suite of powerful, existing Python libraries to provide an end-to-end backtesting and analysis workflow. It takes a simple YAML configuration file as input, runs a backtest, performs a series of validation and robustness checks, and presents a clear verdict in the terminal. The primary goal is to validate a high-level orchestration approach, prioritizing rapid development and reliability by leveraging battle-tested components like `vectorbt`, `pyfolio`, and `pydantic`. The system supports a universe of at least 150 large-cap and mid-cap stocks from the Indian market and includes a predefined library of transparent, human-readable trading strategies. It also features a rule-based strategy engine that allows new strategies to be added via configuration.
 
 ## High-Level Overview
 
@@ -45,7 +45,7 @@ graph TD
 
 ## Architectural / Design Patterns Adopted
 
-The following high-level patterns have been chosen to guide the system's design and ensure the project's goals are met efficiently.
+The following high-level patterns have been chosen to guide the system's design and ensure the project's goals are met efficiently. The system is built as a monolithic application with a modular design, which includes key modules such as `Data Ingestion`, `Strategy Engine`, `Backtesting`, `Signal Generation`, and `Reporting`. The system operates in a stateless manner, meaning it does not track open positions, portfolios, or historical trades for its logic. Each day's signal generation is an independent event.
 
 * **Pattern 1: Modular Monolith**
     * **Rationale:** The application is a single deployable unit (a monolith), which is ideal for a self-contained CLI tool. However, it will be internally structured into distinct modules with clear boundaries (e.g., `config`, `data`, `backtest`, `reporting`). This enforces a strong separation of concerns, making the codebase easier to maintain and test.
@@ -64,13 +64,14 @@ The following high-level patterns have been chosen to guide the system's design 
 
 ## Component View
 
-The MEQSAP application is composed of the following primary modules, which collaborate to execute the backtesting pipeline:
+The Automated Technical Analyst Assistant v1.0 is composed of the following primary modules, which collaborate to execute the backtesting pipeline:
 
-* **`config` Module:** This module is responsible for loading the user's strategy `.yaml` file and validating its structure and values against a strict Pydantic schema.
-* **`data` Module:** This module handles the acquisition and management of historical market data. It interfaces with `yfinance`, performs data integrity checks, and manages the file-based caching system to ensure efficiency.
-* **`backtest` Module:** This is the core engine of the application. It takes the prepared data and strategy configuration, generates trading signals (using `pandas-ta`), executes the backtest (using `vectorbt`), and runs the required robustness "Vibe Checks" (e.g., high fees, trade count).
-* **`reporting` Module:** This module takes the raw results from the `backtest` module and is responsible for all user-facing output. It generates the formatted "Executive Verdict" table for the terminal (using `rich`) and compiles the comprehensive PDF report when requested (using `pyfolio`).
-* **`cli` Module:** This module serves as the application's main entry point. It handles parsing command-line arguments (e.g., `--report`, `--verbose`) and orchestrates the workflow by calling the other modules in the correct sequence.
+* **`Data Ingestion` Module:** This module is responsible for acquiring historical market data from `yfinance` and managing the file-based caching system to ensure efficiency.
+* **`Strategy Engine` Module:** This module handles the definition and execution of trading strategies. It includes a rule-based engine that allows new strategies to be added via configuration.
+* **`Backtesting` Module:** This is the core engine of the application. It takes the prepared data and strategy configuration, generates trading signals (using `pandas-ta`), executes the backtest (using `vectorbt`), and runs the required robustness checks (e.g., high fees, trade count).
+* **`Signal Generation` Module:** This module generates daily trading signals based on the "Active Strategy" for each stock. It operates in a stateless manner, meaning it does not track open positions, portfolios, or historical trades for its logic.
+* **`Reporting` Module:** This module takes the raw results from the `backtest` module and is responsible for all user-facing output. It generates the formatted "Executive Verdict" table for the terminal (using `rich`) and compiles the comprehensive PDF report when requested (using `pyfolio`).
+* **`CLI` Module:** This module serves as the application's main entry point. It handles parsing command-line arguments (e.g., `--report`, `--verbose`) and orchestrates the workflow by calling the other modules in the correct sequence.
 
 This component-based structure is visualized below:
 
@@ -115,7 +116,7 @@ graph TD
 
 ## Project Structure
 
-The project will be organized using a standard `src` layout to cleanly separate the installable Python package from other project files like tests, documentation, and configuration.
+The project will be organized using a standard `src` layout to cleanly separate the installable Python package from other project files like tests, documentation, and configuration. The project includes a `strategies.md` document for maintaining the list of strategies and candlestick patterns.
 
 ```plaintext
 meqsap/
@@ -163,6 +164,8 @@ meqsap/
 * **`requirements.txt`**: This file will list the exact, frozen versions of all project dependencies, ensuring a completely reproducible environment as required by the non-functional requirements.
 
 ## Definitive Tech Stack Selections
+
+The system will exclusively use the `yfinance` library to source all historical end-of-day (EOD) stock data. This is a fixed requirement.
 
 | Category             | Technology      | Version / Details | Description / Purpose                                                   | Justification (Optional)                                                  |
 | :------------------- | :-------------- | :---------------- | :---------------------------------------------------------------------- | :------------------------------------------------------------------------ |
@@ -234,7 +237,45 @@ Not applicable. The application does not use a database for its operations.
 
 ## Core Workflow / Sequence Diagrams
 
-This sequence diagram illustrates the interactions between the logical components defined in the "Component View" during a typical run.
+This section includes sequence diagrams that illustrate the interactions between the logical components defined in the "Component View" during a typical run. The system includes a weekly "bake-off" process and a daily signal generation process.
+
+### Weekly "Bake-Off" Process
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant CLI as cli
+    participant StrategyEngine as strategy_engine
+    participant Backtest as backtest
+    participant Reporting as reporting
+
+    User->>CLI: Executes `meqsap --bake-off`
+    CLI->>StrategyEngine: load_strategies()
+    StrategyEngine-->>CLI: Returns list of strategies
+    CLI->>Backtest: run_bake_off(strategies)
+    Backtest-->>CLI: Returns bake_off_results
+    CLI->>Reporting: generate_bake_off_report(bake_off_results)
+    Reporting-->>User: Prints formatted report to terminal
+```
+
+### Daily Signal Generation Process
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant CLI as cli
+    participant DataIngestion as data_ingestion
+    participant SignalGeneration as signal_generation
+    participant Reporting as reporting
+
+    User->>CLI: Executes `meqsap --generate-signals`
+    CLI->>DataIngestion: get_latest_data()
+    DataIngestion-->>CLI: Returns latest market data
+    CLI->>SignalGeneration: generate_signals(data)
+    SignalGeneration-->>CLI: Returns daily signals
+    CLI->>Reporting: generate_daily_report(signals)
+    Reporting-->>User: Prints formatted report to terminal
+```
 
 ```mermaid
 sequenceDiagram
@@ -287,7 +328,17 @@ The testing approach will focus exclusively on the custom logic written for MEQS
 
 ## Security Best Practices
 
-Even for a single-user tool, following basic best practices ensures robustness and safety.
+Even for a single-user tool, following basic best practices ensures robustness and safety. As the application is for personal use by a single user and does not handle live trading credentials, user accounts, or sensitive personal data, security requirements are considered minimal.
+
+## Post-MVP Features / Future Scope
+
+1. **Stateful Performance Tracking & Learning Engine:** Introduce a stateful mechanism to track the performance of historical signals and implement a feedback loop to learn from failed recommendations.
+2. **Predictive Analytics Module:** Develop and integrate a statistical model to provide forward-looking probabilities for signals (e.g., probability of a 1% price increase within 7 days).
+3. **Automated Rule Discovery Engine:** Evolve from strategy *selection* to strategy *discovery*, programmatically generating and testing novel `if-then-else` rules.
+4. **Advanced Risk Management:** Introduce dynamic risk-management overlays like volatility-based position sizing or trailing stop-losses.
+5. **Strategy Parameter Optimization:** Add an optimization layer to fine-tune parameters of proven strategies.
+6. **Introduction of Short-Selling Strategies:** Develop and enable strategies for short-selling opportunities.
+7. **Interactive Charting & Analysis Interface:** A web-based UI for users to view charts with signals and explore backtest reports.
 
 * **Robust Input Validation:** All configurations from the `.yaml` file will be strictly validated by Pydantic models at the start of any process. This prevents errors from malformed input.
 * **Safe Configuration Parsing:** The system **must** use `yaml.safe_load()` to parse `.yaml` files. This is a critical practice to prevent the execution of arbitrary code from a potentially untrusted configuration file.
