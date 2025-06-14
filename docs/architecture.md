@@ -1,281 +1,257 @@
-Of course. Here is the complete architecture document for MEQSAP in markdown format.
+# KISS Signal CLI v1.4 Architecture Document
 
-```markdown
-# MEQSAP Architecture Document
+> **Status:** Revised 2025-06-14  
+> **Change Scope:** Incorporates the full set of review recommendations, adjusted per the owner’s comments.  
+> • One-command hobby project, no cron/CI jobs  
+> • No hard LoC cap, but code should remain minimal and boring  
+> • Focus universe = Indian large-cap & mid-cap equities  
+> • `rich` is mandatory  
+> • No automated formatting or security hardening  
+> • “Not-to-do” list called out explicitly at the end  
+
+---
 
 ## Technical Summary
 
-This document outlines the architecture for the Automated Technical Analyst Assistant v1.0. The system is designed as a command-line tool that orchestrates a suite of powerful, existing Python libraries to provide an end-to-end backtesting and analysis workflow. It takes a simple YAML configuration file as input, runs a backtest, performs a series of validation and robustness checks, and presents a clear verdict in the terminal. The primary goal is to validate a high-level orchestration approach, prioritizing rapid development and reliability by leveraging battle-tested components like `vectorbt`, `pyfolio`, and `pydantic`. The system supports a universe of at least 150 large-cap and mid-cap stocks from the Indian market and includes a predefined library of transparent, human-readable trading strategies. It also features a rule-based strategy engine that allows new strategies to be added via configuration.
+This document outlines the architecture for the **KISS Signal CLI v1.4**.  
+The system is a single-executable command-line tool that:
+
+* Reads two YAML files (`config.yaml` parameters, `rules.yaml` logic).  
+* Discovers the **optimal rule stack** for each ticker in the Indian large-cap / mid-cap universe (NSE).  
+* Runs that strategy on the most recent, **corporate-action-adjusted** EOD data.  
+* Stores prices, optimal rule stacks, and trade life-cycle events in a local SQLite database.  
+* Emits a clear Markdown report for the day.
+
+The design follows a **modular monolith** philosophy: one repository, one binary entry-point, well-defined internal modules, minimal surface area, no external services beyond the NSE data feed.
+
+---
 
 ## High-Level Overview
 
-The MEQSAP application will be built as a **Monolithic** application contained within a **single repository**. This approach was chosen for the MVP to simplify development, dependency management, and deployment for a command-line tool.
+The **only interaction** is the user running:
 
-The primary data flow is as follows:
-1.  The user invokes the CLI, providing a path to a strategy `.yaml` file.
-2.  The application loads and validates this configuration using a Pydantic schema.
-3.  It then acquires historical market data via `yfinance`, utilizing a local file-based cache to speed up subsequent runs.
-4.  The core backtesting engine, powered by `vectorbt`, processes the data and strategy rules to generate performance results.
-5.  Finally, a presentation layer uses `rich` to display a formatted "Executive Verdict" in the terminal and can optionally generate a detailed PDF tear sheet with `pyfolio`.
+```bash
+quickedge run [--verbose] [--freeze-data YYYY-MM-DD]
+```
+
+A frozen-data flag pins the run to a deterministic snapshot if the user wants repeatability.  
+This project is deliberately **not** intended for cron jobs, CI pipelines, or multi-user concurrency.
 
 ```mermaid
 graph TD
     subgraph "User Interaction"
-        A[Strategist] --invokes--> B{MEQSAP CLI};
+    A[Trader] --invokes--> B{KISS Signal CLI}
     end
 
-    subgraph "MEQSAP Core Pipeline"
-        B --.yaml config--> C[1. Load & Validate Config];
-        C --uses--> D[Pydantic Schema];
-        C --on success--> E[2. Acquire Data];
-        E --checks--> F[(File Cache)];
-        F --on miss--> G(yfinance API);
-        G --stores--> F;
-        F --provides data--> H[3. Run Backtest];
-        E --provides data--> H;
-        H --uses vectorbt--> I[Generate Signals & Stats];
-        I --results--> J[4. Present Verdict & Report];
+    subgraph "KISS Signal Core Pipeline"
+    B --'quickedge run'--> C[1. Load & Validate Config]
+    C --reads--> D[config.yaml & rules.yaml]
+    C --on success--> E[2. Acquire Data]
+    E --checks--> F[(File Cache)]
+    F --on miss--> G(yfinance API)
+    G --stores--> F
+    F --provides data--> H[3. Discover Optimal Strategy]
+    E --provides data--> H
+    H --uses vectorbt--> I[Iterative Backtesting]
+    I --optimal strategy--> J[4. Persist Strategy]
+    J --writes to--> K[(SQLite DB)]
+    H --latest data & optimal strategy--> L[5. Generate Signals]
+    L --new signals--> M[6. Persist Trades]
+    M --writes to--> K
+    L --triggers--> N[7. Generate Report]
+    N --reads from--> K
     end
 
     subgraph "Output"
-        J --uses rich--> K[Formatted Terminal Verdict];
-        J --'--report' flag & uses pyfolio--> L((PDF Tear Sheet));
+    N --writes--> O((signals_YYYY-MM-DD.md))
     end
 ```
 
+*All alternate/error paths (API failure, cache flush, DB lock) raise explicit CLI exceptions and abort cleanly; no silent retries are attempted.*
+
+---
+
 ## Architectural / Design Patterns Adopted
 
-The following high-level patterns have been chosen to guide the system's design and ensure the project's goals are met efficiently. The system is built as a monolithic application with a modular design, which includes key modules such as `Data Ingestion`, `Strategy Engine`, `Backtesting`, `Signal Generation`, and `Reporting`. The system operates in a stateless manner, meaning it does not track open positions, portfolios, or historical trades for its logic. Each day's signal generation is an independent event.
+| # | Pattern | Notes & Rationale |
+|---|---------|------------------|
+| 1 | **Modular Monolith** | One deployable unit is simpler for a personal hobby project. Internally segmented into small modules (`data_manager`, `backtester`, `rule_funcs`, `reporter`, `persistence`). No hard 1 000-LoC limit, but every addition must justify itself. |
+| 2 | **Orchestration & Facade** | CLI + YAML act as a thin façade over heavy libraries (`vectorbt`, `pandas`, `rich`). |
+| 3 | **Declarative Configuration** | `config.yaml` and `rules.yaml` describe *what* to do. Execution logic lives in code. |
+| 4 | **Data Persistence (Normalized)** | Two main tables: `price` and `rule_stack`. `trades` now references `rule_stack_id` and **does not duplicate** metrics (`win_pct`, `sharpe`, `edge_score`). |
+| 5 | **File-based Caching (Hash-validated)** | Historical data cached as CSV + SHA-256 checksum. `--refresh-cache` flag forces invalidation. |
+| 6 | **Deterministic Snapshot Option** | `--freeze-data YYYY-MM-DD` instructs the CLI to ignore any newer price updates, guaranteeing reproducible results. |
 
-* **Pattern 1: Modular Monolith**
-    * **Rationale:** The application is a single deployable unit (a monolith), which is ideal for a self-contained CLI tool. However, it will be internally structured into distinct modules with clear boundaries (e.g., `config`, `data`, `backtest`, `reporting`). This enforces a strong separation of concerns, making the codebase easier to maintain and test.
-
-* **Pattern 2: Orchestration & Facade**
-    * **Rationale:** This is the foundational principle of MEQSAP. The tool acts as a simplifying facade that provides a simple interface (the CLI and YAML file) to a complex subsystem of underlying libraries (`vectorbt`, `pyfolio`, etc.). This directly supports the primary objective of rapid, high-level development by orchestrating powerful, pre-existing components.
-
-* **Pattern 3: Declarative Configuration**
-    * **Rationale:** Users declare their strategy and its parameters in a `.yaml` file, defining *what* they want to test, not *how* to test it. The application is responsible for interpreting this configuration and executing the pipeline, which cleanly separates the strategy logic from the execution logic.
-
-* **Pattern 4: Schema-Driven Validation (using Data Transfer Objects)**
-    * **Rationale:** By using Pydantic to define a strict schema for the YAML configuration, we ensure all inputs are validated at the application's boundary. This pattern is crucial for providing immediate, clear error feedback and ensuring data integrity from the very start of the pipeline.
-
-* **Pattern 5: Caching**
-    * **Rationale:** To improve performance and avoid redundant API calls, a file-based cache for historical market data is explicitly required. This is a standard performance pattern that is essential for providing a fast, iterative user experience.
+---
 
 ## Component View
-
-The Automated Technical Analyst Assistant v1.0 is composed of the following primary modules, which collaborate to execute the backtesting pipeline:
-
-* **`Data Ingestion` Module:** This module is responsible for acquiring historical market data from `yfinance` and managing the file-based caching system to ensure efficiency.
-* **`Strategy Engine` Module:** This module handles the definition and execution of trading strategies. It includes a rule-based engine that allows new strategies to be added via configuration.
-* **`Backtesting` Module:** This is the core engine of the application. It takes the prepared data and strategy configuration, generates trading signals (using `pandas-ta`), executes the backtest (using `vectorbt`), and runs the required robustness checks (e.g., high fees, trade count).
-* **`Signal Generation` Module:** This module generates daily trading signals based on the "Active Strategy" for each stock. It operates in a stateless manner, meaning it does not track open positions, portfolios, or historical trades for its logic.
-* **`Reporting` Module:** This module takes the raw results from the `backtest` module and is responsible for all user-facing output. It generates the formatted "Executive Verdict" table for the terminal (using `rich`) and compiles the comprehensive PDF report when requested (using `pyfolio`).
-* **`CLI` Module:** This module serves as the application's main entry point. It handles parsing command-line arguments (e.g., `--report`, `--verbose`) and orchestrates the workflow by calling the other modules in the correct sequence.
-
-This component-based structure is visualized below:
 
 ```mermaid
 graph TD
     subgraph "Entrypoint"
-        CLI
+    CLI
     end
 
     subgraph "Core Logic"
-        ConfigModule[config]
-        DataModule[data]
-        BacktestModule[backtest]
-        ReportingModule[reporting]
+    ConfigModule[Config]
+    DataManager[Data Manager]
+    BacktesterModule[Backtester]
+    SignalGenerator[Signal Generator]
+    PersistenceModule[Persistence]
+    ReporterModule[Reporter]
     end
 
     subgraph "External Libraries"
-        Pydantic
-        yfinance
-        vectorbt
-        rich
-        pyfolio
+    Pydantic
+    PyYAML
+    yfinance
+    vectorbt
+    rich
     end
 
-    subgraph "Output"
-        TerminalOutput[Terminal Verdict]
-        PDFReport((PDF Report))
+    subgraph "Data & Output"
+    SQLiteDB[(SQLite DB)]
+    MarkdownReport((Markdown Report))
     end
 
     CLI --> ConfigModule
     ConfigModule --uses--> Pydantic
-    ConfigModule --Validated Config--> DataModule
-    DataModule --uses--> yfinance
-    DataModule --Market Data--> BacktestModule
-    BacktestModule --uses--> vectorbt
-    BacktestModule --Raw Results--> ReportingModule
-    ReportingModule --uses--> rich
-    ReportingModule --uses--> pyfolio
-    ReportingModule --> TerminalOutput
-    ReportingModule --> PDFReport
+    ConfigModule --uses--> PyYAML
+    ConfigModule --Validated Config--> DataManager
+    DataManager --uses--> yfinance
+    DataManager --Market Data--> BacktesterModule
+    BacktesterModule --uses--> vectorbt
+    BacktesterModule --Optimal Strategy--> PersistenceModule
+    PersistenceModule --writes--> SQLiteDB
+    BacktesterModule --Optimal Strategy & Latest Data--> SignalGenerator
+    SignalGenerator --New Signals--> PersistenceModule
+    PersistenceModule --> ReporterModule
+    ReporterModule --uses--> rich
+    ReporterModule --> MarkdownReport
 ```
+
+---
 
 ## Project Structure
 
-The project will be organized using a standard `src` layout to cleanly separate the installable Python package from other project files like tests, documentation, and configuration. The project includes a `strategies.md` document for maintaining the list of strategies and candlestick patterns.
-
 ```plaintext
-meqsap/
-├── .github/
-│   └── workflows/
-│       └── main.yml            # CI/CD pipeline for testing and publishing to PyPI
-├── .venv/                      # Python virtual environment directory (git-ignored)
+kiss-signal-cli/
 ├── docs/
-│   ├── adr/                          # Architectural Decision Records
-│   │   ├── 004-error-handling-policy.md # Example ADR file
-│   │   └── ...                         # Other ADR files
-│   ├── policies/                     # Policy documents
-│   │   └── error-handling-policy.md    # Example Policy file
-│   ├── architecture.md               # This architecture document
-│   └── ...                           # Other documentation (prd.md, etc.)
-├── examples/                         # Example strategy configurations
-│   └── ma_crossover.yaml        # Example Moving Average Crossover config
+│   └── architecture.md   # This file
+├── data/
+│   └── nifty_large_mid.csv  # NSE large- & mid-cap universe
 ├── src/
-│   └── meqsap/                 # The main installable Python package
+│   └── kiss_signal/
 │       ├── __init__.py
-│       ├── backtest.py         # Core backtesting and vibe check logic
-│       ├── cli.py              # Main CLI entrypoint and command parsing
-│       ├── config.py           # Pydantic schema and YAML loading
-│       ├── data.py             # Data acquisition and caching logic
-│       ├── exceptions.py             # Custom application exceptions
-│       ├── reporting.py        # Terminal output and PDF generation
-│       └── py.typed            # PEP 561 marker to indicate type hints are supported
+│       ├── backtester.py
+│       ├── cli.py
+│       ├── config.py
+│       ├── data_manager.py
+│       ├── persistence.py
+│       ├── rule_funcs.py       # Implementation of indicator/helper functions
+│       ├── reporter.py
+│       └── signal_generator.py
 ├── tests/
-│   ├── __init__.py
-│   ├── test_backtest.py
-│   ├── test_config.py
-│   └── ...                       # Tests mirroring the application package structure
+│   ├── test_backtester.py
+│   ├── test_report_golden.py   # Markdown golden-file comparison
+│   └── benchmarks/
+│       └── test_perf_60_tickers.py
 ├── .gitignore
-├── pyproject.toml                # Defines project metadata for packaging (for PyPI)
-├── README.md                     # Project overview and setup instructions
-└── requirements.txt              # Frozen project dependencies for reproducibility
+├── config.yaml
+├── rules.yaml
+├── pyproject.toml
+└── README.md
 ```
 
-### Key Directory Descriptions
-
-* **`docs/`**: Contains all project planning and reference documentation, including this architecture document.
-* **`src/meqsap/`**: This is the main Python package that will be installed by `pip`. It contains all application source code, with each logical component from our "Component View" represented as a separate Python module (`.py` file).
-* **`tests/`**: Contains all automated tests. The structure of this directory will mirror the `src/meqsap` package to ensure clear organization.
-* **`pyproject.toml`**: The standard file for configuring a Python project's metadata, build dependencies, and defining the CLI entry point for packaging. This is essential for publishing to PyPI.
-* **`requirements.txt`**: This file will list the exact, frozen versions of all project dependencies, ensuring a completely reproducible environment as required by the non-functional requirements.
+---
 
 ## Definitive Tech Stack Selections
 
-The system will exclusively use the `yfinance` library to source all historical end-of-day (EOD) stock data. This is a fixed requirement.
+| Category | Technology | Details | Purpose |
+|----------|------------|---------|---------|
+| **Language** | Python | 3.11+ | Entire codebase |
+| **CLI Framework** | Typer | Latest | Sub-command & flag parsing |
+| **Terminal UI** | rich | Latest (mandatory) | Progress bars, tables |
+| **Data Handling** | pandas | Latest | Data wrangling |
+| | yfinance | Latest | NSE EOD data download |
+| **Backtesting** | vectorbt | Latest | Fast vectorised indicator calc |
+| **Config** | PyYAML | Latest (`safe_load`) | YAML parsing |
+| | Pydantic | Latest v2 | Schema validation |
+| **Database** | sqlite3 | stdlib (WAL mode) | Local persistence |
+| **Testing** | pytest + pytest-benchmark | Latest | Unit, E2E, perf tests |
 
-| Category             | Technology      | Version / Details | Description / Purpose                                                   | Justification (Optional)                                                  |
-| :------------------- | :-------------- | :---------------- | :---------------------------------------------------------------------- | :------------------------------------------------------------------------ |
-| **Languages** | Python          | 3.9+              | Primary language for the entire application.                           | Specified in project requirements.                                        |
-| **CLI Framework** | Typer           | Latest            | For building a robust and user-friendly command-line interface.         | Integrates well with Pydantic and provides modern features like auto-completion. |
-| **Data Handling** | pandas          | Latest            | Core data manipulation and analysis.                                   | Industry standard for data science in Python.                             |
-|                      | yfinance        | Latest            | To download historical OHLCV data.                                     | Meets the project's data source requirement.                              |
-| **Technical Analysis** | pandas-ta       | Latest            | To generate technical analysis indicators like moving averages.       | A comprehensive and widely used library for TA.                           |
-| **Backtesting** | vectorbt        | Latest            | Core library for running fast, vectorized backtests.                   | A powerful, modern library that is central to the project's objective.    |
-| **Configuration** | PyYAML          | Latest            | To securely load the strategy `.yaml` configuration file.              | Standard and secure library for YAML parsing.                             |
-|                      | Pydantic        | Latest            | For defining a strict schema and validating the user's configuration. | Enforces data integrity and provides clear validation errors.             |
-| **Reporting & UI** | rich            | Latest            | To display formatted tables and text in the terminal.                  | Creates a polished and readable user experience in the CLI.               |
-|                      | pyfolio         | Latest            | To generate institutional-grade PDF tear sheets for analysis.         | Industry standard for performance and risk analysis reporting.            |
-| **Testing** | pytest          | Latest            | Framework for writing and running unit and integration tests.           | De facto standard for testing in the Python ecosystem.                    |
-| **CI/CD** | GitHub Actions  | N/A               | To automate testing and publishing to PyPI.                             | Well-integrated solution for projects hosted on GitHub.                   |
-
-## API Reference
-
-### External APIs Consumed
-
-This application consumes data from one external service via its Python library wrapper.
-
-* **`yfinance` API**
-    * **Purpose:** To acquire historical OHLCV (Open, High, Low, Close, Volume) market data for specified stock tickers.
-    * **Consumption Method:** The API is not a direct REST API but is consumed via the `yfinance` Python library.
-    * **Authentication:** Not required for public historical data.
-    * **Key Functions Used:** The primary function will be `yfinance.download()`.
-    * **Rate Limits:** While not explicitly defined by the library, usage is subject to Yahoo! Finance's terms of service and may be subject to throttling if abused. The application's caching mechanism is designed to mitigate this.
-    * **Link to Official Docs:** [https://pypi.org/project/yfinance/](https://pypi.org/project/yfinance/)
-
-### Internal APIs Provided (If Applicable)
-
-Not applicable. As a self-contained command-line tool, MEQSAP does not provide any network APIs for other services to consume.
+---
 
 ## Data Models
 
-This section defines the core data structures the application works with. For MEQSAP, the primary data model is the strategy configuration provided by the user.
+### Configuration (Pydantic)
 
-### Core Application Entities / Domain Objects
+```python
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Dict
 
-* **`StrategyConfig`**
-    * **Description:** This entity represents the complete configuration for a single backtest run, as loaded from the user's `.yaml` file. It is validated by Pydantic to ensure all parameters are correct before the pipeline begins.
-    * **Schema / Pydantic Definition (Example for a Moving Average Crossover):**
-        ```python
-        from pydantic import BaseModel, Field, validator
+class EdgeScoreWeights(BaseModel):
+    win_pct: float = Field(..., ge=0, le=1)
+    sharpe: float = Field(..., ge=0, le=1)
 
-        class MovingAverageCrossoverParams(BaseModel):
-            fast_ma: int = Field(..., gt=0)
-            slow_ma: int = Field(..., gt=0)
+    @field_validator("sharpe")
+    def _weights_sum_to_one(cls, v, values):
+        assert (v + values["win_pct"]) == 1.0, "weights must sum to 1"
+        return v
 
-            @validator('slow_ma')
-            def slow_ma_must_be_greater_than_fast_ma(cls, v, values):
-                if 'fast_ma' in values and v <= values['fast_ma']:
-                    raise ValueError('slow_ma must be greater than fast_ma')
-                return v
-
-        class StrategyConfig(BaseModel):
-            ticker: str
-            start_date: str
-            end_date: str
-            strategy_name: str = "MovingAverageCrossover"
-            strategy_params: MovingAverageCrossoverParams
-        ```
-    * **Validation Rules:** Validation is handled directly within the Pydantic models, as shown with the `@validator` decorator. This ensures rules like `slow_ma > fast_ma` are enforced.
-
-### Database Schemas (If applicable)
-
-Not applicable. The application does not use a database for its operations.
-
-## Core Workflow / Sequence Diagrams
-
-This section includes sequence diagrams that illustrate the interactions between the logical components defined in the "Component View" during a typical run. The system includes a weekly "bake-off" process and a daily signal generation process.
-
-### Weekly "Bake-Off" Process
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant CLI as cli
-    participant StrategyEngine as strategy_engine
-    participant Backtest as backtest
-    participant Reporting as reporting
-
-    User->>CLI: Executes `meqsap --bake-off`
-    CLI->>StrategyEngine: load_strategies()
-    StrategyEngine-->>CLI: Returns list of strategies
-    CLI->>Backtest: run_bake_off(strategies)
-    Backtest-->>CLI: Returns bake_off_results
-    CLI->>Reporting: generate_bake_off_report(bake_off_results)
-    Reporting-->>User: Prints formatted report to terminal
+class Config(BaseModel):
+    universe_path: str
+    hold_period: int = Field(..., gt=0)
+    min_trades_threshold: int = Field(..., ge=0)
+    edge_score_weights: EdgeScoreWeights
 ```
 
-### Daily Signal Generation Process
+### Database Schema (SQLite, Normalised)
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant CLI as cli
-    participant DataIngestion as data_ingestion
-    participant SignalGeneration as signal_generation
-    participant Reporting as reporting
+```sql
+-- Price table (unchanged)
+CREATE TABLE price (
+  ticker TEXT,
+  date   DATE,
+  open   REAL,
+  high   REAL,
+  low    REAL,
+  close  REAL,
+  volume REAL,
+  PRIMARY KEY (ticker, date)
+);
 
-    User->>CLI: Executes `meqsap --generate-signals`
-    CLI->>DataIngestion: get_latest_data()
-    DataIngestion-->>CLI: Returns latest market data
-    CLI->>SignalGeneration: generate_signals(data)
-    SignalGeneration-->>CLI: Returns daily signals
-    CLI->>Reporting: generate_daily_report(signals)
-    Reporting-->>User: Prints formatted report to terminal
+-- Rule stacks now keep history
+CREATE TABLE rule_stack (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticker     TEXT,
+  layers     TEXT,
+  win_pct    REAL,
+  sharpe     REAL,
+  edge_score REAL,
+  updated_at DATE
+);
+
+-- Trades reference rule_stack_id; no duplicate metrics
+CREATE TABLE trades (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  trade_date      DATE,
+  ticker          TEXT,
+  entry_price     REAL,
+  rule_stack_id   INTEGER,
+  status          TEXT,  -- NEW_BUY | OPEN | SELL
+  day_in_trade    INTEGER,
+  close_price     REAL,
+  exit_date       DATE,
+  FOREIGN KEY(rule_stack_id) REFERENCES rule_stack(id)
+);
 ```
+
+*The report generator joins `trades` ↔ `rule_stack` to display `EdgeScore`, `win_pct`, etc.*
+
+---
+
+## Core Workflow / Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -283,63 +259,69 @@ sequenceDiagram
     participant CLI as cli
     participant Config as config
     participant Data as data
-    participant Backtest as backtest
-    participant Reporting as reporting
+    participant BT as backtester
+    participant DB as persistence
+    participant Rep as reporter
 
-    User->>CLI: Executes `meqsap --config path/to/strategy.yaml`
-    CLI->>Config: load_and_validate(path)
-    Config-->>CLI: Returns StrategyConfig object
-    CLI->>Data: get_market_data(StrategyConfig)
-    Data-->>CLI: Returns pandas DataFrame
-    CLI->>Backtest: run(StrategyConfig, DataFrame)
-    Backtest-->>CLI: Returns BacktestResults
-    CLI->>Reporting: generate_output(BacktestResults)
-    Reporting-->>User: Prints formatted verdict to terminal
+    User->>CLI: quickedge run --verbose
+    CLI->>Config: load_and_validate()
+    Config-->>CLI: Config, Rules
+    CLI->>Data: refresh_market_data()
+    Data-->>CLI: DataFrame
+    CLI->>BT: find_optimal_strategies()
+    BT-->>DB: save_rule_stacks()
+    BT-->>CLI: rule_stack_ids
+    CLI->>DB: persist_signals()
+    CLI->>Rep: generate_report()
+    Rep->>DB: fetch_trades_and_rules()
+    Rep-->>User: signals_<date>.md
 ```
+
+---
 
 ## Coding Standards
 
-These standards are mandatory for all code to ensure consistency and maintainability.
+* **Naming:** `snake_case` for vars/functions, `PascalCase` for classes, `UPPER_SNAKE` for constants.  
+* **Type Hints:** 100 % coverage, checked with `mypy`.  
+* **Logging:** Use built-in `logging`, default level `INFO`; `--verbose` sets `DEBUG` and writes `run_log_<date>.txt`.  
+* **Style:** No enforced formatter (black, isort, pre-commit) – rely on disciplined manual formatting.  
+* **Code Volume:** No explicit LoC ceiling, but every new line must serve a clear purpose; avoid clever abstractions.
 
-* **Naming Conventions:**
-    * Variables & Functions: `snake_case` (e.g., `market_data`, `run_backtest`).
-    * Classes: `PascalCase` (e.g., `StrategyConfig`).
-    * Constants: `UPPER_SNAKE_CASE` (e.g., `CACHE_DIR`).
-* **Type Safety:**
-    * As per the requirements, the entire codebase **must** use Python's native type hints.
-    * `mypy` will be used for static type checking to enforce type safety.
-* **Dependency Management:**
-    * All project dependencies **must** be explicitly defined and frozen in `requirements.txt` to ensure a completely reproducible environment.
-* **Logging:**
-    * The built-in `logging` module will be used. Standard logs will be at the `INFO` level, with detailed debugging information available via the `--verbose` flag.
+---
 
 ## Overall Testing Strategy
 
-The testing approach will focus exclusively on the custom logic written for MEQSAP, not the internal functionality of third-party libraries.
+* **Unit Tests**: Each core module; DB tests run on an in-memory SQLite connection.  
+* **Integration Tests**: End-to-end invocation comparing output Markdown against a golden file.  
+* **Performance Benchmark**: `pytest-benchmark` test ensures a 60-ticker run completes within an empirically acceptable window on reference hardware (document the number).  
+* **No Security Tests**: Not required for single-user local execution.
 
-* **Tools:** `pytest` will be the primary framework for all tests.
-* **Unit Tests:**
-    * **Scope:** Tests will validate our custom orchestration logic. We will not test the internal calculations of libraries like `vectorbt` or `pyfolio`. For example, a test for our `data` module will mock the call to `yfinance` and verify that our caching logic works as expected. A test for our `backtest` module will ensure our code correctly prepares data and calls the `vectorbt` functions with the right arguments.
-    * **Location:** Reside in the top-level `tests/` directory.
-* **Integration Tests:**
-    * **Scope:** Test the interaction and data flow between our custom modules (e.g., ensuring the `StrategyConfig` object from the `config` module is correctly passed to and used by the `data` and `backtest` modules).
-* **End-to-End (E2E) Tests:**
-    * **Scope:** Validate the complete application flow from the command line. These tests will execute the `meqsap` command with arguments and verify that the terminal output is generated correctly and that files (like a PDF report) are created successfully.
+---
 
-## Security Best Practices
+## Roadmap – Post-MVP Features
 
-Even for a single-user tool, following basic best practices ensures robustness and safety. As the application is for personal use by a single user and does not handle live trading credentials, user accounts, or sensitive personal data, security requirements are considered minimal.
+* AI Strategy Improver  
+* Dynamic Exit Conditions  
+* Equal-risk ATR position sizing  
+* Short-side rule stacks  
+* Sector rotation overlay  
+* Adaptive exit optimisation  
+* Opt-in e-mail / Telegram alerts  
 
-## Post-MVP Features / Future Scope
+---
 
-1. **Stateful Performance Tracking & Learning Engine:** Introduce a stateful mechanism to track the performance of historical signals and implement a feedback loop to learn from failed recommendations.
-2. **Predictive Analytics Module:** Develop and integrate a statistical model to provide forward-looking probabilities for signals (e.g., probability of a 1% price increase within 7 days).
-3. **Automated Rule Discovery Engine:** Evolve from strategy *selection* to strategy *discovery*, programmatically generating and testing novel `if-then-else` rules.
-4. **Advanced Risk Management:** Introduce dynamic risk-management overlays like volatility-based position sizing or trailing stop-losses.
-5. **Strategy Parameter Optimization:** Add an optimization layer to fine-tune parameters of proven strategies.
-6. **Introduction of Short-Selling Strategies:** Develop and enable strategies for short-selling opportunities.
-7. **Interactive Charting & Analysis Interface:** A web-based UI for users to view charts with signals and explore backtest reports.
+## Explicit **Not-to-Do** List
 
-* **Robust Input Validation:** All configurations from the `.yaml` file will be strictly validated by Pydantic models at the start of any process. This prevents errors from malformed input.
-* **Safe Configuration Parsing:** The system **must** use `yaml.safe_load()` to parse `.yaml` files. This is a critical practice to prevent the execution of arbitrary code from a potentially untrusted configuration file.
-```
+1. No cron jobs, CI pipelines, or multi-user support.  
+2. No GUI, web dashboard, or external DB engines.  
+3. No options, futures, or intraday data; EOD only.  
+4. No deep-learning or opaque “AI” black boxes.  
+5. No automatic code formatters (black, isort, pre-commit).  
+6. No explicit security hardening or supply-chain scanning.  
+7. No packaging for public distribution (PyPI); run directly from source.  
+8. No duplicate storage of derived metrics in the `trades` table.  
+9. No support for non-Indian instruments or micro/small-cap stocks.  
+
+---
+
+*End of document.*
