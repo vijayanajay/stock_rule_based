@@ -1,17 +1,36 @@
 ============================= test session starts =============================
-platform win32 -- Python 3.12.10, pytest-8.3.5, pluggy-1.6.0
-cachedir: \tmp\pytest_cache
-rootdir: D:\Code\simplest
+platform win32 -- Python 3.12.10, pytest-8.4.0, pluggy-1.6.0 -- D:\Code\stock_rule_based\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: d:\Code\stock_rule_based
 configfile: pyproject.toml
-collected 154 items
+plugins: cov-6.2.1
+collecting ... collected 9 items
 
-tests\test_backtest.py ............                                      [  7%]
-tests\test_cli.py ..................                                     [ 19%]
-tests\test_cli_comprehensive.py .......................                  [ 34%]
-tests\test_cli_enhanced.py ..................................            [ 56%]
-tests\test_config.py ............                                        [ 64%]
-tests\test_data.py .......                                               [ 68%]
-tests\test_float_handling.py s......                                     [ 73%]
-tests\test_reporting.py ................................s........        [100%]
+tests/test_cli.py::test_cli_help PASSED                                  [ 11%]
+tests/test_cli.py::test_run_command_basic PASSED                         [ 22%]
+tests/test_cli.py::test_run_command_verbose PASSED                       [ 33%]
+tests/test_cli.py::test_run_command_freeze_date PASSED                   [ 44%]
+tests/test_config.py::test_edge_score_weights_valid PASSED               [ 55%]
+tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 66%]
+tests/test_config.py::test_config_validation PASSED                      [ 77%]
+tests/test_config.py::test_load_config PASSED                            [ 88%]
+tests/test_config.py::test_load_config_missing_file PASSED               [100%]
 
-======================= 152 passed, 2 skipped in 20.26s =======================
+=============================== tests coverage ================================
+______________ coverage: platform win32, python 3.12.10-final-0 _______________
+
+Name                                  Stmts   Miss  Cover
+---------------------------------------------------------
+src\kiss_signal\__init__.py               5      0   100%
+src\kiss_signal\_version.py              13     13     0%
+src\kiss_signal\backtester.py            17     17     0%
+src\kiss_signal\cli.py                   46     10    78%
+src\kiss_signal\config.py                49     13    73%
+src\kiss_signal\data_manager.py          17     17     0%
+src\kiss_signal\persistence.py           19     19     0%
+src\kiss_signal\reporter.py              26     26     0%
+src\kiss_signal\rule_funcs.py            14     14     0%
+src\kiss_signal\signal_generator.py      16     16     0%
+---------------------------------------------------------
+TOTAL                                   222    145    35%
+============================== 9 passed in 1.77s ==============================

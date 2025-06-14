@@ -51,7 +51,8 @@ def load_config(config_path: str = "config.yaml") -> Config:
             data = yaml.safe_load(f)
         return Config(**data)
     except FileNotFoundError:
-        raise ValueError(f"Configuration file not found: {config_path}")
+        # Don't wrap FileNotFoundError - preserve specific exception type
+        raise
     except yaml.YAMLError as e:
         raise ValueError(f"Invalid YAML in {config_path}: {e}")
     except Exception as e:
@@ -63,8 +64,10 @@ def load_rules(rules_path: str = "rules.yaml") -> Dict[str, Any]:
     try:
         with open(rules_path, 'r') as f:
             result = yaml.safe_load(f)
-            return result if result is not None else {}
+            # Ensure we always return Dict[str, Any] even when result is None
+            return {} if result is None else result
     except FileNotFoundError:
-        raise ValueError(f"Rules file not found: {rules_path}")
+        # Don't wrap FileNotFoundError - preserve specific exception type
+        raise
     except yaml.YAMLError as e:
         raise ValueError(f"Invalid YAML in {rules_path}: {e}")

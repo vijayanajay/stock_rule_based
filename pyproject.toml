@@ -1,23 +1,28 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "kiss-signal-cli"
-version = "1.4.0"
-description = "KISS Signal CLI - Keep-It-Simple Signal Generation for NSE Equities"
-authors = [{name = "KISS Signal Team"}]
-license = {text = "MIT"}
+dynamic = ["version"]
+description = "Keep-It-Simple Signal Generation for NSE Equities"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "KISS Signal Team"}
+]
+keywords = ["trading", "signals", "nse", "backtesting"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
 ]
+
 dependencies = [
     "typer>=0.9.0",
     "pydantic>=2.0.0",
@@ -26,80 +31,75 @@ dependencies = [
     "pandas>=2.0.0",
     "vectorbt>=0.25.0",
     "yfinance>=0.2.0",
-    "requests>=2.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.0.0",
+    "types-PyYAML>=6.0.0",
 ]
 
 [project.scripts]
 quickedge = "kiss_signal.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/kiss-signal-cli"
-Repository = "https://github.com/yourusername/kiss-signal-cli"
+Homepage = "https://github.com/your-org/kiss-signal-cli"
+Repository = "https://github.com/your-org/kiss-signal-cli"
+Issues = "https://github.com/your-org/kiss-signal-cli/issues"
+
+[tool.setuptools_scm]
+write_to = "src/kiss_signal/_version.py"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.package-dir]
-"" = "src"
-
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-python_executable = ".venv/Scripts/python.exe"
-python_version = "3.9"
-
-# Module discovery
-mypy_path = "src"
-packages = ["meqsap"]
-namespace_packages = true
-
-# Type checking strictness
-strict = true
-warn_return_any = true
-warn_unused_configs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
-check_untyped_defs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-disallow_any_generics = true
-disallow_subclassing_any = true
+strict_equality = true
+packages = ["kiss_signal"]
 
-# Error output
-show_error_codes = true
-show_column_numbers = true
-color_output = true
-error_summary = true
-pretty = true
-
-# Cache
-cache_dir = ".mypy_cache"
-sqlite_cache = true
-
-# Performance
-incremental = true
-warn_incomplete_stub = true
-
-[[tool.mypy.overrides]]
-module = [
-    "pandas.*",
-    "numpy.*", 
-    "yfinance.*",
-    "vectorbt.*",
-    "pandas_ta.*",
-    "matplotlib.*",
-    "seaborn.*",
-    "pytest.*",
-    "rich.*",
-    "yaml.*"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
 ]
-ignore_missing_imports = true
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
 
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false

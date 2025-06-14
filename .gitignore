@@ -49,3 +49,4 @@ run_mypy.bat
 .gitignore
 setup_dev.bat
 docs/mypy_setup.md
+.memory-bank/stock_rule_based/memory.md
