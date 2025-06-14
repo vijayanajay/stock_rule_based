@@ -1,0 +1,27 @@
+# Trading Rules Configuration (BUY SIGNALS ONLY)
+# Note: All rules generate BUY signals when conditions are met
+# SELL signals are time-based only (after hold_period days)
+
+rules:
+  - name: "sma_crossover"
+    type: "trend"
+    enabled: true
+    signal_type: "buy"  # All rules are buy signals in v1.4
+    params:
+      fast_period: 10
+      slow_period: 20
+  
+  - name: "rsi_oversold"
+    type: "momentum" 
+    enabled: true
+    signal_type: "buy"  # Triggers BUY when RSI < threshold
+    params:
+      period: 14
+      oversold_threshold: 30
+
+# Rule combination settings
+max_rule_stack_size: 3
+min_rule_stack_size: 1
+
+# Exit strategy (v1.4 limitation)
+exit_strategy: "time_based_only"  # Future versions will add stop-loss, etc.

@@ -1,0 +1,13 @@
+# KISS Signal CLI Configuration
+universe_path: "data/nifty_large_mid.csv"
+hold_period: 20  # Days to hold position (time-based exit only)
+min_trades_threshold: 10
+
+edge_score_weights:
+  win_pct: 0.6
+  sharpe: 0.4
+
+# Data settings
+historical_data_years: 3      # Years of data to keep for backtesting
+cache_refresh_days: 7         # How often to check for new data
+freeze_date: null             # Optional: YYYY-MM-DD format
