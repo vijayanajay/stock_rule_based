@@ -42,3 +42,10 @@ ENV/
 Thumbs.db
 
 vibe.yaml
+run_mypy.ps1
+.gitignore
+mypy.ini
+run_mypy.bat
+.gitignore
+setup_dev.bat
+docs/mypy_setup.md

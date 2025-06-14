@@ -1,1 +1,0 @@
-"""MEQSAP source package."""
