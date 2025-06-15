@@ -50,7 +50,7 @@ write_to = "src/kiss_signal/_version.py"
 where = ["src"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

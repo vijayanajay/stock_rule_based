@@ -60,21 +60,25 @@ class DataManager:
         
         Returns:
             List of symbols from universe file
-            
-        Raises:
+              Raises:
             FileNotFoundError: If universe file doesn't exist
-            ValueError: If universe file is malformed        """
+            ValueError: If universe file is malformed
+        """
         try:
             df = pd.read_csv(self.universe_path)
-            if 'symbol' not in df.columns:
-                raise ValueError("Universe file missing 'symbol' column")
-            
-            symbols: list[str] = df['symbol'].astype(str).tolist()
-            logger.info(f"Loaded {len(symbols)} symbols from universe")
-            return symbols
-        except Exception as e:
-            logger.error(f"Failed to load universe file: {e}")
+        except FileNotFoundError:
+            logger.error(f"Universe file not found: {self.universe_path}")
             raise
+        except (ValueError, KeyError) as e:
+            logger.error(f"Failed to load universe file, malformed CSV: {e}")
+            raise ValueError(f"Malformed universe file: {self.universe_path}") from e
+
+        if 'symbol' not in df.columns:
+            raise ValueError("Universe file missing 'symbol' column")
+
+        symbols: list[str] = df['symbol'].astype(str).tolist()
+        logger.info(f"Loaded {len(symbols)} symbols from universe")
+        return symbols
     
     def _load_cache_metadata(self) -> Dict[str, str]:
         """Load cache metadata from JSON file.
@@ -89,8 +93,11 @@ class DataManager:
             with open(self._metadata_path, 'r') as f:
                 result: dict[str, str] = json.load(f)
                 return result
-        except Exception as e:
-            logger.warning(f"Failed to load cache metadata: {e}")
+        except json.JSONDecodeError as e:
+            logger.warning(f"Cache metadata file corrupted (JSON decode error): {e}")
+            return {}
+        except (OSError, IOError) as e:
+            logger.warning(f"Failed to read cache metadata file: {e}")
             return {}
     
     # impure
@@ -101,8 +108,10 @@ class DataManager:
             metadata: Dictionary mapping symbol -> last_update timestamp
         """
         try:
-            with open(self._metadata_path, 'w') as f:
+            tmp = self._metadata_path.with_suffix('.tmp')
+            with open(tmp, 'w') as f:
                 json.dump(metadata, f, indent=2)
+            tmp.replace(self._metadata_path)
         except Exception as e:
             logger.error(f"Failed to save cache metadata: {e}")
     
@@ -116,6 +125,10 @@ class DataManager:
         Returns:
             True if symbol needs refresh
         """
+        # Skip cache refresh in freeze mode to maintain repeatability
+        if self.freeze_date is not None:
+            return False
+            
         if symbol not in metadata:
             return True
         
@@ -160,8 +173,7 @@ class DataManager:
             if data.empty:
                 logger.warning(f"No data returned for {symbol}")
                 return None
-            
-            # Standardize column names and format
+              # Standardize column names and format
             data = data.reset_index()
             data.columns = [col.lower() for col in data.columns]
             
@@ -176,8 +188,8 @@ class DataManager:
             # Ensure proper data types
             data['date'] = pd.to_datetime(data['date'])
             for col in ['open', 'high', 'low', 'close']:
-                data[col] = data[col].astype('float64')
-            data['volume'] = data['volume'].astype('int64')
+                data[col] = pd.to_numeric(data[col], errors='coerce')
+            data['volume'] = pd.to_numeric(data['volume'], errors='coerce').astype('Int64')
             
             return data
             
@@ -204,18 +216,18 @@ class DataManager:
         negative_prices = (data[price_cols] < 0).any().any()
         if negative_prices:
             logger.warning(f"Negative prices detected for {symbol}")
+            return False
         
         # Check for zero volume days
-        zero_volume_days = (data['volume'] == 0).sum()
-        if zero_volume_days > len(data) * 0.1:  # More than 10% zero volume
-            logger.warning(f"High zero-volume days for {symbol}: {zero_volume_days}")
+        if (data['volume'] == 0).sum() > len(data) * 0.1:
+            logger.warning(f"High zero-volume days for {symbol}")
+            return False
         
         # Check for large data gaps
-        data_sorted = data.sort_values('date')
-        date_diffs = data_sorted['date'].diff().dt.days
-        max_gap = date_diffs.max()
-        if max_gap > 5:  # More than 5 days gap
-            logger.warning(f"Large data gap detected for {symbol}: {max_gap} days")
+        max_gap_days = data.sort_values('date')['date'].diff().dt.days.max()
+        if pd.notna(max_gap_days) and max_gap_days > 5:
+            logger.warning(f"Large data gap detected for {symbol}: {max_gap_days} days")
+            return False
         
         return True
     
@@ -363,6 +375,6 @@ class DataManager:
             logger.debug(f"Served {len(data)} rows for {symbol}")
             return data
             
-        except Exception as e:
-            logger.error(f"Failed to load cached data for {symbol}: {e}")
-            raise ValueError(f"Corrupted cache data for {symbol}") from e
+        except (pd.errors.EmptyDataError, pd.errors.ParserError, KeyError) as e:
+            logger.error(f"Failed to load or parse cached data for {symbol}: {e}")
+            raise ValueError(f"Corrupted or invalid cache data for {symbol}") from e

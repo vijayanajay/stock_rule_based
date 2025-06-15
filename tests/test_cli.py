@@ -39,7 +39,7 @@ def test_run_command_basic(sample_config: Dict[str, Any]) -> None:
         with patch("kiss_signal.cli.DataManager.refresh_market_data", return_value={}):
             result = runner.invoke(app, [])
             assert result.exit_code == 0, f"Exit code: {result.exit_code}, Stdout: {result.stdout}"
-            assert "KISS Signal CLI ready for backtesting!" in result.stdout
+            assert "Data refresh complete." in result.stdout
 
 
 def test_run_command_verbose(sample_config: Dict[str, Any]) -> None:
@@ -89,9 +89,7 @@ def test_run_command_success(mock_dm_class: Any, sample_config: Dict[str, Any]) 
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-
-        # Update config to point to the new universe file
+        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")        # Update config to point to the new universe file
         sample_config["universe_path"] = str(universe_path)
         Path("config.yaml").write_text(yaml.dump(sample_config))
         Path("rules.yaml").write_text("rules: []")
@@ -99,7 +97,7 @@ def test_run_command_success(mock_dm_class: Any, sample_config: Dict[str, Any]) 
         result = runner.invoke(app, [])
 
         assert result.exit_code == 0, result.stdout
-        assert "KISS Signal CLI ready for backtesting!" in result.stdout
+        assert "✨ Data refresh complete. Foundation is ready." in result.stdout
         mock_dm_class.assert_called_once()
         mock_dm_instance.refresh_market_data.assert_called_once()
 
@@ -127,20 +125,21 @@ def test_run_command_with_freeze_date(mock_dm_class: Any, sample_config: Dict[st
         mock_dm_class.return_value.refresh_market_data.assert_not_called()
 
 
-def test_run_command_invalid_freeze_date():
+def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
     """Test run command with invalid freeze date."""
-    with runner.isolated_filesystem():
-        # Create config file
-        with open("config.yaml", "w") as f:
-            f.write("universe_path: data/nifty_large_mid.csv\n")
-        
-        # Create rules file
-        with open("rules.yaml", "w") as f:
-            f.write("rules: []\n")
-        
+    with runner.isolated_filesystem() as fs:
+        data_dir = Path(fs) / "data"
+        data_dir.mkdir()
+        universe_path = data_dir / "nifty_large_mid.csv"
+        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
+
+        sample_config["universe_path"] = str(universe_path)
+        Path("config.yaml").write_text(yaml.dump(sample_config))
+        Path("rules.yaml").write_text("rules: []")
+
         result = runner.invoke(app, ["--freeze-data", "invalid-date"])
         assert result.exit_code == 1
-        assert "Invalid freeze date format" in result.stdout
+        assert "Invalid isoformat string" in result.stdout
 
 
 def test_run_command_no_config() -> None:

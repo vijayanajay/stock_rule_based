@@ -1,6 +1,7 @@
 """Tests for Data Manager module."""
 
 import json
+import shutil
 import tempfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -32,6 +33,10 @@ class TestDataManager:
         
         self.cache_dir = self.temp_path / "cache"
         self.console = Console(file=Mock())  # Mock console for testing
+    
+    def teardown_method(self):
+        """Clean up test fixtures."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     def test_init(self):
         """Test DataManager initialization."""

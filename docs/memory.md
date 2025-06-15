@@ -95,3 +95,17 @@
 **Prevention**: When testing components that interact with the filesystem, especially within an isolated context, ensure the test setup is hermetic. Create *all* file dependencies that the code under test will access during its execution path. This prevents unrelated, prerequisite errors from masking the true test condition and creates more robust, reliable, and easier-to-debug tests.
 
 ---
+
+### Cascading Failures from Inconsistent Configuration and Error Handling (2025-06-16)
+**Issue**: Widespread test failures, primarily `AttributeError: 'Config' object has no attribute 'cache_dir'` in `test_cli.py` and an `AssertionError` on an incorrect exception message in `test_data_manager.py`.
+**Root Cause**: A set of interconnected structural issues:
+1.  **Data Contract Mismatch**: The `Config` Pydantic model (`config.py`) had fallen out of sync with its consumer, `DataManager` (`data_manager.py`). The `DataManager` required a `cache_dir` parameter, but the `Config` model did not define it. The `cli.py` orchestrator failed when it tried to wire them together.
+2.  **Error Obscuration**: In `data_manager.py`, a specific `ValueError` (e.g., "missing 'symbol' column") was being caught by a broad `except (ValueError, KeyError)` block and re-raised with a generic message. This broke a test that was correctly asserting on the specific, more informative error.
+**Fix**:
+1.  **Synchronized Config**: The `Config` model in `config.py` was updated to include the missing `cache_dir` field. The `DataManager` instantiation in `cli.py` was also updated to pass all required parameters, restoring the data contract.
+2.  **Preserved Error Details**: The error handling in `data_manager.py`'s `_load_universe` method was refactored. The check for the specific `ValueError` was moved outside the `try...except` block that was incorrectly catching it, allowing the specific error to propagate.
+**Prevention**:
+1.  Treat configuration models as strict, shared interfaces. When a component's dependencies change, update the configuration schema and any orchestrator code in lockstep.
+2.  When handling exceptions, be specific. Avoid broad `except` clauses that can accidentally swallow and re-wrap more specific, informative exceptions raised within the `try` block. This preserves error details, making tests more precise and debugging easier.
+
+---

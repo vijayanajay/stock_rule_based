@@ -8,6 +8,8 @@ from typing import Optional
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+__all__ = ["Config", "EdgeScoreWeights", "load_config"]
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,7 @@ class Config(BaseModel):
 
     universe_path: str = Field(default="data/nifty_large_mid.csv", description="Path to universe CSV file")
     historical_data_years: int = Field(default=3, ge=1, le=10, description="Years of historical data")
+    cache_dir: str = Field(default="data/cache", description="Directory for cached data files")
     cache_refresh_days: int = Field(default=7, ge=1, description="Cache refresh frequency")
     hold_period: int = Field(default=20, gt=0, description="Days to hold positions")
     min_trades_threshold: int = Field(default=10, ge=0, description="Minimum trades for valid backtest")
@@ -68,13 +71,14 @@ def load_config(config_path: Path) -> Config:
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         raise yaml.YAMLError(f"Invalid YAML in config file: {e}") from e
 
+    # An empty file or a file with only comments loads as None. Pydantic can
+    # handle an empty dict, but we want to enforce that the config file is
+    # explicitly present and not empty.
     if data is None:
         raise ValueError("Config file is empty or contains only comments")
 
-    config_data = data if data is not None else {}
-    return Config(**config_data)
+    return Config(**data)
