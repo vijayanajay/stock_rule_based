@@ -34,7 +34,11 @@ def test_run_command_basic(sample_config: Dict[str, Any]) -> None:
 
         sample_config["universe_path"] = str(universe_path)
         Path("config.yaml").write_text(yaml.dump(sample_config))
-        Path("rules.yaml").write_text("rules: []")
+        
+        # Create config directory and rules file
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
 
         with patch("kiss_signal.cli.DataManager.refresh_market_data", return_value={}):
             result = runner.invoke(app, [])
@@ -52,7 +56,11 @@ def test_run_command_verbose(sample_config: Dict[str, Any]) -> None:
 
         sample_config["universe_path"] = str(universe_path)
         Path("config.yaml").write_text(yaml.dump(sample_config))
-        Path("rules.yaml").write_text("rules: []")
+        
+        # Create config directory and rules file
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
 
         with patch("kiss_signal.cli.DataManager.refresh_market_data", return_value={}):
             result = runner.invoke(app, ["--verbose"])
@@ -66,10 +74,13 @@ def test_run_command_freeze_date(sample_config: Dict[str, Any]) -> None:
         data_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-
         sample_config["universe_path"] = str(universe_path)
         Path("config.yaml").write_text(yaml.dump(sample_config))
-        Path("rules.yaml").write_text("rules: []")
+        
+        # Create config directory and rules file
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
 
         with patch("kiss_signal.cli.DataManager.refresh_market_data") as mock_refresh:
             result = runner.invoke(app, ["--freeze-data", "2025-01-01"])
@@ -89,10 +100,16 @@ def test_run_command_success(mock_dm_class: Any, sample_config: Dict[str, Any]) 
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")        # Update config to point to the new universe file
+        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
+        
+        # Update config to point to the new universe file
         sample_config["universe_path"] = str(universe_path)
         Path("config.yaml").write_text(yaml.dump(sample_config))
-        Path("rules.yaml").write_text("rules: []")
+        
+        # Create config directory and rules file
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
 
         result = runner.invoke(app, [])
 
@@ -110,10 +127,13 @@ def test_run_command_with_freeze_date(mock_dm_class: Any, sample_config: Dict[st
         data_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-
         sample_config["universe_path"] = str(universe_path)
         Path("config.yaml").write_text(yaml.dump(sample_config))
-        Path("rules.yaml").write_text("rules: []")
+        
+        # Create config directory and rules file
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
 
         result = runner.invoke(app, ["--freeze-data", "2025-01-01"])
 
@@ -132,10 +152,13 @@ def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
         data_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-
         sample_config["universe_path"] = str(universe_path)
         Path("config.yaml").write_text(yaml.dump(sample_config))
-        Path("rules.yaml").write_text("rules: []")
+        
+        # Create config directory and rules file
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
 
         result = runner.invoke(app, ["--freeze-data", "invalid-date"])
         assert result.exit_code == 1

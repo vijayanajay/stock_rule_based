@@ -109,3 +109,20 @@
 2.  When handling exceptions, be specific. Avoid broad `except` clauses that can accidentally swallow and re-wrap more specific, informative exceptions raised within the `try` block. This preserves error details, making tests more precise and debugging easier.
 
 ---
+
+### Duplicate Rule Configuration Files (2025-06-16)
+**Issue**: Duplicate rule configuration files existed at root level (`rules.yaml`) and in config directory (`config/rules.yaml`) with conflicting validation ranges, causing non-deterministic behavior and potential configuration drift.
+**Root Cause**: Multiple rule definition files were created during development iterations without consolidating them. The files had different validation constraints (e.g., `fast_period` min values: root had `min: 5`, config had `min: 2`) and different structures (embedded vs. centralized validation), leading to inconsistent rule behavior depending on which file was loaded.
+**Fix**: 
+1. Consolidated into single canonical file: `config/rules.yaml` with consistent validation ranges
+2. Removed root-level `rules.yaml` file to eliminate duplication
+3. Updated CLI default from `"rules.yaml"` to `"config/rules.yaml"`
+4. Created CI check script (`scripts/check_duplicate_rules.py`) and batch file (`check_rules.bat`) to prevent future duplicates
+5. Updated all test files to use config directory structure
+**Prevention**: 
+- Always run `check_rules.bat` before committing changes to verify single canonical rules file
+- Keep rule configuration files only in `config/` directory
+- Use consistent validation ranges across all rule definitions
+- CI checks will fail if multiple rule configuration files are detected
+
+---

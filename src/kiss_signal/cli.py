@@ -44,7 +44,7 @@ def _show_banner() -> None:
 def run(
     verbose: bool = typer.Option(False, "--verbose", help="Enable verbose logging"),
     config: str = typer.Option("config.yaml", "--config", help="Path to config file"),
-    rules: str = typer.Option("rules.yaml", "--rules", help="Path to rules file"),
+    rules: str = typer.Option("config/rules.yaml", "--rules", help="Path to rules file"),
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)")
 ) -> None:
     """Run the KISS Signal data foundation pipeline."""
