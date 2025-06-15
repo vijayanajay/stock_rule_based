@@ -1,72 +1,25 @@
 ============================= test session starts =============================
 platform win32 -- Python 3.12.10, pytest-8.4.0, pluggy-1.6.0 -- D:\Code\stock_rule_based\venv\Scripts\python.exe
 cachedir: .pytest_cache
-rootdir: D:\Code\stock_rule_based
+rootdir: d:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
-collecting ... collected 11 items
+collecting ... collected 13 items
 
-tests/test_cli.py::test_help_command PASSED                              [  9%]
-tests/test_cli.py::test_run_command_basic FAILED                         [ 18%]
-tests/test_cli.py::test_run_command_verbose FAILED                       [ 27%]
-tests/test_cli.py::test_run_command_freeze_date FAILED                   [ 36%]
-tests/test_config.py::test_edge_score_weights_valid PASSED               [ 45%]
-tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 54%]
-tests/test_config.py::test_config_validation PASSED                      [ 63%]
-tests/test_config.py::test_load_config PASSED                            [ 72%]
-tests/test_config.py::test_load_config_missing_file PASSED               [ 81%]
-tests/test_config.py::test_load_config_empty_file PASSED                 [ 90%]
+tests/test_cli.py::test_cli_import PASSED                                [  7%]
+tests/test_cli.py::test_help_command PASSED                              [ 15%]
+tests/test_cli.py::test_run_command_basic PASSED                         [ 23%]
+tests/test_cli.py::test_run_command_verbose PASSED                       [ 30%]
+tests/test_cli.py::test_run_command_freeze_date PASSED                   [ 38%]
+tests/test_cli.py::test_run_command_no_config PASSED                     [ 46%]
+tests/test_config.py::test_edge_score_weights_valid PASSED               [ 53%]
+tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 61%]
+tests/test_config.py::test_config_validation PASSED                      [ 69%]
+tests/test_config.py::test_load_config PASSED                            [ 76%]
+tests/test_config.py::test_load_config_missing_file PASSED               [ 84%]
+tests/test_config.py::test_load_config_empty_file PASSED                 [ 92%]
 tests/test_data_manager.py::test_data_manager_initialization PASSED      [100%]
 
-================================== FAILURES ===================================
-___________________________ test_run_command_basic ____________________________
-
-sample_config = {'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, 'historical_data_years': 3, ...}
-
-    def test_run_command_basic(sample_config: Dict[str, Any]) -> None:
-        """Test basic run command with isolated filesystem."""
-        with runner.isolated_filesystem():
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-            result = runner.invoke(app, ["run"])
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:24: AssertionError
-__________________________ test_run_command_verbose ___________________________
-
-sample_config = {'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, 'historical_data_years': 3, ...}
-
-    def test_run_command_verbose(sample_config: Dict[str, Any]) -> None:
-        """Test run command with verbose flag and isolated filesystem."""
-        with runner.isolated_filesystem():
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-            result = runner.invoke(app, ["run", "--verbose"])
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:33: AssertionError
-________________________ test_run_command_freeze_date _________________________
-
-sample_config = {'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, 'historical_data_years': 3, ...}
-
-    def test_run_command_freeze_date(sample_config: Dict[str, Any]) -> None:
-        """Test run command with freeze date and isolated filesystem."""
-        with runner.isolated_filesystem():
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-            result = runner.invoke(
-                app,
-                ["run", "--freeze-data", "2025-01-01"],
-            )
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:44: AssertionError
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -75,17 +28,13 @@ Name                                  Stmts   Miss  Cover
 src\kiss_signal\__init__.py               4      0   100%
 src\kiss_signal\_version.py              13     13     0%
 src\kiss_signal\backtester.py            17     17     0%
-src\kiss_signal\cli.py                   38     23    39%
+src\kiss_signal\cli.py                   39      1    97%
 src\kiss_signal\config.py                35      1    97%
 src\kiss_signal\data_manager.py          17      4    76%
 src\kiss_signal\persistence.py           19     19     0%
-src\kiss_signal\reporter.py              26     26     0%
+src\kiss_signal\reporter.py              25     25     0%
 src\kiss_signal\rule_funcs.py            14     14     0%
 src\kiss_signal\signal_generator.py      16     16     0%
 ---------------------------------------------------------
-TOTAL                                   199    133    33%
-=========================== short test summary info ===========================
-FAILED tests/test_cli.py::test_run_command_basic - AssertionError: 
-FAILED tests/test_cli.py::test_run_command_verbose - AssertionError: 
-FAILED tests/test_cli.py::test_run_command_freeze_date - AssertionError: 
-========================= 3 failed, 8 passed in 2.99s =========================
+TOTAL                                   199    110    45%
+============================= 13 passed in 4.94s ==============================
