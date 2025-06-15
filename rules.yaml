@@ -1,27 +1,47 @@
-# Trading Rules Configuration (BUY SIGNALS ONLY)
-# Note: All rules generate BUY signals when conditions are met
-# SELL signals are time-based only (after hold_period days)
+# Trading rules configuration for signal generation
+# Format: List of rules with type, parameters, and validation ranges
 
 rules:
-  - name: "sma_crossover"
-    type: "trend"
-    enabled: true
-    signal_type: "buy"  # All rules are buy signals in v1.4
+  - name: "sma_10_20_crossover"
+    type: "sma_crossover"
+    description: "Buy when 10-day SMA crosses above 20-day SMA"
     params:
       fast_period: 10
       slow_period: 20
-  
-  - name: "rsi_oversold"
-    type: "momentum" 
-    enabled: true
-    signal_type: "buy"  # Triggers BUY when RSI < threshold
+    validation:
+      fast_period: {min: 5, max: 50}
+      slow_period: {min: 10, max: 200}
+      constraint: "fast_period < slow_period"
+
+  - name: "rsi_oversold_30"
+    type: "rsi_oversold"
+    description: "Buy when RSI recovers from oversold condition below 30"
     params:
       period: 14
-      oversold_threshold: 30
+      oversold_threshold: 30.0
+    validation:
+      period: {min: 5, max: 50}
+      oversold_threshold: {min: 10.0, max: 40.0}
 
-# Rule combination settings
-max_rule_stack_size: 3
-min_rule_stack_size: 1
+  - name: "ema_12_26_crossover"
+    type: "ema_crossover"
+    description: "Buy when 12-day EMA crosses above 26-day EMA"
+    params:
+      fast_period: 12
+      slow_period: 26
+    validation:
+      fast_period: {min: 5, max: 50}
+      slow_period: {min: 10, max: 200}
+      constraint: "fast_period < slow_period"
 
-# Exit strategy (v1.4 limitation)
-exit_strategy: "time_based_only"  # Future versions will add stop-loss, etc.
+# Default parameters for rules (used when not specified)
+defaults:
+  sma_crossover:
+    fast_period: 10
+    slow_period: 20
+  ema_crossover:
+    fast_period: 12
+    slow_period: 26
+  rsi_oversold:
+    period: 14
+    oversold_threshold: 30.0

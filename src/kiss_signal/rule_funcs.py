@@ -1,74 +1,218 @@
-"""Rule Functions - Technical Indicator and Helper Functions.
+"""Rule Functions - Core Technical Indicator Implementation.
 
-This module provides indicator calculations and rule evaluation helpers.
+This module implements the technical analysis indicators used for signal generation.
+All functions are pure and operate on pandas DataFrames with OHLCV data.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Callable
 
 import pandas as pd
+
+__all__ = [
+    "sma_crossover",
+    "rsi_oversold", 
+    "ema_crossover",
+    "calculate_rsi",
+    "validate_rule_params",
+    "get_rule_function",
+    "RULE_REGISTRY"
+]
 
 logger = logging.getLogger(__name__)
 
 
 def sma_crossover(price_data: pd.DataFrame, fast_period: int = 10, slow_period: int = 20) -> pd.Series:
-    """Calculate SMA crossover buy signals.
+    """Generate buy signals when fast SMA crosses above slow SMA.
     
     Args:
-        price_data: OHLCV DataFrame
-        fast_period: Fast SMA period
-        slow_period: Slow SMA period
+        price_data: DataFrame with OHLCV data (must have 'close' column)
+        fast_period: Period for fast moving average
+        slow_period: Period for slow moving average
         
     Returns:
-        Boolean series where True indicates buy signal
+        Boolean Series with True for buy signals, aligned with price_data index
+        
+    Raises:
+        ValueError: If invalid parameters or insufficient data
     """
-    logger.debug(f"Calculating SMA crossover: {fast_period}/{slow_period}")
-    # TODO: Implement SMA calculation and crossover detection
-    # TODO: Return buy signals when fast SMA crosses above slow SMA
-    return pd.Series(dtype=bool, index=price_data.index)
-
-
-def rsi_oversold(price_data: pd.DataFrame, period: int = 14, oversold_threshold: float = 30.0) -> pd.Series:
-    """Calculate RSI oversold buy signals.
+    if fast_period >= slow_period:
+        raise ValueError(f"fast_period ({fast_period}) must be < slow_period ({slow_period})")
     
-    Args:
-        price_data: OHLCV DataFrame
-        period: RSI calculation period
-        oversold_threshold: RSI level considered oversold
-        
-    Returns:
-        Boolean series where True indicates buy signal
-    """
-    logger.debug(f"Calculating RSI oversold: period={period}, threshold={oversold_threshold}")
-    # TODO: Implement RSI calculation
-    # TODO: Return buy signals when RSI < oversold_threshold
-    return pd.Series(dtype=bool, index=price_data.index)
+    if len(price_data) < slow_period:
+        logger.warning(f"Insufficient data: {len(price_data)} rows, need {slow_period}")
+        return pd.Series(False, index=price_data.index)
+    
+    close_prices = price_data['close']
+    fast_sma = close_prices.rolling(window=fast_period, min_periods=fast_period).mean()
+    slow_sma = close_prices.rolling(window=slow_period, min_periods=slow_period).mean()
+    
+    # Crossover: fast crosses above slow
+    signals = (fast_sma > slow_sma) & (fast_sma.shift(1) <= slow_sma.shift(1))
+    
+    logger.debug(f"SMA crossover signals: {signals.sum()} triggers")
+    return signals.fillna(False)
 
 
 def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
-    """Calculate Relative Strength Index.
+    """Calculate Relative Strength Index (RSI).
     
     Args:
         prices: Price series (typically close prices)
         period: RSI calculation period
         
     Returns:
-        RSI values (0-100)
+        RSI values (0-100 range)
     """
-    # TODO: Implement standard RSI calculation
-    # TODO: Handle edge cases (insufficient data, etc.)
-    return pd.Series(dtype=float, index=prices.index)
+    if len(prices) < period + 1:
+        return pd.Series(float('nan'), index=prices.index)
+    
+    delta = prices.diff()
+    gains = delta.where(delta > 0, 0)
+    losses = -delta.where(delta < 0, 0)
+    
+    # Use exponential smoothing (Wilder's method)
+    alpha = 1.0 / period
+    avg_gains = gains.ewm(alpha=alpha, adjust=False).mean()
+    avg_losses = losses.ewm(alpha=alpha, adjust=False).mean()
+    
+    # Avoid division by zero
+    rs = avg_gains / avg_losses.where(avg_losses != 0, 1e-10)
+    rsi = 100 - (100 / (1 + rs))
+    
+    return rsi
 
 
-def calculate_sma(prices: pd.Series, period: int) -> pd.Series:
-    """Calculate Simple Moving Average.
+def rsi_oversold(price_data: pd.DataFrame, period: int = 14, oversold_threshold: float = 30.0) -> pd.Series:
+    """Generate buy signals when RSI crosses below oversold threshold.
     
     Args:
-        prices: Price series
-        period: SMA period
+        price_data: DataFrame with OHLCV data (must have 'close' column)
+        period: RSI calculation period
+        oversold_threshold: RSI threshold for oversold condition
         
     Returns:
-        SMA values
+        Boolean Series with True for buy signals
     """
-    # TODO: Implement SMA calculation with proper handling
-    return pd.Series(dtype=float, index=prices.index)
+    if len(price_data) < period + 1:
+        logger.warning(f"Insufficient data for RSI: {len(price_data)} rows, need {period + 1}")
+        return pd.Series(False, index=price_data.index)
+    
+    rsi = calculate_rsi(price_data['close'], period)
+    
+    # Signal when RSI crosses below threshold (recovery signal)
+    signals = (rsi < oversold_threshold) & (rsi.shift(1) >= oversold_threshold)
+    
+    logger.debug(f"RSI oversold signals: {signals.sum()} triggers at threshold {oversold_threshold}")
+    return signals.fillna(False)
+
+
+def ema_crossover(price_data: pd.DataFrame, fast_period: int = 10, slow_period: int = 20) -> pd.Series:
+    """Generate buy signals when fast EMA crosses above slow EMA.
+    
+    Args:
+        price_data: DataFrame with OHLCV data (must have 'close' column)
+        fast_period: Period for fast exponential moving average
+        slow_period: Period for slow exponential moving average
+        
+    Returns:
+        Boolean Series with True for buy signals
+    """
+    if fast_period >= slow_period:
+        raise ValueError(f"fast_period ({fast_period}) must be < slow_period ({slow_period})")
+    
+    if len(price_data) < slow_period:
+        logger.warning(f"Insufficient data: {len(price_data)} rows, need {slow_period}")
+        return pd.Series(False, index=price_data.index)
+    
+    close_prices = price_data['close']
+    
+    # Calculate EMAs using pandas exponential smoothing
+    fast_ema = close_prices.ewm(span=fast_period, adjust=False).mean()
+    slow_ema = close_prices.ewm(span=slow_period, adjust=False).mean()
+    
+    # Crossover: fast crosses above slow
+    signals = (fast_ema > slow_ema) & (fast_ema.shift(1) <= slow_ema.shift(1))
+    
+    logger.debug(f"EMA crossover signals: {signals.sum()} triggers")
+    return signals.fillna(False)
+
+
+def validate_rule_params(rule_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate rule parameters against expected ranges.
+    
+    Args:
+        rule_type: Type of rule (e.g., 'sma_crossover')
+        params: Rule parameters to validate
+        
+    Returns:
+        Validated parameters with defaults applied
+        
+    Raises:
+        ValueError: If parameters are invalid
+    """
+    validation_rules = {
+        'sma_crossover': {
+            'fast_period': {'type': int, 'min': 2, 'max': 50, 'default': 10},
+            'slow_period': {'type': int, 'min': 5, 'max': 200, 'default': 20}
+        },
+        'rsi_oversold': {
+            'period': {'type': int, 'min': 2, 'max': 50, 'default': 14},
+            'oversold_threshold': {'type': (int, float), 'min': 10, 'max': 40, 'default': 30.0}
+        },
+        'ema_crossover': {
+            'fast_period': {'type': int, 'min': 2, 'max': 50, 'default': 10},
+            'slow_period': {'type': int, 'min': 5, 'max': 200, 'default': 20}
+        }    }
+    
+    if rule_type not in validation_rules:
+        raise ValueError(f"Unknown rule type: {rule_type}")
+    
+    rules = validation_rules[rule_type]
+    validated_params = {}
+    for param_name, constraints in rules.items():
+        value = params.get(param_name, constraints['default'])
+        # Type check
+        expected_type = constraints['type']
+        # Cast to proper type for isinstance check
+        if not isinstance(value, expected_type):  # type: ignore[arg-type]
+            raise ValueError(f"Parameter {param_name} must be {expected_type}, got {type(value)}")
+        
+        # Range check
+        if value < constraints['min'] or value > constraints['max']:
+            raise ValueError(f"Parameter {param_name} must be between {constraints['min']} and {constraints['max']}")
+        
+        validated_params[param_name] = value
+    
+    # Additional logical validation
+    if rule_type in ('sma_crossover', 'ema_crossover'):
+        if validated_params['fast_period'] >= validated_params['slow_period']:
+            raise ValueError("fast_period must be less than slow_period")
+    
+    return validated_params
+
+
+# Rule registry mapping rule types to functions
+RULE_REGISTRY: Dict[str, Callable[..., pd.Series]] = {
+    'sma_crossover': sma_crossover,
+    'rsi_oversold': rsi_oversold,
+    'ema_crossover': ema_crossover,
+}
+
+
+def get_rule_function(rule_type: str) -> Callable[..., pd.Series]:
+    """Get rule function by type name.
+    
+    Args:
+        rule_type: Type of rule to retrieve
+        
+    Returns:
+        Rule function
+        
+    Raises:
+        ValueError: If rule type is not registered
+    """
+    if rule_type not in RULE_REGISTRY:
+        raise ValueError(f"Unknown rule type: {rule_type}. Available: {list(RULE_REGISTRY.keys())}")
+    
+    return RULE_REGISTRY[rule_type]

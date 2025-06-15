@@ -4,10 +4,13 @@ This module generates buy signals based on rule combinations and manages signal 
 """
 
 import logging
-from typing import Dict, List, Optional, Any
-from datetime import date
+from typing import Dict, List, Any
 
 import pandas as pd
+
+from .rule_funcs import get_rule_function, validate_rule_params
+
+__all__ = ["SignalGenerator"]
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +41,7 @@ class SignalGenerator:
         Returns:
             DataFrame with signal timestamps and metadata
         """
-        logger.info(f"Generating signals for {symbol} using rules: {rule_stack}")
-        # TODO: Implement rule evaluation logic
+        logger.info(f"Generating signals for {symbol} using rules: {rule_stack}")        # TODO: Implement rule evaluation logic
         # TODO: Combine multiple rules (AND logic)
         # TODO: Generate buy signals when all rules trigger
         # TODO: Add time-based sell signals after hold_period
@@ -56,6 +58,26 @@ class SignalGenerator:
             Boolean series indicating rule trigger points
         """
         logger.debug(f"Evaluating rule: {rule_name}")
-        # TODO: Implement individual rule evaluation
-        # TODO: Support SMA crossover, RSI oversold, etc.
-        return pd.Series(dtype=bool)
+        
+        # Find rule configuration
+        rule_config = None
+        for rule in self.rules_config.get('rules', []):
+            if rule['name'] == rule_name:
+                rule_config = rule
+                break
+        
+        if not rule_config:
+            raise ValueError(f"Rule not found: {rule_name}")
+        
+        rule_type = rule_config['type']
+        rule_params = rule_config.get('params', {})
+        
+        # Validate parameters
+        validated_params = validate_rule_params(rule_type, rule_params)
+        
+        # Get and execute rule function
+        rule_function = get_rule_function(rule_type)
+        signals = rule_function(price_data, **validated_params)
+        
+        logger.debug(f"Rule {rule_name} generated {signals.sum()} signals")
+        return signals
