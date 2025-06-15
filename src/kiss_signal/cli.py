@@ -8,30 +8,12 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from .config import load_config
+from .config import Config, load_config
 
 app = typer.Typer()
 
 logger = logging.getLogger(__name__)
 console = Console()
-
-
-def resolve_config_path(config_path: str = "config.yaml") -> str:
-    """Resolve config path relative to project root or current directory."""
-    config_file = Path(config_path)
-    
-    # First try current directory
-    if config_file.exists():
-        return str(config_file)
-    
-    # Try project root (3 levels up from cli.py: src/kiss_signal/cli.py -> project_root)
-    project_root = Path(__file__).parent.parent.parent
-    project_config = project_root / config_path
-    if project_config.exists():
-        return str(project_config)
-    
-    # Return original path for proper error handling
-    return config_path
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -53,33 +35,44 @@ def show_banner() -> None:
 
 
 @app.command()
-def main(
+def run(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
-    freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)")
+    freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)"),
+    config_file: str = typer.Option(
+        "config.yaml", "--config", help="Path to the configuration file."
+    ),
 ) -> None:
-    """QuickEdge: KISS Signal CLI - Keep-It-Simple Signal Generation for NSE Equities."""
+    """Run the KISS Signal pipeline: load config and print a success message."""
+    # Initialize logging first
     setup_logging(verbose)
+    
+    # Create a local logger instance
+    local_logger = logging.getLogger(__name__)
+    
+    # Show banner
     show_banner()
     
+    local_logger.debug(
+        "Running CLI run command with verbose=%s, freeze_data=%s, config_file=%s",
+        verbose,
+        freeze_data,
+        config_file,
+    )
+
     try:
-        # Step 1: Loading configuration
-        console.print("🔧 Loading configuration...", style="yellow")
-        config_path = resolve_config_path()
-        config = load_config(config_path)
-        logger.info("Configuration loaded successfully")
-        
-        # Step 2-6: Placeholder steps
-        console.print("✅ Validating universe data...", style="green")
-        console.print("🚀 Initializing data manager...", style="blue")
-        console.print("📊 Setting up backtester...", style="cyan")
-        console.print("🎯 Preparing signal generator...", style="magenta")
+        config_path = Path(config_file)
+        if not config_path.exists():
+            console.print(f"❌ Error: Configuration file not found: {config_file}", style="bold red")
+            local_logger.error(f"Configuration file not found: {config_file}")
+            raise typer.Exit(1)
+        console.print(f"🔧 Loading configuration from [cyan]{config_file}[/cyan]...", style="yellow")
+        config: Config = load_config(config_path)
+        local_logger.info("Configuration and rules loaded successfully")
         console.print("🎉 Foundation setup complete!", style="bold green")
-        
-        logger.info("Pipeline completed successfully")
-        
+        local_logger.info("Pipeline completed successfully")
     except Exception as e:
         console.print(f"❌ Error: {e}", style="bold red")
-        logger.error(f"Pipeline failed: {e}")
+        local_logger.error(f"Pipeline failed: {e}", exc_info=verbose)
         raise typer.Exit(1)
 
 

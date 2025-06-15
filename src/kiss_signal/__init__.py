@@ -4,7 +4,6 @@ __version__ = "1.4.0"
 __author__ = "KISS Signal Team"
 
 # Re-export main classes for convenience
-from .config import Config, EdgeScoreWeights
-from .cli import app
+from .config import Config
 
-__all__ = ["Config", "EdgeScoreWeights", "app", "__version__"]
+__all__ = ["Config", "__version__"]

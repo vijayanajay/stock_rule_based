@@ -50,3 +50,6 @@ run_mypy.bat
 setup_dev.bat
 docs/mypy_setup.md
 .memory-bank/stock_rule_based/memory.md
+src/kiss_signal/__init__.py
+quickedge.bat
+README.md

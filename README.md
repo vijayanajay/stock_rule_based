@@ -1,18 +1,31 @@
-# MEQSAP - Market Equity Quantitative Strategy Analysis Platform
+# KISS Signal CLI - Keep-It-Simple Signal Generation for NSE Equities
 
-A comprehensive platform for backtesting quantitative trading strategies using historical market data. MEQSAP provides robust data acquisition, signal generation, backtesting, and reporting capabilities with a user-friendly command-line interface.
+A streamlined tool for backtesting and generating trading signals for Indian equities. KISS Signal provides robust data acquisition, signal generation, backtesting, and reporting capabilities with a simple command-line interface.
 
-## Installation
+## Getting Started
 
-### Option 1: Development Installation (Recommended)
+### Dependencies Installation
+First, install the required dependencies:
 ```bash
-pip install -e .
+pip install -r requirements.txt
 ```
 
-### Option 2: Direct Usage (No Installation Required)
-You can run MEQSAP directly from the project root using the provided `run.py` script:
-```bash
-python run.py --help
+### Running the Application
+Run KISS Signal directly using the provided scripts:
+
+#### On Windows:
+```cmd
+quickedge run
+```
+or
+```cmd
+python run.py run
+```
+
+#### Common Options:
+```cmd
+python run.py run --verbose --freeze-data 2025-06-15
+python run.py run --config custom_config.yaml --rules custom_rules.yaml
 ```
 
 ## Quick Start

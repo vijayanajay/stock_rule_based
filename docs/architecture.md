@@ -34,6 +34,12 @@ The **only interaction** is the user running:
 quickedge run [--verbose] [--freeze-data YYYY-MM-DD]
 ```
 
+Or directly with Python:
+
+```bash
+python run.py run [--verbose] [--freeze-data YYYY-MM-DD]
+```
+
 A frozen-data flag pins the run to a deterministic snapshot if the user wants repeatability.  
 This project is deliberately **not** intended for cron jobs, CI pipelines, or multi-user concurrency.
 
