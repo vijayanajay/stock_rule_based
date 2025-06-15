@@ -1,10 +1,11 @@
 # Story 002: Data Manager & NSE Data Fetching
 
-**Status:** InProgress  
+**Status:** ✅ Complete  
 **Estimated Story Points:** 8  
 **Priority:** High (Blocks all backtesting work)  
 **Created:** 2025-06-15  
-**Prerequisites:** Story 001 (Project Foundation) ✅ Complete  
+**Completed:** 2025-06-16  
+**Prerequisites:** Story 001 (Project Foundation) ✅ Complete
 
 ## User Story
 As a technical trader, I want the data manager to automatically fetch and cache NSE equity price data so that I can run backtesting and signal generation with up-to-date market data.
