@@ -4,8 +4,7 @@ This module handles all terminal output formatting using Rich components.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
-from datetime import date
+from typing import Dict, List, Any
 
 from rich.console import Console
 from rich.table import Table
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Reporter:
     """Handles Rich-formatted terminal output and reports."""
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the reporter with Rich console."""
         self.console = Console()
         logger.debug("Reporter initialized with Rich console")
