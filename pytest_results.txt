@@ -4,21 +4,49 @@ cachedir: .pytest_cache
 rootdir: d:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
-collecting ... collected 13 items
+collecting ... collected 41 items
 
-tests/test_cli.py::test_cli_import PASSED                                [  7%]
-tests/test_cli.py::test_help_command PASSED                              [ 15%]
-tests/test_cli.py::test_run_command_basic PASSED                         [ 23%]
-tests/test_cli.py::test_run_command_verbose PASSED                       [ 30%]
-tests/test_cli.py::test_run_command_freeze_date PASSED                   [ 38%]
-tests/test_cli.py::test_run_command_no_config PASSED                     [ 46%]
-tests/test_config.py::test_edge_score_weights_valid PASSED               [ 53%]
-tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 61%]
-tests/test_config.py::test_config_validation PASSED                      [ 69%]
-tests/test_config.py::test_load_config PASSED                            [ 76%]
-tests/test_config.py::test_load_config_missing_file PASSED               [ 84%]
-tests/test_config.py::test_load_config_empty_file PASSED                 [ 92%]
-tests/test_data_manager.py::test_data_manager_initialization PASSED      [100%]
+tests/test_cli.py::test_cli_import PASSED                                [  2%]
+tests/test_cli.py::test_help_command PASSED                              [  4%]
+tests/test_cli.py::test_run_command_basic PASSED                         [  7%]
+tests/test_cli.py::test_run_command_verbose PASSED                       [  9%]
+tests/test_cli.py::test_run_command_freeze_date PASSED                   [ 12%]
+tests/test_cli.py::test_run_command_success PASSED                       [ 14%]
+tests/test_cli.py::test_run_command_with_freeze_date PASSED              [ 17%]
+tests/test_cli.py::test_run_command_invalid_freeze_date PASSED           [ 19%]
+tests/test_cli.py::test_run_command_no_config PASSED                     [ 21%]
+tests/test_cli.py::test_run_command_missing_rules PASSED                 [ 24%]
+tests/test_config.py::test_edge_score_weights_valid PASSED               [ 26%]
+tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 29%]
+tests/test_config.py::test_config_validation PASSED                      [ 31%]
+tests/test_config.py::test_load_config PASSED                            [ 34%]
+tests/test_config.py::test_load_config_missing_file PASSED               [ 36%]
+tests/test_config.py::TestConfig::test_config_defaults PASSED            [ 39%]
+tests/test_config.py::TestConfig::test_config_validation_historical_years PASSED [ 41%]
+tests/test_config.py::TestConfig::test_config_validation_cache_refresh_days PASSED [ 43%]
+tests/test_config.py::TestConfig::test_config_universe_path_validation PASSED [ 46%]
+tests/test_config.py::TestConfig::test_config_freeze_date PASSED         [ 48%]
+tests/test_config.py::TestLoadConfig::test_load_config_success PASSED    [ 51%]
+tests/test_config.py::TestLoadConfig::test_load_config_missing_file PASSED [ 53%]
+tests/test_config.py::TestLoadConfig::test_load_config_invalid_yaml PASSED [ 56%]
+tests/test_config.py::TestLoadConfig::test_load_config_with_freeze_date PASSED [ 58%]
+tests/test_data_manager.py::TestDataManager::test_init PASSED            [ 60%]
+tests/test_data_manager.py::TestDataManager::test_load_universe PASSED   [ 63%]
+tests/test_data_manager.py::TestDataManager::test_load_universe_missing_file PASSED [ 65%]
+tests/test_data_manager.py::TestDataManager::test_load_universe_malformed PASSED [ 68%]
+tests/test_data_manager.py::TestDataManager::test_cache_metadata_operations PASSED [ 70%]
+tests/test_data_manager.py::TestDataManager::test_needs_refresh PASSED   [ 73%]
+tests/test_data_manager.py::TestDataManager::test_add_ns_suffix PASSED   [ 75%]
+tests/test_data_manager.py::TestDataManager::test_validate_data_quality PASSED [ 78%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success PASSED [ 80%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure PASSED [ 82%]
+tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache PASSED [ 85%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering PASSED [ 87%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date PASSED [ 90%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache PASSED [ 92%]
+tests/test_data_manager.py::TestDataManager::test_refresh_market_data PASSED [ 95%]
+tests/test_data_manager.py::TestDataManagerConfiguration::test_freeze_date_integration PASSED [ 97%]
+tests/test_data_manager.py::TestDataManagerConfiguration::test_custom_cache_refresh_days PASSED [100%]
 
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
@@ -28,13 +56,13 @@ Name                                  Stmts   Miss  Cover
 src\kiss_signal\__init__.py               4      0   100%
 src\kiss_signal\_version.py              13     13     0%
 src\kiss_signal\backtester.py            17     17     0%
-src\kiss_signal\cli.py                   39      1    97%
-src\kiss_signal\config.py                35      1    97%
-src\kiss_signal\data_manager.py          17      4    76%
+src\kiss_signal\cli.py                   84     14    83%
+src\kiss_signal\config.py                45      1    98%
+src\kiss_signal\data_manager.py         164     27    84%
 src\kiss_signal\persistence.py           19     19     0%
 src\kiss_signal\reporter.py              25     25     0%
 src\kiss_signal\rule_funcs.py            14     14     0%
 src\kiss_signal\signal_generator.py      16     16     0%
 ---------------------------------------------------------
-TOTAL                                   199    110    45%
-============================= 13 passed in 4.94s ==============================
+TOTAL                                   401    146    64%
+============================= 41 passed in 3.94s ==============================

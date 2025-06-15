@@ -70,3 +70,28 @@
 **Prevention**: Always adhere to established testing patterns within a project. For file-based `typer`/`click` CLIs, prefer `runner.isolated_filesystem()` to create hermetic tests that are robust and easy to understand. Ensure tests respect the type contracts of the functions they call.
 
 ---
+
+### Cascading Failures from Brittle Config and Flawed Test Architecture (2025-06-16)
+**Issue**: Widespread, cascading test failures across `test_cli.py`, `test_config.py`, and `test_data_manager.py`. The root causes were interconnected structural issues, not simple logic errors.
+**Root Cause**:
+1.  **Brittle Pydantic Model**: The `Config` model in `config.py` was not synchronized with `config.yaml` (it was missing fields like `hold_period`) and had mandatory nested fields (`EdgeScoreWeights`) without defaults. This made it intolerant to partial configs and difficult to instantiate in tests, causing validation errors.
+2.  **Incorrect Mocking Strategy**: `test_data_manager.py` tried to patch a deferred (in-function) import (`yfinance`) at the module level. This is structurally incorrect as the name doesn't exist in the module's namespace, causing `AttributeError` during test collection.
+3.  **Non-Hermetic CLI Tests**: `test_cli.py` tests were not properly isolated. They failed to create all necessary file dependencies (like the universe CSV) within the `isolated_filesystem`, and they attempted to make real network calls via the `DataManager`, violating the principle of hermetic testing.
+**Fix**:
+1.  **Robust Config Model**: The `Config` model was updated to include all fields from the YAML file and provided a `default_factory` for the nested `EdgeScoreWeights`. This makes the model resilient and easier to work with. The `load_config` function was also hardened to explicitly reject empty files.
+2.  **Correct Mocking**: The data manager tests were fixed to patch the `yfinance.Ticker` class directly, which is the correct pattern for mocking a dependency that is imported inside a function.
+3.  **Hermetic CLI Tests**: The CLI tests were refactored to be fully hermetic. The `DataManager` is now mocked to prevent network calls, and the tests create a complete, self-contained file environment (`config.yaml`, `rules.yaml`, universe file) for the CLI to run against.
+**Prevention**:
+1.  Design Pydantic models to be robust by providing sensible defaults, especially for nested models, to simplify testing and instantiation.
+2.  When mocking, always target the object where it is looked up. For deferred imports, this usually means patching the source library (e.g., `yfinance.Ticker`) rather than a local alias.
+3.  Integration tests for CLI commands must be hermetic. Mock all external interactions (network, databases) and use filesystem fixtures to create a fully controlled environment.
+
+---
+
+### Non-Hermetic Tests Causing Prerequisite Failures (2025-06-16)
+**Issue**: Multiple CLI tests in `test_cli.py` were failing with `ValidationError` on `universe_path`, even when the test was intended to check for a different condition (e.g., a missing `rules.yaml`).
+**Root Cause**: A structural flaw in the test design. The tests used `runner.isolated_filesystem()` but failed to create a *hermetic* (self-contained) environment. They created a `config.yaml` but neglected to also create the `universe.csv` file that the config pointed to. This caused Pydantic's validation to fail on the missing universe file *before* the CLI could proceed to the logic the test was actually trying to validate (like checking for `rules.yaml`).
+**Fix**: Refactored all failing CLI tests to be fully hermetic. Each test now creates all necessary file dependencies (e.g., `config.yaml`, `rules.yaml`, and a dummy `universe.csv`) within the `isolated_filesystem` context. This ensures that prerequisite checks pass, allowing the test to correctly target and validate its intended behavior. External network calls from `DataManager` were also mocked to ensure tests are fast and reliable.
+**Prevention**: When testing components that interact with the filesystem, especially within an isolated context, ensure the test setup is hermetic. Create *all* file dependencies that the code under test will access during its execution path. This prevents unrelated, prerequisite errors from masking the true test condition and creates more robust, reliable, and easier-to-debug tests.
+
+---

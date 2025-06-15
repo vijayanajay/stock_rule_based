@@ -3,57 +3,366 @@
 This module handles downloading, caching, and serving market data for NSE equities.
 """
 
+import json
 import logging
-from datetime import datetime, date
-from typing import Dict, List, Optional, Any
+import time
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from typing import Dict, List, Optional
 
 import pandas as pd
+from rich.console import Console
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+
+# Defer yfinance import to avoid startup cost
+# import yfinance as yf
+
+__all__ = ["DataManager"]
 
 logger = logging.getLogger(__name__)
 
 
 class DataManager:
-    """Manages NSE market data fetching, caching, and serving."""
+    """Manages NSE equity price data fetching and caching."""
     
-    def __init__(self, cache_dir: Path = Path("data"), freeze_date: Optional[date] = None):
-        """Initialize the data manager.
+    def __init__(
+        self,
+        universe_path: str,
+        cache_dir: str = "data/cache",
+        historical_years: int = 3,
+        cache_refresh_days: int = 7,
+        freeze_date: Optional[date] = None,
+        console: Optional[Console] = None
+    ) -> None:
+        """Initialize data manager.
         
         Args:
-            cache_dir: Directory for caching market data
-            freeze_date: Optional date to freeze data for backtesting
+            universe_path: Path to universe CSV file
+            cache_dir: Directory for cached data files
+            historical_years: Years of historical data to fetch
+            cache_refresh_days: Days before cache refresh
+            freeze_date: Optional freeze date for backtesting
+            console: Rich console for progress display
         """
-        self.cache_dir = cache_dir
+        self.universe_path = Path(universe_path)
+        self.cache_dir = Path(cache_dir)
+        self.historical_years = historical_years
+        self.cache_refresh_days = cache_refresh_days
         self.freeze_date = freeze_date
-        logger.info(f"DataManager initialized with cache_dir={cache_dir}")
+        self.console = console or Console()
+          # Ensure cache directory exists
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        self._metadata_path = self.cache_dir / "cache_metadata.json"
     
-    def refresh_market_data(self, symbols: List[str]) -> bool:
-        """Download and cache latest market data for given symbols.
+    def _load_universe(self) -> List[str]:
+        """Load universe symbols from CSV file.
+        
+        Returns:
+            List of symbols from universe file
+            
+        Raises:
+            FileNotFoundError: If universe file doesn't exist
+            ValueError: If universe file is malformed        """
+        try:
+            df = pd.read_csv(self.universe_path)
+            if 'symbol' not in df.columns:
+                raise ValueError("Universe file missing 'symbol' column")
+            
+            symbols: list[str] = df['symbol'].astype(str).tolist()
+            logger.info(f"Loaded {len(symbols)} symbols from universe")
+            return symbols
+        except Exception as e:
+            logger.error(f"Failed to load universe file: {e}")
+            raise
+    
+    def _load_cache_metadata(self) -> Dict[str, str]:
+        """Load cache metadata from JSON file.
+        
+        Returns:
+            Dictionary mapping symbol -> last_update timestamp
+        """
+        if not self._metadata_path.exists():
+            return {}
+        
+        try:
+            with open(self._metadata_path, 'r') as f:
+                result: dict[str, str] = json.load(f)
+                return result
+        except Exception as e:
+            logger.warning(f"Failed to load cache metadata: {e}")
+            return {}
+    
+    # impure
+    def _save_cache_metadata(self, metadata: Dict[str, str]) -> None:
+        """Save cache metadata to JSON file.
         
         Args:
-            symbols: List of NSE symbols to fetch data for
+            metadata: Dictionary mapping symbol -> last_update timestamp
+        """
+        try:
+            with open(self._metadata_path, 'w') as f:
+                json.dump(metadata, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save cache metadata: {e}")
+    
+    def _needs_refresh(self, symbol: str, metadata: Dict[str, str]) -> bool:
+        """Check if symbol data needs refresh.
+        
+        Args:
+            symbol: Symbol to check
+            metadata: Cache metadata dictionary
             
         Returns:
-            True if data refresh successful, False otherwise
+            True if symbol needs refresh
         """
-        logger.info(f"Refreshing market data for {len(symbols)} symbols")
-        # TODO: Implement yfinance-based data fetching
-        # TODO: Add proper error handling and retry logic
-        # TODO: Implement freeze_date support for backtesting
+        if symbol not in metadata:
+            return True
+        
+        try:
+            last_update = datetime.fromisoformat(metadata[symbol])
+            cutoff = datetime.now() - timedelta(days=self.cache_refresh_days)
+            return last_update < cutoff
+        except (ValueError, KeyError):
+            return True
+    
+    def _add_ns_suffix(self, symbol: str) -> str:
+        """Add .NS suffix for yfinance compatibility.
+        
+        Args:
+            symbol: NSE symbol
+            
+        Returns:
+            Symbol with .NS suffix
+        """
+        return f"{symbol}.NS" if not symbol.endswith('.NS') else symbol
+    
+    # impure
+    def _fetch_symbol_data(self, symbol: str) -> Optional[pd.DataFrame]:
+        """Fetch data for single symbol using yfinance.
+        
+        Args:
+            symbol: Symbol to fetch (with .NS suffix)
+            
+        Returns:
+            DataFrame with OHLCV data or None if failed
+        """
+        # Import yfinance here to avoid startup cost
+        import yfinance as yf
+        
+        try:
+            end_date = self.freeze_date or date.today()
+            start_date = end_date - timedelta(days=self.historical_years * 365)
+            
+            ticker = yf.Ticker(symbol)
+            data = ticker.history(start=start_date, end=end_date, auto_adjust=True)
+            
+            if data.empty:
+                logger.warning(f"No data returned for {symbol}")
+                return None
+            
+            # Standardize column names and format
+            data = data.reset_index()
+            data.columns = [col.lower() for col in data.columns]
+            
+            required_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
+            if not all(col in data.columns for col in required_columns):
+                logger.error(f"Missing required columns for {symbol}")
+                return None
+            
+            # Select and order columns
+            data = data[required_columns].copy()
+            
+            # Ensure proper data types
+            data['date'] = pd.to_datetime(data['date'])
+            for col in ['open', 'high', 'low', 'close']:
+                data[col] = data[col].astype('float64')
+            data['volume'] = data['volume'].astype('int64')
+            
+            return data
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch data for {symbol}: {e}")
+            return None
+    
+    def _validate_data_quality(self, data: pd.DataFrame, symbol: str) -> bool:
+        """Validate data quality for a symbol.
+        
+        Args:
+            data: DataFrame to validate
+            symbol: Symbol name for logging
+            
+        Returns:
+            True if data passes quality checks
+        """
+        if data.empty:
+            logger.warning(f"Empty data for {symbol}")
+            return False
+        
+        # Check for negative prices
+        price_cols = ['open', 'high', 'low', 'close']
+        negative_prices = (data[price_cols] < 0).any().any()
+        if negative_prices:
+            logger.warning(f"Negative prices detected for {symbol}")
+        
+        # Check for zero volume days
+        zero_volume_days = (data['volume'] == 0).sum()
+        if zero_volume_days > len(data) * 0.1:  # More than 10% zero volume
+            logger.warning(f"High zero-volume days for {symbol}: {zero_volume_days}")
+        
+        # Check for large data gaps
+        data_sorted = data.sort_values('date')
+        date_diffs = data_sorted['date'].diff().dt.days
+        max_gap = date_diffs.max()
+        if max_gap > 5:  # More than 5 days gap
+            logger.warning(f"Large data gap detected for {symbol}: {max_gap} days")
+        
         return True
     
-    def get_price_data(self, symbol: str, start_date: date, end_date: date) -> pd.DataFrame:
-        """Get cached price data for symbol within date range.
+    # impure
+    def _save_symbol_cache(self, symbol: str, data: pd.DataFrame) -> bool:
+        """Save symbol data to cache file.
         
         Args:
-            symbol: NSE symbol (e.g., 'RELIANCE.NS')
-            start_date: Start date for data
-            end_date: End date for data
+            symbol: Symbol name (without .NS suffix)
+            data: DataFrame to save
             
         Returns:
-            DataFrame with OHLCV data
+            True if save successful
         """
-        logger.debug(f"Getting price data for {symbol}: {start_date} to {end_date}")
-        # TODO: Implement cache lookup and data serving
-        # TODO: Add data validation and cleaning
-        return pd.DataFrame()
+        cache_file = self.cache_dir / f"{symbol}.NS.csv"
+        
+        try:
+            data.to_csv(cache_file, index=False)
+            logger.debug(f"Saved cache for {symbol}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save cache for {symbol}: {e}")
+            return False
+    
+    # impure
+    def refresh_market_data(self, symbols: Optional[List[str]] = None) -> Dict[str, bool]:
+        """Fetch latest data for symbols with intelligent caching.
+        
+        Args:
+            symbols: Optional list of symbols to refresh. If None, loads from universe.
+            
+        Returns:
+            Dict mapping symbol -> success status
+        """
+        if symbols is None:
+            symbols = self._load_universe()
+        
+        metadata = self._load_cache_metadata()
+        
+        # Filter symbols that need refresh
+        symbols_to_fetch = [
+            symbol for symbol in symbols 
+            if self._needs_refresh(symbol, metadata)
+        ]
+        
+        if not symbols_to_fetch:
+            logger.info("All symbols are fresh, no refresh needed")
+            return {symbol: True for symbol in symbols}
+        
+        logger.info(f"Refreshing {len(symbols_to_fetch)} of {len(symbols)} symbols")
+        
+        results = {}
+        updated_metadata = metadata.copy()
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            console=self.console
+        ) as progress:
+            
+            task = progress.add_task(
+                f"Fetching data for {len(symbols_to_fetch)} symbols...",
+                total=len(symbols_to_fetch)
+            )
+            
+            for symbol in symbols_to_fetch:
+                symbol_with_suffix = self._add_ns_suffix(symbol)
+                
+                # Fetch data with retry logic
+                data = None
+                for attempt in range(3):  # Max 3 retries
+                    data = self._fetch_symbol_data(symbol_with_suffix)
+                    if data is not None:
+                        break
+                    
+                    if attempt < 2:  # Don't sleep on final attempt
+                        time.sleep(2 ** attempt)  # Exponential backoff
+                
+                if data is not None and self._validate_data_quality(data, symbol):
+                    success = self._save_symbol_cache(symbol, data)
+                    if success:
+                        updated_metadata[symbol] = datetime.now().isoformat()
+                    results[symbol] = success
+                else:
+                    results[symbol] = False
+                
+                progress.advance(task)
+        
+        # Save updated metadata
+        self._save_cache_metadata(updated_metadata)
+        
+        successful = sum(1 for success in results.values() if success)
+        logger.info(f"Successfully refreshed {successful}/{len(symbols_to_fetch)} symbols")
+        
+        return results
+    
+    def get_price_data(
+        self, 
+        symbol: str, 
+        start_date: Optional[date] = None, 
+        end_date: Optional[date] = None
+    ) -> pd.DataFrame:
+        """Serve price data from cache with validation.
+        
+        Args:
+            symbol: Symbol to fetch (without .NS suffix)
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+            
+        Returns:
+            Standardized DataFrame with date index and OHLCV columns
+            
+        Raises:
+            FileNotFoundError: If cached data not found
+            ValueError: If data is corrupted or invalid
+        """
+        cache_file = self.cache_dir / f"{symbol}.NS.csv"
+        
+        if not cache_file.exists():
+            raise FileNotFoundError(f"Cached data not found for {symbol}")
+        
+        try:
+            data = pd.read_csv(cache_file)
+            data['date'] = pd.to_datetime(data['date'])
+            
+            # Apply date filtering
+            if start_date:
+                data = data[data['date'] >= pd.to_datetime(start_date)]
+            
+            if end_date:
+                data = data[data['date'] <= pd.to_datetime(end_date)]
+            
+            # Apply freeze date restriction
+            if self.freeze_date:
+                data = data[data['date'] <= pd.to_datetime(self.freeze_date)]
+            
+            # Set date as index
+            data = data.set_index('date').sort_index()
+            
+            if data.empty:
+                raise ValueError(f"No data available for {symbol} in requested date range")
+            
+            logger.debug(f"Served {len(data)} rows for {symbol}")
+            return data
+            
+        except Exception as e:
+            logger.error(f"Failed to load cached data for {symbol}: {e}")
+            raise ValueError(f"Corrupted cache data for {symbol}") from e

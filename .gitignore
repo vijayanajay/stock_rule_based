@@ -53,3 +53,4 @@ docs/mypy_setup.md
 src/kiss_signal/__init__.py
 quickedge.bat
 README.md
+.memory-bank/
