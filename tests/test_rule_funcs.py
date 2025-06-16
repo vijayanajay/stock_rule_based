@@ -6,14 +6,16 @@ Tests all technical indicator functions with known data sets and edge cases.
 import pandas as pd
 import pytest
 
-from kiss_signal.rule_funcs import (
+from kiss_signal.rules import (
     sma_crossover,
     rsi_oversold, 
     ema_crossover,
     calculate_rsi,
+)
+from kiss_signal.config import (
     validate_rule_params,
     get_rule_function,
-    RULE_REGISTRY
+    RULE_REGISTRY,
 )
 
 

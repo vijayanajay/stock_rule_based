@@ -151,6 +151,117 @@ def backtest(data_source: DataSource, symbol: str):
     # Rest of backtest logic
 ```
 
+## CLI and Architecture Antipatterns
+
+### 6. CLI Fat Orchestration
+**Problem**: CLI commands contain complex business logic and orchestration
+**Impact**: Hard to test business logic, CLI becomes bloated, poor separation of concerns
+**Solution**:
+- Keep CLI thin - only handle user interface concerns
+- Delegate complex logic to dedicated engine/service modules
+- Use dependency injection to pass dependencies to business logic
+
+```python
+# WRONG ❌
+@app.command()
+def run(config: str, rules: str):
+    # 50+ lines of config loading, data setup, analysis, etc.
+    config_path = Path(config)
+    app_config = load_config(config_path)
+    data_manager = DataManager(...)
+    results = data_manager.refresh_market_data()
+    # ... more complex logic ...
+
+# BETTER ✅
+@app.command()
+def run(config: str, rules: str):
+    try:
+        app_config = load_app_config(Path(config), Path(rules))
+        console.print("[1/2] Configuration loaded.")
+        
+        console.print("[2/2] Running analysis...")
+        signals = run_analysis(app_config)
+        
+        # Simple output formatting only
+        console.print("✨ Analysis complete.")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+```
+
+### 7. Inconsistent Test Mocking Strategies
+**Problem**: Tests mock at different levels (module vs class vs function) inconsistently
+**Impact**: Brittle tests, unclear test boundaries, difficult maintenance
+**Solution**:
+- Mock at the appropriate boundary - typically the module's public API
+- Be consistent with mocking strategy across similar tests
+- Update tests when refactoring changes the mocking surface
+
+```python
+# WRONG ❌ - Mocking removed dependencies
+with patch("kiss_signal.cli.DataManager.refresh_market_data"):
+    # This will fail after refactoring removes DataManager from CLI
+
+# BETTER ✅ - Mock the current interface
+with patch("kiss_signal.cli.run_analysis") as mock_analysis:
+    mock_analysis.return_value = {"refresh_results": {}, "signals": []}
+    # Test continues to work after refactoring
+```
+
+### 8. Function Signature Changes Without Parameter Updates
+**Problem**: Renaming or extending functions without updating all call sites
+**Impact**: Breaking changes, undefined behavior, hard-to-trace bugs
+**Solution**:
+- Use automated refactoring tools when possible
+- Maintain backward compatibility with deprecated parameters
+- Update all imports and usage consistently
+
+```python
+# WRONG ❌ - Breaking change
+def load_config(config_path: Path) -> Config:  # Old signature
+    # implementation
+
+def load_app_config(config_path: Path, rules_path: Path) -> Config:  # New signature
+    # implementation
+
+# BETTER ✅ - Backward compatible transition
+def load_app_config(config_path: Path, rules_path: Optional[Path] = None) -> Config:
+    """New unified config loader"""
+    # implementation
+
+def load_config(config_path: Path) -> Config:
+    """Deprecated: Use load_app_config instead"""
+    warnings.warn("load_config is deprecated, use load_app_config", DeprecationWarning)
+    return load_app_config(config_path)
+```
+
+### 9. Missing Freeze Date Propagation
+**Problem**: CLI accepts freeze_date parameter but doesn't pass it to engine/config
+**Impact**: Feature silently doesn't work, inconsistent behavior
+**Solution**:
+- Ensure parameters flow through the entire call chain
+- Add validation that critical parameters are properly propagated
+- Test parameter propagation explicitly
+
+```python
+# WRONG ❌ - Parameter not propagated
+@app.command()
+def run(freeze_data: Optional[str] = None):
+    freeze_date = date.fromisoformat(freeze_data) if freeze_data else None
+    config = load_app_config(Path(config), Path(rules))
+    # freeze_date is lost here!
+    signals = run_analysis(config)
+
+# BETTER ✅ - Proper parameter flow
+@app.command()
+def run(freeze_data: Optional[str] = None):
+    freeze_date = date.fromisoformat(freeze_data) if freeze_data else None
+    config = load_app_config(Path(config), Path(rules))
+    if freeze_date:
+        config.freeze_date = freeze_date  # Ensure propagation
+    signals = run_analysis(config)
+```
+
 ## Code Quality Antipatterns
 
 ### 1. Missing Type Annotations
@@ -176,6 +287,26 @@ def backtest(data_source: DataSource, symbol: str):
 - Break into smaller, focused functions
 - Separate concerns (data loading, processing, reporting)
 - Stay under 25 lines per function when possible
+
+### 4. Variable Name Shadowing
+**Problem**: Using parameter names that conflict with local variables
+**Impact**: Confusing code, potential bugs, poor readability
+**Solution**:
+- Use distinct names for parameters vs local variables
+- Consider prefixing parameters (e.g., `config_path` vs `config`)
+- Use descriptive variable names that indicate scope
+
+```python
+# WRONG ❌ - Parameter shadows local variable
+def run(config: str):
+    config = load_app_config(Path(config))  # Shadows parameter
+    # Now 'config' refers to different things!
+
+# BETTER ✅ - Clear naming
+def run(config_path: str):
+    app_config = load_app_config(Path(config_path))
+    # Clear distinction between path and loaded config
+```
 
 ## Testing Antipatterns
 
@@ -203,6 +334,24 @@ def backtest(data_source: DataSource, symbol: str):
 - Reset shared resources between tests
 - Avoid persistent state in test modules
 
+### 4. Syntax Errors in String Replacements
+**Problem**: Text editing creates malformed code (missing newlines, etc.)
+**Impact**: Tests fail to run, syntax errors in code
+**Solution**:
+- Always verify syntax after string replacements
+- Use proper code formatting tools
+- Include sufficient context in replacements to avoid ambiguity
+
+```python
+# WRONG ❌ - Missing newline creates syntax error
+(config_dir / "rules.yaml").write_text("rules: []")        with patch(...):
+
+# BETTER ✅ - Proper line separation
+(config_dir / "rules.yaml").write_text("rules: []")
+
+        with patch(...):
+```
+
 ## Prevention Strategies
 
 1. **Consistent Code Reviews**: Check for these antipatterns in PR reviews
@@ -210,3 +359,6 @@ def backtest(data_source: DataSource, symbol: str):
 3. **Documentation**: Update this document when new antipatterns are identified
 4. **Refactoring**: Prioritize fixing identified antipatterns in existing code
 5. **Knowledge Sharing**: Discuss antipatterns in team meetings to build awareness
+6. **Automated Testing**: Write tests that catch common antipatterns
+7. **Incremental Refactoring**: Make small, focused changes to avoid introducing new antipatterns
+8. **Parameter Flow Validation**: Explicitly test that parameters propagate correctly through call chains

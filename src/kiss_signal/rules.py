@@ -1,11 +1,10 @@
-"""Rule Functions - Core Technical Indicator Implementation.
+"""Rules - Core Technical Indicator Implementation.
 
 This module implements the technical analysis indicators used for signal generation.
 All functions are pure and operate on pandas DataFrames with OHLCV data.
 """
 
 import logging
-from typing import Any, Dict, Callable
 
 import pandas as pd
 
@@ -14,9 +13,6 @@ __all__ = [
     "rsi_oversold", 
     "ema_crossover",
     "calculate_rsi",
-    "validate_rule_params",
-    "get_rule_function",
-    "RULE_REGISTRY"
 ]
 
 logger = logging.getLogger(__name__)
@@ -130,89 +126,8 @@ def ema_crossover(price_data: pd.DataFrame, fast_period: int = 10, slow_period: 
     # Calculate EMAs using pandas exponential smoothing
     fast_ema = close_prices.ewm(span=fast_period, adjust=False).mean()
     slow_ema = close_prices.ewm(span=slow_period, adjust=False).mean()
-    
-    # Crossover: fast crosses above slow
+      # Crossover: fast crosses above slow
     signals = (fast_ema > slow_ema) & (fast_ema.shift(1) <= slow_ema.shift(1))
     
     logger.debug(f"EMA crossover signals: {signals.sum()} triggers")
     return signals.fillna(False)
-
-
-def validate_rule_params(rule_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate rule parameters against expected ranges.
-    
-    Args:
-        rule_type: Type of rule (e.g., 'sma_crossover')
-        params: Rule parameters to validate
-        
-    Returns:
-        Validated parameters with defaults applied
-        
-    Raises:
-        ValueError: If parameters are invalid
-    """
-    validation_rules = {
-        'sma_crossover': {
-            'fast_period': {'type': int, 'min': 2, 'max': 50, 'default': 10},
-            'slow_period': {'type': int, 'min': 5, 'max': 200, 'default': 20}
-        },
-        'rsi_oversold': {
-            'period': {'type': int, 'min': 2, 'max': 50, 'default': 14},
-            'oversold_threshold': {'type': (int, float), 'min': 10, 'max': 40, 'default': 30.0}
-        },
-        'ema_crossover': {
-            'fast_period': {'type': int, 'min': 2, 'max': 50, 'default': 10},
-            'slow_period': {'type': int, 'min': 5, 'max': 200, 'default': 20}
-        }    }
-    
-    if rule_type not in validation_rules:
-        raise ValueError(f"Unknown rule type: {rule_type}")
-    
-    rules = validation_rules[rule_type]
-    validated_params = {}
-    for param_name, constraints in rules.items():
-        value = params.get(param_name, constraints['default'])
-        # Type check
-        expected_type = constraints['type']
-        # Cast to proper type for isinstance check
-        if not isinstance(value, expected_type):  # type: ignore[arg-type]
-            raise ValueError(f"Parameter {param_name} must be {expected_type}, got {type(value)}")
-        
-        # Range check
-        if value < constraints['min'] or value > constraints['max']:
-            raise ValueError(f"Parameter {param_name} must be between {constraints['min']} and {constraints['max']}")
-        
-        validated_params[param_name] = value
-    
-    # Additional logical validation
-    if rule_type in ('sma_crossover', 'ema_crossover'):
-        if validated_params['fast_period'] >= validated_params['slow_period']:
-            raise ValueError("fast_period must be less than slow_period")
-    
-    return validated_params
-
-
-# Rule registry mapping rule types to functions
-RULE_REGISTRY: Dict[str, Callable[..., pd.Series]] = {
-    'sma_crossover': sma_crossover,
-    'rsi_oversold': rsi_oversold,
-    'ema_crossover': ema_crossover,
-}
-
-
-def get_rule_function(rule_type: str) -> Callable[..., pd.Series]:
-    """Get rule function by type name.
-    
-    Args:
-        rule_type: Type of rule to retrieve
-        
-    Returns:
-        Rule function
-        
-    Raises:
-        ValueError: If rule type is not registered
-    """
-    if rule_type not in RULE_REGISTRY:
-        raise ValueError(f"Unknown rule type: {rule_type}. Available: {list(RULE_REGISTRY.keys())}")
-    
-    return RULE_REGISTRY[rule_type]

@@ -8,7 +8,7 @@ from typing import Dict, List, Any
 
 import pandas as pd
 
-from .rule_funcs import get_rule_function, validate_rule_params
+from .config import get_rule_function, validate_rule_params
 
 __all__ = ["SignalGenerator"]
 

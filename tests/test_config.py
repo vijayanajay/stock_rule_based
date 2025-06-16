@@ -8,7 +8,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from kiss_signal.config import Config, EdgeScoreWeights, load_config
+from kiss_signal.config import Config, EdgeScoreWeights, load_app_config
 
 
 def test_edge_score_weights_valid():
@@ -33,7 +33,7 @@ def test_config_validation(sample_config):
 
 def test_load_config(config_file):
     """Test config loading from file."""
-    config = load_config(config_file)
+    config = load_app_config(config_file)
     assert config.hold_period == 20  # This field was missing from the model
     assert config.min_trades_threshold == 10
 
@@ -41,7 +41,7 @@ def test_load_config(config_file):
 def test_load_config_missing_file():
     """Test config loading with missing file."""
     with pytest.raises(FileNotFoundError):
-        load_config(Path("nonexistent.yaml"))
+        load_app_config(Path("nonexistent.yaml"))
 
 
 class TestConfig:
@@ -128,8 +128,7 @@ class TestLoadConfig:
             config_data = {
                 "universe_path": str(universe_path),
                 "historical_data_years": 5,
-                "cache_refresh_days": 14,
-                "edge_score_weights": {
+                "cache_refresh_days": 14,                "edge_score_weights": {
                     "win_pct": 0.5,
                     "sharpe": 0.5
                 }
@@ -138,7 +137,7 @@ class TestLoadConfig:
             with open(config_path, "w") as f:
                 yaml.dump(config_data, f)
 
-            config = load_config(config_path)
+            config = load_app_config(config_path)
             assert config.universe_path == str(universe_path)
             assert config.historical_data_years == 5
             assert config.cache_refresh_days == 14
@@ -146,7 +145,7 @@ class TestLoadConfig:
     def test_load_config_missing_file(self):
         """Test loading config from non-existent file."""
         with pytest.raises(FileNotFoundError):
-            load_config(Path("nonexistent.yaml"))
+            load_app_config(Path("nonexistent.yaml"))
 
     def test_load_config_invalid_yaml(self):
         """Test loading config from malformed YAML."""
@@ -158,7 +157,7 @@ class TestLoadConfig:
 
         try:
             with pytest.raises(yaml.YAMLError):
-                load_config(config_path)
+                load_app_config(config_path)
         finally:
             config_path.unlink()
 
@@ -183,5 +182,5 @@ class TestLoadConfig:
             with open(config_path, "w") as f:
                 yaml.dump(config_data, f)
 
-            config = load_config(config_path)
+            config = load_app_config(config_path)
             assert config.freeze_date == date(2025, 1, 15)
