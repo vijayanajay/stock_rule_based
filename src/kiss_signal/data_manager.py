@@ -76,8 +76,7 @@ class DataManager:
             Dict mapping symbol -> success status
         """
         return data.refresh_market_data(
-            universe_path=str(self.universe_path),
-            cache_dir=str(self.cache_dir),
+            universe_path=str(self.universe_path),            cache_dir=str(self.cache_dir),
             refresh_days=self.cache_refresh_days,
             years=self.historical_years,
             freeze_date=self.freeze_date,
@@ -103,6 +102,8 @@ class DataManager:
         return data.get_price_data(
             symbol=symbol,
             cache_dir=self.cache_dir,
+            refresh_days=self.cache_refresh_days,
+            years=self.historical_years,
             start_date=start_date,
             end_date=end_date,
             freeze_date=self.freeze_date

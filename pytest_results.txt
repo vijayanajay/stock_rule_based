@@ -4,75 +4,73 @@ cachedir: .pytest_cache
 rootdir: D:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
-collecting ... collected 77 items
+collecting ... collected 75 items
 
 tests/test_cli.py::test_cli_import PASSED                                [  1%]
 tests/test_cli.py::test_help_command PASSED                              [  2%]
-tests/test_cli.py::test_run_command_basic PASSED                         [  3%]
+tests/test_cli.py::test_run_command_basic PASSED                         [  4%]
 tests/test_cli.py::test_run_command_verbose PASSED                       [  5%]
 tests/test_cli.py::test_run_command_freeze_date PASSED                   [  6%]
-tests/test_cli.py::test_run_command_success PASSED                       [  7%]
+tests/test_cli.py::test_run_command_success PASSED                       [  8%]
 tests/test_cli.py::test_run_command_with_freeze_date PASSED              [  9%]
 tests/test_cli.py::test_run_command_invalid_freeze_date PASSED           [ 10%]
-tests/test_cli.py::test_run_command_no_config PASSED                     [ 11%]
-tests/test_cli.py::test_run_command_missing_rules PASSED                 [ 12%]
+tests/test_cli.py::test_run_command_no_config PASSED                     [ 12%]
+tests/test_cli.py::test_run_command_missing_rules PASSED                 [ 13%]
 tests/test_config.py::test_edge_score_weights_valid PASSED               [ 14%]
-tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 15%]
-tests/test_config.py::test_config_validation PASSED                      [ 16%]
+tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 16%]
+tests/test_config.py::test_config_validation PASSED                      [ 17%]
 tests/test_config.py::test_load_config PASSED                            [ 18%]
-tests/test_config.py::test_load_config_missing_file PASSED               [ 19%]
-tests/test_config.py::TestConfig::test_config_defaults PASSED            [ 20%]
+tests/test_config.py::test_load_config_missing_file PASSED               [ 20%]
+tests/test_config.py::TestConfig::test_config_defaults PASSED            [ 21%]
 tests/test_config.py::TestConfig::test_config_validation_historical_years PASSED [ 22%]
-tests/test_config.py::TestConfig::test_config_validation_cache_refresh_days PASSED [ 23%]
-tests/test_config.py::TestConfig::test_config_universe_path_validation PASSED [ 24%]
-tests/test_config.py::TestConfig::test_config_freeze_date PASSED         [ 25%]
-tests/test_config.py::TestLoadConfig::test_load_config_success PASSED    [ 27%]
-tests/test_config.py::TestLoadConfig::test_load_config_missing_file PASSED [ 28%]
-tests/test_config.py::TestLoadConfig::test_load_config_invalid_yaml PASSED [ 29%]
-tests/test_config.py::TestLoadConfig::test_load_config_with_freeze_date PASSED [ 31%]
-tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 32%]
-tests/test_data.py::TestDataFunctions::test_load_universe_missing_file PASSED [ 33%]
-tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 35%]
-tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 36%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_missing_file PASSED [ 37%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_fresh_file PASSED [ 38%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_stale_file PASSED [ 40%]
-tests/test_data.py::TestDataFunctions::test_validate_data_quality_good_data PASSED [ 41%]
-tests/test_data.py::TestDataFunctions::test_validate_data_quality_negative_prices PASSED [ 42%]
-tests/test_data.py::TestDataFunctions::test_save_and_load_symbol_cache PASSED [ 44%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_with_date_filtering PASSED [ 45%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_with_freeze_date PASSED [ 46%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_missing_cache PASSED [ 48%]
-tests/test_data.py::TestDataFunctions::test_refresh_market_data_freeze_mode PASSED [ 49%]
-tests/test_data.py::TestDataFunctions::test_refresh_market_data_success PASSED [ 50%]
-tests/test_data_manager.py::TestDataManager::test_init PASSED            [ 51%]
+tests/test_config.py::TestConfig::test_config_validation_cache_refresh_days PASSED [ 24%]
+tests/test_config.py::TestConfig::test_config_universe_path_validation PASSED [ 25%]
+tests/test_config.py::TestConfig::test_config_freeze_date PASSED         [ 26%]
+tests/test_config.py::TestLoadConfig::test_load_config_success PASSED    [ 28%]
+tests/test_config.py::TestLoadConfig::test_load_config_missing_file PASSED [ 29%]
+tests/test_config.py::TestLoadConfig::test_load_config_invalid_yaml PASSED [ 30%]
+tests/test_config.py::TestLoadConfig::test_load_config_with_freeze_date PASSED [ 32%]
+tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 33%]
+tests/test_data.py::TestDataFunctions::test_load_universe_missing_file PASSED [ 34%]
+tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 36%]
+tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 37%]
+tests/test_data.py::TestDataFunctions::test_needs_refresh_missing_file PASSED [ 38%]
+tests/test_data.py::TestDataFunctions::test_needs_refresh_fresh_file PASSED [ 40%]
+tests/test_data.py::TestDataFunctions::test_needs_refresh_stale_file PASSED [ 41%]
+tests/test_data.py::TestDataFunctions::test_validate_data_quality_good_data PASSED [ 42%]
+tests/test_data.py::TestDataFunctions::test_validate_data_quality_negative_prices PASSED [ 44%]
+tests/test_data.py::TestDataFunctions::test_save_and_load_symbol_cache PASSED [ 45%]
+tests/test_data.py::TestDataFunctions::test_get_price_data_with_date_filtering PASSED [ 46%]
+tests/test_data.py::TestDataFunctions::test_get_price_data_with_freeze_date PASSED [ 48%]
+tests/test_data.py::TestDataFunctions::test_get_price_data_missing_cache PASSED [ 49%]
+tests/test_data.py::TestDataFunctions::test_refresh_market_data_freeze_mode PASSED [ 50%]
+tests/test_data.py::TestDataFunctions::test_refresh_market_data_success PASSED [ 52%]
 tests/test_data_manager.py::TestDataManager::test_load_universe PASSED   [ 53%]
 tests/test_data_manager.py::TestDataManager::test_load_universe_missing_file PASSED [ 54%]
-tests/test_data_manager.py::TestDataManager::test_load_universe_malformed PASSED [ 55%]
-tests/test_data_manager.py::TestDataManager::test_cache_metadata_operations FAILED [ 57%]
-tests/test_data_manager.py::TestDataManager::test_needs_refresh FAILED   [ 58%]
-tests/test_data_manager.py::TestDataManager::test_add_ns_suffix FAILED   [ 59%]
-tests/test_data_manager.py::TestDataManager::test_validate_data_quality FAILED [ 61%]
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success FAILED [ 62%]
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure FAILED [ 63%]
-tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache FAILED [ 64%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering FAILED [ 66%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date FAILED [ 67%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache FAILED [ 68%]
-tests/test_data_manager.py::TestDataManager::test_refresh_market_data FAILED [ 70%]
-tests/test_data_manager.py::TestDataManagerConfiguration::test_freeze_date_integration PASSED [ 71%]
-tests/test_data_manager.py::TestDataManagerConfiguration::test_custom_cache_refresh_days FAILED [ 72%]
-tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 74%]
-tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 75%]
+tests/test_data_manager.py::TestDataManager::test_load_universe_malformed PASSED [ 56%]
+tests/test_data_manager.py::TestDataManager::test_needs_refresh PASSED   [ 57%]
+tests/test_data_manager.py::TestDataManager::test_add_ns_suffix PASSED   [ 58%]
+tests/test_data_manager.py::TestDataManager::test_validate_data_quality PASSED [ 60%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success PASSED [ 61%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure PASSED [ 62%]
+tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache PASSED [ 64%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering PASSED [ 65%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date PASSED [ 66%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache PASSED [ 68%]
+tests/test_data_manager.py::TestDataManager::test_refresh_market_data PASSED [ 69%]
+tests/test_data_manager.py::TestDataConfiguration::test_freeze_date_integration PASSED [ 70%]
+tests/test_data_manager.py::TestDataConfiguration::test_custom_cache_refresh_days PASSED [ 72%]
+tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 73%]
+tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 74%]
 tests/test_rule_funcs.py::TestSMACrossover::test_invalid_periods PASSED  [ 76%]
 tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_calculation PASSED  [ 77%]
-tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_insufficient_data PASSED [ 79%]
+tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_insufficient_data PASSED [ 78%]
 tests/test_rule_funcs.py::TestRSIOversold::test_oversold_signal_generation PASSED [ 80%]
 tests/test_rule_funcs.py::TestRSIOversold::test_insufficient_data_rsi PASSED [ 81%]
-tests/test_rule_funcs.py::TestEMACrossover::test_ema_crossover_signal PASSED [ 83%]
+tests/test_rule_funcs.py::TestEMACrossover::test_ema_crossover_signal PASSED [ 82%]
 tests/test_rule_funcs.py::TestRuleValidation::test_valid_sma_params PASSED [ 84%]
 tests/test_rule_funcs.py::TestRuleValidation::test_default_param_substitution PASSED [ 85%]
-tests/test_rule_funcs.py::TestRuleValidation::test_invalid_rule_type PASSED [ 87%]
+tests/test_rule_funcs.py::TestRuleValidation::test_invalid_rule_type PASSED [ 86%]
 tests/test_rule_funcs.py::TestRuleValidation::test_invalid_param_types PASSED [ 88%]
 tests/test_rule_funcs.py::TestRuleValidation::test_param_range_validation PASSED [ 89%]
 tests/test_rule_funcs.py::TestRuleValidation::test_logical_validation PASSED [ 90%]
@@ -84,158 +82,23 @@ tests/test_rule_funcs.py::TestEdgeCases::test_single_price_data PASSED   [ 97%]
 tests/test_rule_funcs.py::TestEdgeCases::test_nan_price_data PASSED      [ 98%]
 tests/test_rule_funcs.py::TestIntegration::test_all_rules_with_real_data PASSED [100%]
 
-================================== FAILURES ===================================
-_______________ TestDataManager.test_cache_metadata_operations ________________
-tests\test_data_manager.py:101: in test_cache_metadata_operations
-    metadata = dm._load_cache_metadata()
-               ^^^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_load_cache_metadata'
-_____________________ TestDataManager.test_needs_refresh ______________________
-tests\test_data_manager.py:121: in test_needs_refresh
-    assert dm._needs_refresh("RELIANCE", {})
-           ^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_needs_refresh'
-_____________________ TestDataManager.test_add_ns_suffix ______________________
-tests\test_data_manager.py:141: in test_add_ns_suffix
-    assert dm._add_ns_suffix("RELIANCE") == "RELIANCE.NS"
-           ^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_add_ns_suffix'
-_________________ TestDataManager.test_validate_data_quality __________________
-tests\test_data_manager.py:162: in test_validate_data_quality
-    assert dm._validate_data_quality(good_data, "TEST")
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_validate_data_quality'
-_______________ TestDataManager.test_fetch_symbol_data_success ________________
-tests\test_data_manager.py:190: in test_fetch_symbol_data_success
-    result = dm._fetch_symbol_data("RELIANCE.NS")
-             ^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_fetch_symbol_data'
-_______________ TestDataManager.test_fetch_symbol_data_failure ________________
-tests\test_data_manager.py:208: in test_fetch_symbol_data_failure
-    result = dm._fetch_symbol_data("INVALID.NS")
-             ^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_fetch_symbol_data'
-_______________ TestDataManager.test_save_and_load_symbol_cache _______________
-tests\test_data_manager.py:230: in test_save_and_load_symbol_cache
-    success = dm._save_symbol_cache("RELIANCE", test_data)
-              ^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_save_symbol_cache'
-___________ TestDataManager.test_get_price_data_with_date_filtering ___________
-tests\test_data_manager.py:255: in test_get_price_data_with_date_filtering
-    dm._save_symbol_cache("RELIANCE", test_data)
-    ^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_save_symbol_cache'
-____________ TestDataManager.test_get_price_data_with_freeze_date _____________
-tests\test_data_manager.py:284: in test_get_price_data_with_freeze_date
-    dm._save_symbol_cache("RELIANCE", test_data)
-    ^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_save_symbol_cache'
-______________ TestDataManager.test_get_price_data_missing_cache ______________
-tests\test_data_manager.py:299: in test_get_price_data_missing_cache
-    dm.get_price_data("NONEXISTENT")
-src\kiss_signal\data_manager.py:103: in get_price_data
-    return data.get_price_data(
-E   TypeError: get_price_data() missing 2 required positional arguments: 'refresh_days' and 'years'
-__________________ TestDataManager.test_refresh_market_data ___________________
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1393: in patched
-    with self.decoration_helper(patched,
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\contextlib.py:137: in __enter__
-    return next(self.gen)
-           ^^^^^^^^^^^^^^
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1375: in decoration_helper
-    arg = exit_stack.enter_context(patching)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\contextlib.py:526: in enter_context
-    result = _enter(cm)
-             ^^^^^^^^^^
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1467: in __enter__
-    original, local = self.get_original()
-                      ^^^^^^^^^^^^^^^^^^^
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1437: in get_original
-    raise AttributeError(
-E   AttributeError: <class 'kiss_signal.data_manager.DataManager'> does not have the attribute '_fetch_symbol_data'
-_________ TestDataManagerConfiguration.test_custom_cache_refresh_days _________
-tests\test_data_manager.py:366: in test_custom_cache_refresh_days
-    assert dm._needs_refresh("RELIANCE", metadata)
-           ^^^^^^^^^^^^^^^^^
-E   AttributeError: 'DataManager' object has no attribute '_needs_refresh'
-============================== warnings summary ===============================
-tests/test_data_manager.py::TestDataManager::test_init
-  d:\Code\stock_rule_based\tests\test_data_manager.py:43: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
+=============================== tests coverage ================================
+______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
-tests/test_data_manager.py::TestDataManager::test_load_universe
-  d:\Code\stock_rule_based\tests\test_data_manager.py:58: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_load_universe_missing_file
-  d:\Code\stock_rule_based\tests\test_data_manager.py:69: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_load_universe_malformed
-  d:\Code\stock_rule_based\tests\test_data_manager.py:83: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_cache_metadata_operations
-  d:\Code\stock_rule_based\tests\test_data_manager.py:94: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_needs_refresh
-  d:\Code\stock_rule_based\tests\test_data_manager.py:113: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_add_ns_suffix
-  d:\Code\stock_rule_based\tests\test_data_manager.py:135: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_validate_data_quality
-  d:\Code\stock_rule_based\tests\test_data_manager.py:146: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success
-  d:\Code\stock_rule_based\tests\test_data_manager.py:171: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure
-  d:\Code\stock_rule_based\tests\test_data_manager.py:199: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache
-  d:\Code\stock_rule_based\tests\test_data_manager.py:213: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering
-  d:\Code\stock_rule_based\tests\test_data_manager.py:240: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date
-  d:\Code\stock_rule_based\tests\test_data_manager.py:268: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache
-  d:\Code\stock_rule_based\tests\test_data_manager.py:292: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManagerConfiguration::test_freeze_date_integration
-  d:\Code\stock_rule_based\tests\test_data_manager.py:339: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
-tests/test_data_manager.py::TestDataManagerConfiguration::test_custom_cache_refresh_days
-  d:\Code\stock_rule_based\tests\test_data_manager.py:356: DeprecationWarning: DataManager class is deprecated. Use kiss_signal.data functions directly.
-    dm = DataManager(
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ===========================
-FAILED tests/test_data_manager.py::TestDataManager::test_cache_metadata_operations - AttributeError: 'DataManager' object has no attribute '_load_cache_metadata'
-FAILED tests/test_data_manager.py::TestDataManager::test_needs_refresh - AttributeError: 'DataManager' object has no attribute '_needs_refresh'
-FAILED tests/test_data_manager.py::TestDataManager::test_add_ns_suffix - AttributeError: 'DataManager' object has no attribute '_add_ns_suffix'
-FAILED tests/test_data_manager.py::TestDataManager::test_validate_data_quality - AttributeError: 'DataManager' object has no attribute '_validate_data_quality'
-FAILED tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success - AttributeError: 'DataManager' object has no attribute '_fetch_symbol_data'
-FAILED tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure - AttributeError: 'DataManager' object has no attribute '_fetch_symbol_data'
-FAILED tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache - AttributeError: 'DataManager' object has no attribute '_save_symbol_cache'
-FAILED tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering - AttributeError: 'DataManager' object has no attribute '_save_symbol_cache'
-FAILED tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date - AttributeError: 'DataManager' object has no attribute '_save_symbol_cache'
-FAILED tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache - TypeError: get_price_data() missing 2 required positional arguments: 'refresh_days' and 'years'
-FAILED tests/test_data_manager.py::TestDataManager::test_refresh_market_data - AttributeError: <class 'kiss_signal.data_manager.DataManager'> does not have the attribute '_fetch_symbol_data'
-FAILED tests/test_data_manager.py::TestDataManagerConfiguration::test_custom_cache_refresh_days - AttributeError: 'DataManager' object has no attribute '_needs_refresh'
-================= 12 failed, 65 passed, 16 warnings in 2.08s ==================
+Name                                  Stmts   Miss  Cover
+---------------------------------------------------------
+src\kiss_signal\__init__.py               4      0   100%
+src\kiss_signal\_version.py              13     13     0%
+src\kiss_signal\backtester.py            17     17     0%
+src\kiss_signal\cli.py                   49      3    94%
+src\kiss_signal\config.py               100      7    93%
+src\kiss_signal\data.py                 152     26    83%
+src\kiss_signal\data_manager.py          24     24     0%
+src\kiss_signal\engine.py                18     10    44%
+src\kiss_signal\persistence.py           19     19     0%
+src\kiss_signal\reporter.py              25     25     0%
+src\kiss_signal\rules.py                 48      3    94%
+src\kiss_signal\signal_generator.py      30     30     0%
+---------------------------------------------------------
+TOTAL                                   499    177    65%
+============================= 75 passed in 4.97s ==============================

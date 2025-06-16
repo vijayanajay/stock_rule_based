@@ -1,6 +1,13 @@
 # Story 004: Fix DataManager Test Failures & Complete Data Layer Transition
 
-## Status: READY FOR DEVELOPMENT
+## Status: InProgress
+
+**Agent Notes**: 
+- Started implementing Option A - converting tests to use data functions directly per KISS principles
+- Fixed DataManager.get_price_data() signature mismatch by adding missing refresh_days and years parameters  
+- Successfully converted test_add_ns_suffix to use data._add_ns_suffix() directly
+- Working on remaining private method tests (validate_data_quality, needs_refresh, etc.)
+- Approach: Convert each failing test individually to avoid file corruption
 
 ## Story Summary
 Fix 12 failing tests in `test_data_manager.py` by completing the transition from class-based to function-based data operations. The DataManager class was deprecated in favor of direct function calls from `kiss_signal.data`, but the tests weren't updated to match this architectural change.

@@ -126,3 +126,27 @@
 - CI checks will fail if multiple rule configuration files are detected
 
 ---
+
+### Misaligned Tests After Refactoring (2025-06-17)
+**Issue**: Widespread `AttributeError` failures in `test_data_manager.py` after a major refactoring of the data layer.
+**Root Cause**: A structural mismatch between the code and its tests. The core data logic was refactored from a `DataManager` class into a module of pure functions (`kiss_signal/data.py`). The `DataManager` class was kept as a thin, deprecated compatibility shim. However, the test suite (`test_data_manager.py`) was not updated and continued to test the old class structure, including private methods that no longer existed on the shim. This created a fragile state where the tests were validating an obsolete and incomplete interface.
+**Fix**: The test suite was refactored to align with the new architecture.
+1. All tests in `test_data_manager.py` were modified to import and call functions directly from the `kiss_signal.data` module.
+2. Calls to non-existent methods like `dm._fetch_symbol_data()` were replaced with calls to the actual implementation, e.g., `data._fetch_symbol_data()`.
+
+---
+
+### Cascading Test Failures from Inconsistent Test Fixtures and Mock Contracts (2025-06-17)
+**Issue**: Widespread test failures in `test_data_manager.py` caused by multiple related structural issues, not a single bug in application code.
+**Root Cause**:
+1.  **Inconsistent Test Setup**: The `setup_method` for the test class defined a path for a cache directory but never created it on disk. This caused any test that attempted to write to the cache (`touch`, `to_csv`) to fail with `FileNotFoundError`.
+2.  **Incorrect Mock Contracts**: Mocks used in tests for `_fetch_symbol_data` and `refresh_market_data` did not return data in the same format (schema) as the real functions. For example, a mock returned a DataFrame with a named index instead of a `date` column, causing `KeyError` downstream when the code under test tried to access the column.
+3.  **Brittle Test Code**: A test used a `datetime` object with `os.utime`, which expects a numerical timestamp, causing a `TypeError`.
+**Fix**:
+1.  **Robust Test Setup**: Modified the `setup_method` to always create the cache directory (`mkdir(parents=True, exist_ok=True)`), ensuring a valid environment for all tests in the class.
+2.  **Corrected Mocks**: Updated the mock DataFrames to exactly match the schema (column names, types, and structure) of the data returned by the real functions they were replacing.
+3.  **Hardened Test Code**: Corrected the `os.utime` call to use `.timestamp()` to convert the `datetime` object to the required float.
+**Prevention**:
+1.  **Hermetic Test Fixtures**: Test setup fixtures (like `setup_method` or `pytest` fixtures) must create a complete and valid environment for the code under test. If a test needs a directory, the fixture must create it.
+2.  **Strict Mock Contracts**: Mocks must be treated as drop-in replacements that respect the data contract (return type and schema) of the original function. Always validate that mock data structure matches the real data structure.
+3.  **Type-Aware Testing**: Write test code that is aware of the types required by underlying libraries and functions (e.g., `os.utime` expecting a timestamp, not a `datetime` object).
