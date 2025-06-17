@@ -124,7 +124,9 @@ class TestBacktester:
         for entry_date in entry_indices:
             # Check if exit signal exists within reasonable range
             exit_window = exit_signals.loc[entry_date:].head(backtester.hold_period + 5)
-            assert exit_window.sum() > 0  # Should have exit signal in window    def test_generate_signals_invalid_rule(self, sample_price_data):
+            assert exit_window.sum() > 0  # Should have exit signal in window    
+        
+    def test_generate_signals_invalid_rule(self, sample_price_data):
         """Test signal generation with invalid rule name."""
         backtester = Backtester()
         
@@ -359,10 +361,12 @@ def create_sample_backtest_data():
 
 @pytest.fixture
 def sample_backtest_data():
-    """Load sample backtest data from CSV file."""
+    """Load sample backtest data from CSV file, generating it if missing."""
     csv_path = Path(__file__).parent / "fixtures" / "sample_backtest_data.csv"
     if not csv_path.exists():
-        pytest.skip(f"Sample data file not found: {csv_path}")
+        # Generate the sample data dynamically instead of skipping
+        fixtures_dir = csv_path.parent
+        create_sample_backtest_data(fixtures_dir)
     
     df = pd.read_csv(csv_path)
     df['Date'] = pd.to_datetime(df['Date'])

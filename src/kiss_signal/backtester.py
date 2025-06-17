@@ -232,13 +232,13 @@ class Backtester:
         """
         logger.debug(f"Creating portfolio with {entry_signals.sum()} entries, {exit_signals.sum()} exits")
           # Use close prices for simulation
-        close_prices = price_data['close']
-          # Create portfolio with basic settings
+        close_prices = price_data['close']        # Create portfolio with basic settings
         portfolio = vbt.Portfolio.from_signals(
             close=close_prices,
             entries=entry_signals,
             exits=exit_signals,
-            freq='D',  # Daily frequency            fees=0.001,  # 0.1% transaction fee (realistic for Indian markets)
+            freq='D',  # Daily frequency
+            fees=0.001,  # 0.1% transaction fee (realistic for Indian markets)
             slippage=0.0005,  # 0.05% slippage
             init_cash=100000,  # 1 lakh initial capital
             size=np.inf  # Use all available cash for each trade (buy as many shares as possible)
@@ -265,7 +265,7 @@ class Backtester:
         win_pct = winning_trades / total_trades
         
         logger.debug(f"Win percentage: {win_pct:.3f} ({winning_trades}/{total_trades})")
-        return win_pct
+        return float(win_pct)
 
     def _calculate_sharpe_ratio(self, portfolio: 'vbt.Portfolio', risk_free_rate: float = 0.05) -> float:
         """Calculate Sharpe ratio from portfolio returns.
@@ -280,8 +280,7 @@ class Backtester:
         returns = portfolio.returns()
         if len(returns) == 0 or returns.std() == 0:
             return 0.0
-        
-        # Convert to annual figures
+          # Convert to annual figures
         annual_return = returns.mean() * 252  # 252 trading days
         annual_volatility = returns.std() * (252 ** 0.5)
         
@@ -290,7 +289,7 @@ class Backtester:
         
         sharpe = (annual_return - risk_free_rate) / annual_volatility
         logger.debug(f"Sharpe ratio: {sharpe:.3f} (annual_return={annual_return:.3f}, volatility={annual_volatility:.3f})")
-        return sharpe
+        return float(sharpe)
 
     def _calculate_total_trades(self, portfolio: 'vbt.Portfolio') -> int:
         """Calculate total number of trades.
@@ -318,8 +317,7 @@ class Backtester:
         trades = portfolio.trades.records_readable
         if len(trades) == 0:
             return 0.0
-        
-        # Calculate return percentage for each trade
+          # Calculate return percentage for each trade
         avg_return = (trades['Return'] / 100).mean()  # Convert from percentage
         logger.debug(f"Average return per trade: {avg_return:.4f}")
-        return avg_return
+        return float(avg_return)
