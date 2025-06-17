@@ -99,7 +99,7 @@ class EMAParams(BaseModel):
 
 
 # Rule parameter models mapping
-RULE_PARAM_MODELS = {
+RULE_PARAM_MODELS: Dict[str, type[BaseModel]] = {
     'sma_crossover': SMAParams,
     'rsi_oversold': RSIParams,
     'ema_crossover': EMAParams,
@@ -132,12 +132,6 @@ def validate_rule_params(rule_type: str, params: Dict[str, Any]) -> Dict[str, An
     param_model = RULE_PARAM_MODELS[rule_type]
     try:
         validated = param_model(**params)
-        
-        # Additional logical validation for SMA crossover
-        if rule_type == 'sma_crossover':
-            if validated.fast_period >= validated.slow_period:
-                raise ValueError("fast_period must be less than slow_period")
-        
         return validated.model_dump()
     except ValidationError as e:
         # Convert Pydantic validation errors to user-friendly messages

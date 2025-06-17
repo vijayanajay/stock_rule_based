@@ -4,64 +4,65 @@ cachedir: .pytest_cache
 rootdir: D:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
-collecting ... collected 75 items
+collecting ... collected 76 items
 
 tests/test_cli.py::test_cli_import PASSED                                [  1%]
 tests/test_cli.py::test_help_command PASSED                              [  2%]
-tests/test_cli.py::test_run_command_basic PASSED                         [  4%]
+tests/test_cli.py::test_run_command_basic PASSED                         [  3%]
 tests/test_cli.py::test_run_command_verbose PASSED                       [  5%]
 tests/test_cli.py::test_run_command_freeze_date PASSED                   [  6%]
-tests/test_cli.py::test_run_command_success PASSED                       [  8%]
+tests/test_cli.py::test_run_command_success PASSED                       [  7%]
 tests/test_cli.py::test_run_command_with_freeze_date PASSED              [  9%]
 tests/test_cli.py::test_run_command_invalid_freeze_date PASSED           [ 10%]
-tests/test_cli.py::test_run_command_no_config PASSED                     [ 12%]
+tests/test_cli.py::test_run_command_no_config PASSED                     [ 11%]
 tests/test_cli.py::test_run_command_missing_rules PASSED                 [ 13%]
 tests/test_config.py::test_edge_score_weights_valid PASSED               [ 14%]
-tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 16%]
+tests/test_config.py::test_edge_score_weights_invalid_sum PASSED         [ 15%]
 tests/test_config.py::test_config_validation PASSED                      [ 17%]
 tests/test_config.py::test_load_config PASSED                            [ 18%]
-tests/test_config.py::test_load_config_missing_file PASSED               [ 20%]
+tests/test_config.py::test_load_config_missing_file PASSED               [ 19%]
 tests/test_config.py::TestConfig::test_config_defaults PASSED            [ 21%]
 tests/test_config.py::TestConfig::test_config_validation_historical_years PASSED [ 22%]
-tests/test_config.py::TestConfig::test_config_validation_cache_refresh_days PASSED [ 24%]
+tests/test_config.py::TestConfig::test_config_validation_cache_refresh_days PASSED [ 23%]
 tests/test_config.py::TestConfig::test_config_universe_path_validation PASSED [ 25%]
 tests/test_config.py::TestConfig::test_config_freeze_date PASSED         [ 26%]
-tests/test_config.py::TestLoadConfig::test_load_config_success PASSED    [ 28%]
-tests/test_config.py::TestLoadConfig::test_load_config_missing_file PASSED [ 29%]
+tests/test_config.py::TestLoadConfig::test_load_config_success PASSED    [ 27%]
+tests/test_config.py::TestLoadConfig::test_load_config_missing_file PASSED [ 28%]
 tests/test_config.py::TestLoadConfig::test_load_config_invalid_yaml PASSED [ 30%]
-tests/test_config.py::TestLoadConfig::test_load_config_with_freeze_date PASSED [ 32%]
-tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 33%]
+tests/test_config.py::TestLoadConfig::test_load_config_with_freeze_date PASSED [ 31%]
+tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 32%]
 tests/test_data.py::TestDataFunctions::test_load_universe_missing_file PASSED [ 34%]
-tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 36%]
-tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 37%]
+tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 35%]
+tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 36%]
 tests/test_data.py::TestDataFunctions::test_needs_refresh_missing_file PASSED [ 38%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_fresh_file PASSED [ 40%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_stale_file PASSED [ 41%]
+tests/test_data.py::TestDataFunctions::test_needs_refresh_fresh_file PASSED [ 39%]
+tests/test_data.py::TestDataFunctions::test_needs_refresh_stale_file PASSED [ 40%]
 tests/test_data.py::TestDataFunctions::test_validate_data_quality_good_data PASSED [ 42%]
-tests/test_data.py::TestDataFunctions::test_validate_data_quality_negative_prices PASSED [ 44%]
-tests/test_data.py::TestDataFunctions::test_save_and_load_symbol_cache PASSED [ 45%]
+tests/test_data.py::TestDataFunctions::test_validate_data_quality_negative_prices PASSED [ 43%]
+tests/test_data.py::TestDataFunctions::test_save_and_load_symbol_cache PASSED [ 44%]
 tests/test_data.py::TestDataFunctions::test_get_price_data_with_date_filtering PASSED [ 46%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_with_freeze_date PASSED [ 48%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_missing_cache PASSED [ 49%]
+tests/test_data.py::TestDataFunctions::test_get_price_data_with_freeze_date PASSED [ 47%]
+tests/test_data.py::TestDataFunctions::test_get_price_data_missing_cache PASSED [ 48%]
 tests/test_data.py::TestDataFunctions::test_refresh_market_data_freeze_mode PASSED [ 50%]
-tests/test_data.py::TestDataFunctions::test_refresh_market_data_success PASSED [ 52%]
-tests/test_data_manager.py::TestDataManager::test_load_universe PASSED   [ 53%]
-tests/test_data_manager.py::TestDataManager::test_load_universe_missing_file PASSED [ 54%]
-tests/test_data_manager.py::TestDataManager::test_load_universe_malformed PASSED [ 56%]
-tests/test_data_manager.py::TestDataManager::test_needs_refresh PASSED   [ 57%]
-tests/test_data_manager.py::TestDataManager::test_add_ns_suffix PASSED   [ 58%]
-tests/test_data_manager.py::TestDataManager::test_validate_data_quality PASSED [ 60%]
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success PASSED [ 61%]
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure PASSED [ 62%]
-tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache PASSED [ 64%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering PASSED [ 65%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date PASSED [ 66%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache PASSED [ 68%]
-tests/test_data_manager.py::TestDataManager::test_refresh_market_data PASSED [ 69%]
-tests/test_data_manager.py::TestDataConfiguration::test_freeze_date_integration PASSED [ 70%]
+tests/test_data.py::TestDataFunctions::test_refresh_market_data_success PASSED [ 51%]
+tests/test_data_manager.py::TestDataManager::test_load_universe PASSED   [ 52%]
+tests/test_data_manager.py::TestDataManager::test_load_universe_missing_file PASSED [ 53%]
+tests/test_data_manager.py::TestDataManager::test_load_universe_malformed PASSED [ 55%]
+tests/test_data_manager.py::TestDataManager::test_needs_refresh PASSED   [ 56%]
+tests/test_data_manager.py::TestDataManager::test_add_ns_suffix PASSED   [ 57%]
+tests/test_data_manager.py::TestDataManager::test_validate_data_quality PASSED [ 59%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success PASSED [ 60%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure PASSED [ 61%]
+tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache PASSED [ 63%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering PASSED [ 64%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date PASSED [ 65%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache PASSED [ 67%]
+tests/test_data_manager.py::TestDataManager::test_refresh_market_data PASSED [ 68%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_multiindex_columns PASSED [ 69%]
+tests/test_data_manager.py::TestDataConfiguration::test_freeze_date_integration PASSED [ 71%]
 tests/test_data_manager.py::TestDataConfiguration::test_custom_cache_refresh_days PASSED [ 72%]
 tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 73%]
-tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 74%]
+tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 75%]
 tests/test_rule_funcs.py::TestSMACrossover::test_invalid_periods PASSED  [ 76%]
 tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_calculation PASSED  [ 77%]
 tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_insufficient_data PASSED [ 78%]
@@ -91,8 +92,8 @@ src\kiss_signal\__init__.py               4      0   100%
 src\kiss_signal\_version.py              13     13     0%
 src\kiss_signal\backtester.py            17     17     0%
 src\kiss_signal\cli.py                   49      3    94%
-src\kiss_signal\config.py               100      7    93%
-src\kiss_signal\data.py                 152     26    83%
+src\kiss_signal\config.py                97      6    94%
+src\kiss_signal\data.py                 154     26    83%
 src\kiss_signal\data_manager.py          24     24     0%
 src\kiss_signal\engine.py                18     10    44%
 src\kiss_signal\persistence.py           19     19     0%
@@ -100,5 +101,5 @@ src\kiss_signal\reporter.py              25     25     0%
 src\kiss_signal\rules.py                 48      3    94%
 src\kiss_signal\signal_generator.py      30     30     0%
 ---------------------------------------------------------
-TOTAL                                   499    177    65%
-============================= 75 passed in 4.97s ==============================
+TOTAL                                   498    176    65%
+============================= 76 passed in 41.86s =============================

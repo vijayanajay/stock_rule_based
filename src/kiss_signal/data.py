@@ -175,7 +175,17 @@ def _fetch_symbol_data(symbol: str, years: int, freeze_date: Optional[date] = No
         
         # Standardize column names and format
         data = data.reset_index()
-        data.columns = [col.lower() for col in data.columns]
+        
+        # Handle MultiIndex columns (yfinance sometimes returns tuples)
+        if isinstance(data.columns, pd.MultiIndex):
+            # Flatten MultiIndex columns by taking the first level
+            data.columns = [col[0] if isinstance(col, tuple) else col for col in data.columns]
+        
+        # Convert column names to lowercase, handling both strings and tuples
+        data.columns = [
+            col.lower() if isinstance(col, str) else str(col).lower() 
+            for col in data.columns
+        ]
         
         # Handle different possible date column names
         date_col = None
