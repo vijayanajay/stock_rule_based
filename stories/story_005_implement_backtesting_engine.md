@@ -1,6 +1,6 @@
 # Story 005: Implement Backtesting Engine
 
-## Status: Draft
+## Status: InProgress
 
 **Priority:** HIGH  
 **Estimated Story Points:** 8  

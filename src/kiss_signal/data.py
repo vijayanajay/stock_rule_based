@@ -172,20 +172,17 @@ def _fetch_symbol_data(symbol: str, years: int, freeze_date: Optional[date] = No
         if data.empty:
             logger.warning(f"No data returned for {symbol}")
             return None
-        
-        # Standardize column names and format
+          # Standardize column names and format
         data = data.reset_index()
-        
-        # Handle MultiIndex columns (yfinance sometimes returns tuples)
-        if isinstance(data.columns, pd.MultiIndex):
-            # Flatten MultiIndex columns by taking the first level
-            data.columns = [col[0] if isinstance(col, tuple) else col for col in data.columns]
-        
-        # Convert column names to lowercase, handling both strings and tuples
-        data.columns = [
-            col.lower() if isinstance(col, str) else str(col).lower() 
-            for col in data.columns
-        ]
+
+        # Flatten MultiIndex or tuple-based columns and lowercase them
+        new_columns = []
+        for col in data.columns:
+            if isinstance(col, tuple):
+                new_columns.append(str(col[0]).lower())
+            else:
+                new_columns.append(str(col).lower())
+        data.columns = new_columns
         
         # Handle different possible date column names
         date_col = None
