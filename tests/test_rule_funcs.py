@@ -12,11 +12,6 @@ from kiss_signal.rules import (
     ema_crossover,
     calculate_rsi,
 )
-from kiss_signal.config import (
-    validate_rule_params,
-    get_rule_function,
-    RULE_REGISTRY,
-)
 
 
 @pytest.fixture
@@ -160,68 +155,6 @@ class TestEMACrossover:
         assert signals.index.equals(sample_price_data.index)
 
 
-class TestRuleValidation:
-    """Test rule parameter validation."""
-    
-    def test_valid_sma_params(self) -> None:
-        """Test validation of valid SMA parameters."""
-        params = {'fast_period': 10, 'slow_period': 20}
-        validated = validate_rule_params('sma_crossover', params)
-        
-        assert validated == params
-    
-    def test_default_param_substitution(self) -> None:
-        """Test that missing parameters get default values."""
-        params = {}
-        validated = validate_rule_params('sma_crossover', params)
-        
-        assert 'fast_period' in validated
-        assert 'slow_period' in validated
-        assert validated['fast_period'] < validated['slow_period']
-    
-    def test_invalid_rule_type(self) -> None:
-        """Test error handling for unknown rule types."""
-        with pytest.raises(ValueError, match="Unknown rule type"):
-            validate_rule_params('unknown_rule', {})
-    
-    def test_invalid_param_types(self) -> None:
-        """Test error handling for invalid parameter types."""
-        with pytest.raises(ValueError, match="must be"):
-            validate_rule_params('sma_crossover', {'fast_period': 'invalid'})
-    
-    def test_param_range_validation(self) -> None:
-        """Test parameter range validation."""
-        with pytest.raises(ValueError, match="must be between"):
-            validate_rule_params('sma_crossover', {'fast_period': 100})
-    
-    def test_logical_validation(self) -> None:
-        """Test logical parameter validation."""
-        with pytest.raises(ValueError, match="fast_period must be less than slow_period"):
-            validate_rule_params('sma_crossover', {'fast_period': 20, 'slow_period': 10})
-
-
-class TestRuleRegistry:
-    """Test rule registry functionality."""
-    
-    def test_registry_completeness(self) -> None:
-        """Test that all expected rules are in registry."""
-        expected_rules = ['sma_crossover', 'rsi_oversold', 'ema_crossover']
-        
-        for rule_type in expected_rules:
-            assert rule_type in RULE_REGISTRY
-    
-    def test_get_rule_function(self) -> None:
-        """Test getting rule function from registry."""
-        func = get_rule_function('sma_crossover')
-        assert callable(func)
-        assert func == sma_crossover
-    
-    def test_get_unknown_rule_function(self) -> None:
-        """Test error handling for unknown rule functions."""
-        with pytest.raises(ValueError, match="Unknown rule type"):
-            get_rule_function('unknown_rule')
-
-
 class TestEdgeCases:
     """Test edge cases and error conditions."""
     
@@ -261,22 +194,17 @@ class TestIntegration:
     
     def test_all_rules_with_real_data(self, sample_price_data: pd.DataFrame) -> None:
         """Test all rule types with realistic data."""
-        rules_config = [
-            {"type": "sma_crossover", "params": {"fast_period": 5, "slow_period": 10}},
-            {"type": "rsi_oversold", "params": {"period": 14, "oversold_threshold": 30}},
-            {"type": "ema_crossover", "params": {"fast_period": 5, "slow_period": 10}}
-        ]
+        # Test SMA crossover
+        sma_signals = sma_crossover(sample_price_data, fast_period=5, slow_period=10)
+        assert isinstance(sma_signals, pd.Series)
+        assert sma_signals.dtype == bool
         
-        for rule in rules_config:
-            rule_type = rule["type"]
-            params = rule["params"]
-            
-            # Validate parameters
-            validate_rule_params(rule_type, params)
-            
-            # Get function and test
-            func = get_rule_function(rule_type)
-            signals = func(sample_price_data, **params)
-            
-            assert isinstance(signals, pd.Series)
-            assert signals.dtype == bool
+        # Test RSI oversold
+        rsi_signals = rsi_oversold(sample_price_data, period=14, oversold_threshold=30)
+        assert isinstance(rsi_signals, pd.Series)
+        assert rsi_signals.dtype == bool
+        
+        # Test EMA crossover
+        ema_signals = ema_crossover(sample_price_data, fast_period=5, slow_period=10)
+        assert isinstance(ema_signals, pd.Series)
+        assert ema_signals.dtype == bool

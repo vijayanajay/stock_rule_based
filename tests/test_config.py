@@ -8,7 +8,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from kiss_signal.config import Config, EdgeScoreWeights, load_app_config
+from kiss_signal.config import Config, EdgeScoreWeights, load_config
 
 
 def test_edge_score_weights_valid():
@@ -26,22 +26,30 @@ def test_edge_score_weights_invalid_sum():
 
 def test_config_validation(sample_config):
     """Test Config model validation."""
-    config = Config(**sample_config)
-    assert config.hold_period == 20  # This field was missing from the model
-    assert config.edge_score_weights.win_pct == 0.6
+    with tempfile.NamedTemporaryFile(suffix=".csv") as fp:
+        sample_config["universe_path"] = fp.name
+        config = Config(**sample_config)
+        assert config.hold_period == 20
+        assert config.edge_score_weights.win_pct == 0.6
 
 
-def test_load_config(config_file):
+def test_load_config(temp_dir, sample_config):
     """Test config loading from file."""
-    config = load_app_config(config_file)
-    assert config.hold_period == 20  # This field was missing from the model
+    universe_file = temp_dir / "universe.csv"
+    universe_file.touch()
+    sample_config["universe_path"] = str(universe_file)
+    config_path = temp_dir / "config.yaml"
+    config_path.write_text(yaml.dump(sample_config))
+    config = load_config(config_path)
+    assert config.hold_period == 20
+    assert config.min_trades_threshold == 10
     assert config.min_trades_threshold == 10
 
 
 def test_load_config_missing_file():
     """Test config loading with missing file."""
     with pytest.raises(FileNotFoundError):
-        load_app_config(Path("nonexistent.yaml"))
+        load_config(Path("nonexistent.yaml"))
 
 
 class TestConfig:
@@ -49,11 +57,15 @@ class TestConfig:
 
     def test_config_defaults(self):
         """Test default configuration values."""
-        config = Config()
-        assert config.universe_path == "data/nifty_large_mid.csv"
-        assert config.historical_data_years == 3
-        assert config.cache_refresh_days == 7
-        assert config.freeze_date is None
+        with tempfile.NamedTemporaryFile(suffix=".csv") as fp:
+            config = Config(universe_path=fp.name)
+            assert config.universe_path == fp.name
+            assert config.historical_data_years == 3
+            assert config.cache_dir == "data"
+            assert config.cache_refresh_days == 7
+            assert config.hold_period == 20
+            assert config.min_trades_threshold == 10
+            assert config.freeze_date is None
 
     def test_config_validation_historical_years(self):
         """Test validation of historical_data_years."""
@@ -94,20 +106,17 @@ class TestConfig:
 
             # Invalid - file doesn't exist
             with pytest.raises(ValidationError, match="Universe file not found"):
-                Config(universe_path="nonexistent.csv")
-
-            # Invalid - path is directory
+                Config(universe_path="nonexistent.csv")            # Invalid - path is directory
             with pytest.raises(ValidationError, match="Universe path is not a file"):
                 Config(universe_path=temp_dir)
 
     def test_config_freeze_date(self):
         """Test freeze date configuration."""
-        # Valid date
-        config = Config(freeze_date=date(2025, 1, 15))
-        assert config.freeze_date == date(2025, 1, 15)
-
-        # None value
         with tempfile.NamedTemporaryFile(suffix=".csv") as fp:
+            # Valid date
+            config = Config(universe_path=fp.name, freeze_date=date(2025, 1, 15))
+            assert config.freeze_date == date(2025, 1, 15)
+
             # None value
             config = Config(universe_path=fp.name, freeze_date=None)
             assert config.freeze_date is None
@@ -128,36 +137,40 @@ class TestLoadConfig:
             config_data = {
                 "universe_path": str(universe_path),
                 "historical_data_years": 5,
-                "cache_refresh_days": 14,                "edge_score_weights": {
+                "cache_refresh_days": 14,
+                "hold_period": 20,
+                "min_trades_threshold": 10,                "edge_score_weights": {
                     "win_pct": 0.5,
                     "sharpe": 0.5
                 }
             }
-
+            
             with open(config_path, "w") as f:
                 yaml.dump(config_data, f)
-
-            config = load_app_config(config_path)
+            
+            config = load_config(config_path)
             assert config.universe_path == str(universe_path)
             assert config.historical_data_years == 5
             assert config.cache_refresh_days == 14
+            assert config.hold_period == 20
+            assert config.min_trades_threshold == 10
 
     def test_load_config_missing_file(self):
         """Test loading config from non-existent file."""
         with pytest.raises(FileNotFoundError):
-            load_app_config(Path("nonexistent.yaml"))
+            load_config(Path("nonexistent.yaml"))
 
     def test_load_config_invalid_yaml(self):
         """Test loading config from malformed YAML."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content: [")
             f.flush()
-
+            
             config_path = Path(f.name)
-
+        
         try:
             with pytest.raises(yaml.YAMLError):
-                load_app_config(config_path)
+                load_config(config_path)
         finally:
             config_path.unlink()
 
@@ -166,13 +179,13 @@ class TestLoadConfig:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create universe file first
             universe_path = Path(temp_dir) / "universe.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-
-            # Create config file with freeze date
+            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")            # Create config file with freeze date
             config_path = Path(temp_dir) / "config.yaml"
             config_data = {
                 "universe_path": str(universe_path),
                 "freeze_date": "2025-01-15",
+                "hold_period": 20,
+                "min_trades_threshold": 10,
                 "edge_score_weights": {
                     "win_pct": 0.6,
                     "sharpe": 0.4
@@ -181,6 +194,6 @@ class TestLoadConfig:
 
             with open(config_path, "w") as f:
                 yaml.dump(config_data, f)
-
-            config = load_app_config(config_path)
+            
+            config = load_config(config_path)
             assert config.freeze_date == date(2025, 1, 15)

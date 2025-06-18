@@ -8,7 +8,7 @@ from typing import Dict, List, Any
 
 import pandas as pd
 
-from .config import get_rule_function, validate_rule_params
+from .rules import sma_crossover, rsi_oversold, ema_crossover
 
 __all__ = ["SignalGenerator"]
 
@@ -37,8 +37,7 @@ class SignalGenerator:
             symbol: NSE symbol to generate signals for
             price_data: OHLCV price data
             rule_stack: List of rule names to combine
-            
-        Returns:
+              Returns:
             DataFrame with signal timestamps and metadata
         """
         logger.info(f"Generating signals for {symbol} using rules: {rule_stack}")        # TODO: Implement rule evaluation logic
@@ -72,12 +71,18 @@ class SignalGenerator:
         rule_type = rule_config['type']
         rule_params = rule_config.get('params', {})
         
-        # Validate parameters
-        validated_params = validate_rule_params(rule_type, rule_params)
+        # Simple rule function lookup
+        rule_functions = {
+            'sma_crossover': sma_crossover,
+            'rsi_oversold': rsi_oversold,
+            'ema_crossover': ema_crossover,
+        }
         
-        # Get and execute rule function
-        rule_function = get_rule_function(rule_type)
-        signals = rule_function(price_data, **validated_params)
+        if rule_type not in rule_functions:
+            raise ValueError(f"Unknown rule type: {rule_type}")
+        
+        rule_function = rule_functions[rule_type]
+        signals = rule_function(price_data, **rule_params)
         
         logger.debug(f"Rule {rule_name} generated {signals.sum()} signals")
         return signals

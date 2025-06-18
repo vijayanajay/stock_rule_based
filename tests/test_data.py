@@ -146,8 +146,7 @@ class TestDataFunctions:
             self.cache_dir,
             30,  # refresh_days
             1,   # years
-            freeze_date=date(2023, 1, 5),
-            max_age_days=365
+            freeze_date=date(2023, 1, 5)
         )
         
         assert len(result) == 5  # Data up to 2023-01-05

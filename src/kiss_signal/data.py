@@ -50,24 +50,22 @@ def load_universe(universe_path: str) -> List[str]:
 def get_price_data(
     symbol: str,
     cache_dir: Path,
-    refresh_days: int,
-    years: int,
+    refresh_days: int = 30,
+    years: int = 1,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     freeze_date: Optional[date] = None,
-    max_age_days: Optional[int] = None
 ) -> pd.DataFrame:
     """Get price data from cache with validation.
     
     Args:
-        symbol: Symbol to fetch (without .NS suffix)
-        cache_dir: Directory containing cached data files
-        refresh_days: Days before cache needs refresh
-        years: Years of data to fetch if downloading
+        symbol: Stock symbol
+        cache_dir: Path to cache directory
+        refresh_days: Days before cache refresh
+        years: Number of years of data
         start_date: Optional start date filter
         end_date: Optional end date filter
         freeze_date: Optional freeze date for backtesting
-        max_age_days: Optional maximum age in days
         
     Returns:
         Standardized DataFrame with date index and OHLCV columns
