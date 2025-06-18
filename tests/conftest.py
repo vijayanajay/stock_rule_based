@@ -20,6 +20,7 @@ def sample_config() -> Dict[str, Any]:
     """Sample configuration for testing."""
     return {
         "universe_path": "data/nifty_large_mid.csv",
+        "cache_dir": "data/cache",
         "hold_period": 20,
         "min_trades_threshold": 10,
         "edge_score_weights": {

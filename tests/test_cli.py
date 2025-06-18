@@ -31,10 +31,13 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         
         sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
         Path("config.yaml").write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
@@ -62,10 +65,13 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         
         sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
         Path("config.yaml").write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
@@ -91,10 +97,13 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         
         sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
         Path("config.yaml").write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
@@ -114,10 +123,13 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         
         sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
         Path("config.yaml").write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
@@ -145,9 +157,12 @@ def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
         Path("config.yaml").write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
@@ -167,23 +182,26 @@ def test_run_command_no_config() -> None:
         assert "Configuration file not found" in result.stdout
 
 
-def test_run_command_no_rules_file(sample_config: Dict[str, Any]) -> None:
-    """Test run command without rules file gives an error."""
+def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
+    """Test run command with missing rules file."""
     with runner.isolated_filesystem() as fs:
         # Prepare data files for a complete config
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
 
-        # Explicitly set config to point to the new universe file
+        # Complete config setup using fixture
         complete_config = sample_config.copy()
         complete_config["universe_path"] = str(universe_path)
-
-        # Write only the config, but no rules file
-        with open("config.yaml", "w") as f:
-            yaml.dump(complete_config, f)
-
-        result = runner.invoke(app, ["--rules", "nonexistent.yaml"])
+        complete_config["cache_dir"] = str(cache_dir)
+        
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(complete_config))
+        rules_path = Path("nonexistent_rules.yaml")
+        
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path)])
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
