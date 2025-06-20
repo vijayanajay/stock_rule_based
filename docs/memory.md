@@ -1,3 +1,14 @@
+### Inconsistent Data Contracts and Brittle Tests (2025-06-22)
+**Issue**: A test for a rule evaluation function (`test_evaluate_rule_sma_crossover`) was failing with an `AssertionError`, indicating that a rule expected to produce signals on trending data was not.
+**Root Cause**: A structural weakness in the system's data handling contract, coupled with a brittle test. While the production data pipeline (`data.py`) produced dataframes with lowercase column names, test fixtures were inconsistent—some produced uppercase columns. To compensate, a downstream component (`signal_generator.py`) performed defensive normalization by lowercasing column names, hiding the underlying inconsistency. The immediate test failure was caused by a separate, brittle test fixture that used random data, which didn't reliably produce the conditions needed for the test to pass. The combination of inconsistent test data and defensive coding obscured the real issue: the lack of a firm data contract for column casing.
+**Fix**:
+1.  **Enforce Data Contract**: A system-wide contract was established: all components that produce price data (production or test fixtures) are now responsible for providing dataframes with lowercase column names.
+2.  **Stabilize Test Fixture**: The brittle, random-data test fixture (`sample_price_data` in `test_signal_generator.py`) was replaced with a deterministic one that reliably produces testable conditions and adheres to the new lowercase column contract.
+3.  **Remove Redundancy**: The redundant, defensive column normalization in `signal_generator.py` was removed. The component now correctly assumes its input data adheres to the system-wide contract, simplifying its logic.
+**Prevention**: Establish and enforce clear data contracts (e.g., schema, column casing, data types) at the boundaries of components. Upstream components (data providers, test fixtures) are responsible for adhering to the contract. Downstream components should be able to trust the data they receive, which simplifies their logic and removes the need for defensive transformations. Tests should use deterministic, not random, data to ensure they are reliable and non-flaky.
+
+---
+
 ### Component and Test Desynchronization (Regression) (2025-06-20)
 **Issue**: A regression caused multiple test failures in `test_cli.py` due to `AttributeError` on a mocked function and incorrect exit codes (2 instead of 1).
 **Root Cause**: A structural desynchronization between the CLI implementation and its tests, coupled with a framework-level feature overriding application logic, re-emerged in the codebase.

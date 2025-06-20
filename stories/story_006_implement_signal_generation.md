@@ -1,11 +1,12 @@
 # Story 006: Implement Signal Generation
 
-## Status: 🚧 READY FOR DEVELOPMENT
+## Status: 🚧 IN PROGRESS
 
 **Priority:** HIGH  
 **Estimated Story Points:** 6  
 **Prerequisites:** Story 005 (Implement Backtesting Engine) ✅ Complete  
-**Created:** 2025-06-19
+**Created:** 2025-06-19  
+**Started:** 2025-06-19
 
 ## User Story
 As a technical trader, I want the signal generation module implemented so that the system can generate actual buy/sell signals using the optimal rule combinations discovered by the backtesting engine.

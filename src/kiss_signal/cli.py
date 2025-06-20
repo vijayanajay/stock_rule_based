@@ -2,15 +2,15 @@
 
 import logging
 from datetime import date
-from typing import Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from .config import load_config, load_rules
+from .config import Config, load_config, load_rules
 from . import data, backtester
 
 __all__ = ["app"]
@@ -38,6 +38,90 @@ def _show_banner() -> None:
             title="QuickEdge",
             border_style="blue",
         )
+    )
+
+
+def _run_backtests(
+    app_config: Config,
+    rules_config: List[Dict[str, Any]],
+    symbols: List[str],
+    freeze_date: Optional[date],
+) -> List[Dict[str, Any]]:
+    """Run backtester for all symbols and return combined results."""
+    all_results = []
+    bt = backtester.Backtester(
+        hold_period=getattr(app_config, "hold_period", 20),
+        min_trades_threshold=getattr(app_config, "min_trades_threshold", 10),
+    )
+
+    with console.status("[bold green]Running backtests...") as status:
+        for i, symbol in enumerate(symbols):
+            status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
+            try:
+                price_data = data.get_price_data(
+                    symbol=symbol,
+                    cache_dir=Path(app_config.cache_dir),
+                    refresh_days=app_config.cache_refresh_days,
+                    years=app_config.historical_data_years,
+                    freeze_date=freeze_date,
+                )
+
+                if price_data is None or len(price_data) < 100:
+                    logger.warning(f"Insufficient data for {symbol}, skipping")
+                    continue
+
+                strategies = bt.find_optimal_strategies(
+                    rule_combinations=rules_config,
+                    price_data=price_data,
+                    freeze_date=freeze_date,
+                )
+
+                for strategy in strategies:
+                    strategy["symbol"] = symbol
+                    all_results.append(strategy)
+
+            except Exception as e:
+                logger.error(f"Error analyzing {symbol}: {e}")
+                continue
+    return all_results
+
+
+def _build_results_table(results: List[Dict[str, Any]]) -> Table:
+    """Build a Rich Table to display top strategies."""
+    table = Table(title="Top Strategies by Edge Score")
+    table.add_column("Symbol", style="cyan")
+    table.add_column("Rule Stack", style="green")
+    table.add_column("Edge Score", justify="right", style="yellow")
+    table.add_column("Win %", justify="right", style="blue")
+    table.add_column("Sharpe", justify="right", style="magenta")
+    table.add_column("Trades", justify="right", style="white")
+
+    top_strategies = sorted(results, key=lambda x: x["edge_score"], reverse=True)[:10]
+
+    for strategy in top_strategies:
+        rule_stack_str = " + ".join(strategy["rule_stack"])
+        table.add_row(
+            strategy["symbol"],
+            rule_stack_str,
+            f"{strategy['edge_score']:.3f}",
+            f"{strategy['win_pct']:.1%}",
+            f"{strategy['sharpe']:.2f}",
+            str(strategy["total_trades"]),
+        )
+    return table
+
+
+def _print_results(results: List[Dict[str, Any]]) -> None:
+    """Print the results summary table."""
+    if not results:
+        console.print("[red]No valid strategies found. Check data quality and rule configurations.[/red]")
+        return
+
+    table = _build_results_table(results)
+    console.print(table)
+    console.print(
+        f"\n[green]✨ Analysis complete. Found {len(results)} valid strategies "
+        f"across {len(set(s['symbol'] for s in results))} symbols.[/green]"
     )
 
 
@@ -98,78 +182,11 @@ def run(
         # Step 3: Analyze strategies for each ticker
         console.print("[3/4] Analyzing strategies for each ticker...")
         symbols = data.load_universe(app_config.universe_path)
-        all_results = []
-
-        # Initialize backtester
-        bt = backtester.Backtester(
-            hold_period=getattr(app_config, 'hold_period', 20),
-            min_trades_threshold=getattr(app_config, 'min_trades_threshold', 10)
-        )
-
-        with console.status("[bold green]Running backtests...") as status:
-            for i, symbol in enumerate(symbols):
-                status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
-                try:
-                    # Get price data for this symbol
-                    price_data = data.get_price_data(
-                        symbol=symbol,
-                        cache_dir=Path(app_config.cache_dir),
-                        refresh_days=app_config.cache_refresh_days,
-                        years=app_config.historical_data_years,
-                        freeze_date=freeze_date,
-                    )
-                    
-                    if price_data is None or len(price_data) < 100:
-                        logger.warning(f"Insufficient data for {symbol}, skipping")
-                        continue
-
-                    # Run backtester on this symbol
-                    strategies = bt.find_optimal_strategies(
-                        rule_combinations=rules_config,
-                        price_data=price_data,
-                        freeze_date=freeze_date
-                    )
-
-                    # Add symbol info to each strategy
-                    for strategy in strategies:
-                        strategy['symbol'] = symbol
-                        all_results.append(strategy)
-
-                except Exception as e:
-                    logger.error(f"Error analyzing {symbol}: {e}")
-                    continue
+        all_results = _run_backtests(app_config, rules_config, symbols, freeze_date)
 
         # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
-        
-        if all_results:
-            # Create summary table
-            table = Table(title="Top Strategies by Edge Score")
-            table.add_column("Symbol", style="cyan")
-            table.add_column("Rule Stack", style="green")
-            table.add_column("Edge Score", justify="right", style="yellow")
-            table.add_column("Win %", justify="right", style="blue")
-            table.add_column("Sharpe", justify="right", style="magenta")
-            table.add_column("Trades", justify="right", style="white")
-
-            # Sort all results by edge score and show top 10
-            top_strategies = sorted(all_results, key=lambda x: x['edge_score'], reverse=True)[:10]
-            
-            for strategy in top_strategies:
-                rule_stack_str = " + ".join(strategy['rule_stack'])
-                table.add_row(
-                    strategy['symbol'],
-                    rule_stack_str,
-                    f"{strategy['edge_score']:.3f}",
-                    f"{strategy['win_pct']:.1%}",
-                    f"{strategy['sharpe']:.2f}",
-                    str(strategy['total_trades'])
-                )
-
-            console.print(table)
-            console.print(f"\n[green]✨ Analysis complete. Found {len(all_results)} valid strategies across {len(set(s['symbol'] for s in all_results))} symbols.[/green]")
-        else:
-            console.print("[red]No valid strategies found. Check data quality and rule configurations.[/red]")
+        _print_results(all_results)
     
     except typer.Exit:
         raise

@@ -1,7 +1,7 @@
 ============================= test session starts =============================
 platform win32 -- Python 3.12.10, pytest-8.4.0, pluggy-1.6.0 -- D:\Code\stock_rule_based\venv\Scripts\python.exe
 cachedir: .pytest_cache
-rootdir: D:\Code\stock_rule_based
+rootdir: d:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
 collecting ... collected 71 items
@@ -86,13 +86,13 @@ Name                                  Stmts   Miss  Cover
 src\kiss_signal\__init__.py               4      0   100%
 src\kiss_signal\_version.py              13     13     0%
 src\kiss_signal\backtester.py           128     21    84%
-src\kiss_signal\cli.py                   93     12    87%
+src\kiss_signal\cli.py                  102     12    88%
 src\kiss_signal\config.py                58     12    79%
-src\kiss_signal\data.py                 157     26    83%
-src\kiss_signal\persistence.py           19     19     0%
-src\kiss_signal\reporter.py              25     25     0%
+src\kiss_signal\data.py                 142     23    84%
+src\kiss_signal\persistence.py            0      0   100%
+src\kiss_signal\reporter.py               0      0   100%
 src\kiss_signal\rules.py                 48      3    94%
-src\kiss_signal\signal_generator.py      32     32     0%
+src\kiss_signal\signal_generator.py       0      0   100%
 ---------------------------------------------------------
-TOTAL                                   577    163    72%
-============================= 71 passed in 27.75s =============================
+TOTAL                                   495     84    83%
+============================= 71 passed in 24.85s =============================

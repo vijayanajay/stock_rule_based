@@ -371,6 +371,8 @@ def sample_backtest_data():
     df = pd.read_csv(csv_path)
     df['Date'] = pd.to_datetime(df['Date'])
     df.set_index('Date', inplace=True)
+    # Enforce the lowercase column contract at the data source (the fixture).
+    df.columns = [col.lower() for col in df.columns]
     return df
 
 
@@ -382,19 +384,17 @@ class TestBacktesterFixtures:
         assert sample_backtest_data is not None
         assert isinstance(sample_backtest_data, pd.DataFrame)
         assert len(sample_backtest_data) == 100
-        assert list(sample_backtest_data.columns) == ['Open', 'High', 'Low', 'Close', 'Volume']
-        
+        assert list(sample_backtest_data.columns) == ['open', 'high', 'low', 'close', 'volume']
         # Verify data quality - all prices should be positive
-        assert (sample_backtest_data['Close'] > 0).all()
-        assert (sample_backtest_data['Open'] > 0).all()
-        assert (sample_backtest_data['High'] > 0).all()
-        assert (sample_backtest_data['Low'] > 0).all()
-        assert (sample_backtest_data['Volume'] > 0).all()
-        
+        assert (sample_backtest_data['close'] > 0).all()
+        assert (sample_backtest_data['open'] > 0).all()
+        assert (sample_backtest_data['high'] > 0).all()
+        assert (sample_backtest_data['low'] > 0).all()
+        assert (sample_backtest_data['volume'] > 0).all()
         # Verify OHLC relationships
-        assert (sample_backtest_data['High'] >= sample_backtest_data['Low']).all()
-        assert (sample_backtest_data['Close'] >= sample_backtest_data['Low']).all()
-        assert (sample_backtest_data['Close'] <= sample_backtest_data['High']).all()
+        assert (sample_backtest_data['high'] >= sample_backtest_data['low']).all()
+        assert (sample_backtest_data['close'] >= sample_backtest_data['low']).all()
+        assert (sample_backtest_data['close'] <= sample_backtest_data['high']).all()
 
 
 if __name__ == "__main__":

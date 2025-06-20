@@ -170,36 +170,17 @@ def _fetch_symbol_data(symbol: str, years: int, freeze_date: Optional[date] = No
         if data.empty:
             logger.warning(f"No data returned for {symbol}")
             return None
-          # Standardize column names and format
+        # Standardize columns: reset index to get 'Date', then lowercase all columns.
         data = data.reset_index()
-
-        # Flatten MultiIndex or tuple-based columns and lowercase them
-        new_columns = []
-        for col in data.columns:
-            if isinstance(col, tuple):
-                new_columns.append(str(col[0]).lower())
-            else:
-                new_columns.append(str(col).lower())
-        data.columns = new_columns
-        
-        # Handle different possible date column names
-        date_col = None
-        for possible_date_col in ['date', 'datetime']:
-            if possible_date_col in data.columns:
-                date_col = possible_date_col
-                break
-        
-        if date_col is None:
-            logger.error(f"No date column found for {symbol}")
-            return None
-        
-        # Rename date column to 'date' if needed
-        if date_col != 'date':
-            data = data.rename(columns={date_col: 'date'})
+        # Handle potential MultiIndex or tuple columns from yfinance by checking each column name
+        data.columns = [
+            col[0].lower() if isinstance(col, tuple) else str(col).lower()
+            for col in data.columns
+        ]
         
         required_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
         if not all(col in data.columns for col in required_columns):
-            logger.error(f"Missing required columns for {symbol}. Available: {data.columns.tolist()}")
+            logger.error(f"Missing required columns for {symbol}: {data.columns}")
             return None
         
         # Select and order columns
