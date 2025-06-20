@@ -1,0 +1,50 @@
+2025-06-21 01:39:24,011 - kiss_signal.cli - INFO - === KISS Signal CLI Run Started - Log file: run_log.txt ===
+2025-06-21 01:39:24,031 - kiss_signal.rules - WARNING - Insufficient data: 3 rows, need 10
+2025-06-21 01:39:24,048 - kiss_signal.rules - WARNING - Insufficient data for RSI: 3 rows, need 15
+2025-06-21 01:39:24,054 - kiss_signal.rules - WARNING - Insufficient data: 0 rows, need 10
+2025-06-21 01:39:24,056 - kiss_signal.rules - WARNING - Insufficient data: 1 rows, need 10
+2025-06-21 01:39:24,072 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,074 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=30
+2025-06-21 01:39:24,075 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,081 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,087 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,091 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,095 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,095 - kiss_signal.rules - WARNING - Insufficient data: 5 rows, need 20
+2025-06-21 01:39:24,097 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,099 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,101 - kiss_signal.signal_generator - INFO - Generated 1 buy and 1 sell signals for TEST.NS
+2025-06-21 01:39:24,105 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,108 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover', 'rsi_oversold_30']
+2025-06-21 01:39:24,113 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,115 - kiss_signal.signal_generator - INFO - Generated 1 buy and 1 sell signals for TEST.NS
+2025-06-21 01:39:24,116 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,118 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,120 - kiss_signal.signal_generator - INFO - Generated 1 buy and 1 sell signals for TEST.NS
+2025-06-21 01:39:24,122 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,125 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: []
+2025-06-21 01:39:24,125 - kiss_signal.signal_generator - WARNING - Empty rule stack for TEST.NS, returning empty signals
+2025-06-21 01:39:24,128 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,128 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,132 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,133 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,135 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,137 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,139 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,141 - kiss_signal.signal_generator - INFO - Generating signals for TEST.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,143 - kiss_signal.signal_generator - INFO - Generated 1 buy and 1 sell signals for TEST.NS
+2025-06-21 01:39:24,147 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,149 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,153 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,155 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,163 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,163 - kiss_signal.signal_generator - INFO - Generating signals for REAL.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,165 - kiss_signal.signal_generator - INFO - Generated 2 buy and 2 sell signals for REAL.NS
+2025-06-21 01:39:24,172 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=15
+2025-06-21 01:39:24,174 - kiss_signal.signal_generator - INFO - Generating signals for MULTI.NS using rules: ['sma_10_20_crossover', 'ema_12_26_crossover']
+2025-06-21 01:39:24,180 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 3 rules, hold_period=20
+2025-06-21 01:39:24,180 - kiss_signal.signal_generator - INFO - Generating signals for LARGE.NS using rules: ['sma_10_20_crossover']
+2025-06-21 01:39:24,210 - kiss_signal.signal_generator - INFO - Generated 140 buy and 140 sell signals for LARGE.NS
+2025-06-21 01:39:24,213 - kiss_signal.signal_generator - INFO - SignalGenerator initialized with 1 rules, hold_period=10
+2025-06-21 01:39:24,213 - kiss_signal.signal_generator - INFO - Generating signals for FIXTURE.NS using rules: ['test_sma']
+2025-06-21 01:39:24,217 - kiss_signal.signal_generator - INFO - Generated 8 buy and 8 sell signals for FIXTURE.NS

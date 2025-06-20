@@ -118,16 +118,16 @@ class TestDataManager:
     def test_save_and_load_symbol_cache(self):
         """Test saving and loading symbol cache."""
         # Create test data
-        test_data = pd.DataFrame({
+        test_data_with_col = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2025-01-01', periods=3)),
             'open': [100.0, 101.0, 102.0],
             'high': [105.0, 106.0, 107.0],
             'low': [95.0, 96.0, 97.0],
             'close': [102.0, 103.0, 104.0],
             'volume': [1000, 1100, 1200]
-        }, index=pd.to_datetime(pd.date_range('2025-01-01', periods=3)))
-        test_data.index.name = 'date'
+        })
         # Save data
-        success = data._save_symbol_cache("RELIANCE", test_data, self.cache_dir)
+        success = data._save_symbol_cache("RELIANCE", test_data_with_col, self.cache_dir)
         assert success
         # Load data
         loaded_data = data.get_price_data("RELIANCE", self.cache_dir, 7, 1)
@@ -137,15 +137,15 @@ class TestDataManager:
     def test_get_price_data_with_date_filtering(self):
         """Test getting price data with date filtering."""
         # Create and save test data
-        test_data = pd.DataFrame({
+        test_data_with_col = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2025-01-01', periods=10)),
             'open': range(100, 110),
             'high': range(105, 115),
             'low': range(95, 105),
             'close': range(102, 112),
             'volume': range(1000, 1010)
-        }, index=pd.to_datetime(pd.date_range('2025-01-01', periods=10)))
-        test_data.index.name = 'date'
-        data._save_symbol_cache("RELIANCE", test_data, self.cache_dir)
+        })
+        data._save_symbol_cache("RELIANCE", test_data_with_col, self.cache_dir)
         # Test date filtering
         filtered_data = data.get_price_data(
             "RELIANCE", 
@@ -162,15 +162,15 @@ class TestDataManager:
     def test_get_price_data_with_freeze_date(self):
         """Test getting price data with freeze date."""
         # Create and save test data
-        test_data = pd.DataFrame({
+        test_data_with_col = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2025-01-01', periods=10)),
             'open': range(100, 110),
             'high': range(105, 115),
             'low': range(95, 105),
             'close': range(102, 112),
             'volume': range(1000, 1010)
-        }, index=pd.to_datetime(pd.date_range('2025-01-01', periods=10)))
-        test_data.index.name = 'date'
-        data._save_symbol_cache("RELIANCE", test_data, self.cache_dir)
+        })
+        data._save_symbol_cache("RELIANCE", test_data_with_col, self.cache_dir)
         # Data should be limited to freeze date
         result = data.get_price_data("RELIANCE", self.cache_dir, 7, 1, freeze_date=date(2025, 1, 5))
         assert result.index.max() <= pd.to_datetime(date(2025, 1, 5))

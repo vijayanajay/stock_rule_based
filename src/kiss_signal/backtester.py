@@ -66,7 +66,9 @@ class Backtester:
         
         for i, rule_combo in enumerate(rule_combinations):
             try:
-                logger.debug(f"Processing rule combination {i+1}/{len(rule_combinations)}: {rule_combo['rule_stack']}")
+                # Only log every 5th strategy to reduce verbosity
+                if i % 5 == 0 or i == len(rule_combinations) - 1:
+                    logger.debug(f"Processing rule combination {i+1}/{len(rule_combinations)}: {rule_combo['rule_stack']}")
                 
                 # Generate signals
                 entry_signals, exit_signals = self._generate_signals(rule_combo, price_data)
@@ -95,12 +97,11 @@ class Backtester:
                     'edge_score': edge_score,
                     'win_pct': win_pct,
                     'sharpe': sharpe,
-                    'total_trades': total_trades,
-                    'avg_return': avg_return
+                    'total_trades': total_trades,                    'avg_return': avg_return
                 }
                 
                 strategies.append(strategy)
-                logger.debug(f"Strategy added: edge_score={edge_score:.4f}, win_pct={win_pct:.3f}, sharpe={sharpe:.3f}")
+                # Only log successful strategies, not each individual one
                 
             except Exception as e:
                 logger.error(f"Error processing rule combination {rule_combo}: {e}")
@@ -111,7 +112,6 @@ class Backtester:
         
         logger.info(f"Found {len(strategies)} valid strategies (>= {self.min_trades_threshold} trades)")
         return strategies
-    
     def calc_edge_score(self, win_pct: float, sharpe: float, weights: Dict[str, float]) -> float:
         """Calculate edge score using weighted metrics.
         
@@ -124,7 +124,6 @@ class Backtester:
             Calculated edge score
         """
         edge_score = (win_pct * weights['win_pct']) + (sharpe * weights['sharpe'])
-        logger.debug(f"Edge score calculated: {edge_score:.4f} (win_pct={win_pct:.3f}, sharpe={sharpe:.3f})")
         return edge_score
 
     def _generate_signals(self, rule_combo: Dict[str, Any], price_data: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
@@ -143,47 +142,45 @@ class Backtester:
         rule_stack = rule_combo.get('rule_stack', [])
         parameters = rule_combo.get('parameters', {})
         
-        if not rule_stack:
-            raise ValueError("Rule combination must have non-empty rule_stack")
+        # Only log for complex rule stacks (more than 1 rule)
+        if len(rule_stack) > 1:
+            logger.debug(f"Generating signals for rule stack: {rule_stack}")
         
-        logger.debug(f"Generating signals for rule stack: {rule_stack}")
-        
-        # Initialize entry signals (start with all False)
-        entry_signals = pd.Series(False, index=price_data.index)
+        # Initialize entry signals (start with all True for AND logic)
+        entry_signals = pd.Series(True, index=price_data.index)
         
         # Process each rule in the stack
         for rule_name in rule_stack:
-            if rule_name == 'baseline':
-                # Baseline rule: always True (no additional filtering)
-                rule_signals = pd.Series(True, index=price_data.index)
-            else:
-                # Get rule function and parameters
-                rule_func = getattr(rules, rule_name, None)
-                if rule_func is None:
-                    raise ValueError(f"Rule function '{rule_name}' not found in rules module")
-                
-                rule_params = parameters.get(rule_name, {})
-                
-                # Check if rule parameters are provided for non-baseline rules
-                if not rule_params:
-                    raise ValueError(f"Missing parameters for rule '{rule_name}'")
-                
-                try:
-                    rule_signals = rule_func(price_data, **rule_params)
-                except Exception as e:
-                    logger.error(f"Error executing rule '{rule_name}': {e}")
-                    raise ValueError(f"Rule '{rule_name}' failed: {e}") from e
+            # Get rule function and parameters
+            rule_func = getattr(rules, rule_name, None)
+            if rule_func is None:
+                raise ValueError(f"Rule function '{rule_name}' not found in rules module")
             
+            rule_params = parameters.get(rule_name, {})
+            
+            # Check if rule parameters are provided for non-baseline rules
+            if not rule_params:
+                raise ValueError(f"Missing parameters for rule '{rule_name}'")
+
+            try:
+                # Call the actual rule function from the rules module
+                rule_signals = rule_func(price_data, **rule_params)
+            except Exception as e:
+                logger.error(f"Error executing rule '{rule_name}' with params {rule_params}: {e}")
+                raise ValueError(f"Rule '{rule_name}' failed execution") from e
+
             # Combine signals (AND logic for rule stack)
-            if rule_name == 'baseline':
-                entry_signals = rule_signals
-            else:
-                entry_signals = entry_signals & rule_signals
+            entry_signals = entry_signals & rule_signals
         
         # Generate exit signals (time-based)
         exit_signals = self._generate_exit_signals(entry_signals, price_data)
         
-        logger.debug(f"Generated {entry_signals.sum()} entry signals, {exit_signals.sum()} exit signals")
+        # Debug: Check signal counts
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Final entry signals: {entry_signals.sum()}, exit signals: {exit_signals.sum()}")
+            if entry_signals.sum() > 0:
+                logger.debug(f"Entry signal dates: {entry_signals[entry_signals].index[:5].tolist()}")
+        
         return entry_signals, exit_signals
 
     def _generate_exit_signals(self, entry_signals: pd.Series, price_data: pd.DataFrame) -> pd.Series:
@@ -213,9 +210,8 @@ class Backtester:
                     exit_signals.loc[actual_exit_date] = True
                     
             except (KeyError, IndexError):
-                # Exit date beyond available data - skip this trade
-                continue
-        
+                # Exit date beyond available data - skip this trade                
+                continue        
         return exit_signals
 
     def _create_portfolio(self, entry_signals: pd.Series, exit_signals: pd.Series, 
@@ -231,8 +227,17 @@ class Backtester:
             Vectorbt Portfolio object with simulation results
         """
         logger.debug(f"Creating portfolio with {entry_signals.sum()} entries, {exit_signals.sum()} exits")
-          # Use close prices for simulation
-        close_prices = price_data['close']        # Create portfolio with basic settings
+        
+        # Use close prices for simulation
+        close_prices = price_data['close']
+        
+        # Debug: Check data alignment
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Price data shape: {price_data.shape}, close prices shape: {close_prices.shape}")
+            logger.debug(f"Entry signals shape: {entry_signals.shape}, Exit signals shape: {exit_signals.shape}")
+            logger.debug(f"Index types - Price: {type(price_data.index[0])}, Entry: {type(entry_signals.index[0])}")
+        
+        # Create portfolio with basic settings
         portfolio = vbt.Portfolio.from_signals(
             close=close_prices,
             entries=entry_signals,
@@ -244,7 +249,6 @@ class Backtester:
             size=np.inf  # Use all available cash for each trade (buy as many shares as possible)
         )
         
-        logger.debug(f"Portfolio created with {len(portfolio.trades.records_readable)} trades")
         return portfolio
 
     def _calculate_win_percentage(self, portfolio: 'vbt.Portfolio') -> float:
@@ -252,8 +256,7 @@ class Backtester:
         
         Args:
             portfolio: Vectorbt Portfolio object
-            
-        Returns:
+              Returns:
             Win percentage as float (0.0 to 1.0)
         """
         trades = portfolio.trades.records_readable
@@ -264,7 +267,6 @@ class Backtester:
         total_trades = len(trades)
         win_pct = winning_trades / total_trades
         
-        logger.debug(f"Win percentage: {win_pct:.3f} ({winning_trades}/{total_trades})")
         return float(win_pct)
 
     def _calculate_sharpe_ratio(self, portfolio: 'vbt.Portfolio', risk_free_rate: float = 0.05) -> float:
@@ -273,14 +275,14 @@ class Backtester:
         Args:
             portfolio: Vectorbt Portfolio object
             risk_free_rate: Annual risk-free rate (default 5%)
-            
-        Returns:
+              Returns:
             Sharpe ratio as float
         """
         returns = portfolio.returns()
         if len(returns) == 0 or returns.std() == 0:
             return 0.0
-          # Convert to annual figures
+        
+        # Convert to annual figures
         annual_return = returns.mean() * 252  # 252 trading days
         annual_volatility = returns.std() * (252 ** 0.5)
         
@@ -288,7 +290,6 @@ class Backtester:
             return 0.0
         
         sharpe = (annual_return - risk_free_rate) / annual_volatility
-        logger.debug(f"Sharpe ratio: {sharpe:.3f} (annual_return={annual_return:.3f}, volatility={annual_volatility:.3f})")
         return float(sharpe)
 
     def _calculate_total_trades(self, portfolio: 'vbt.Portfolio') -> int:
@@ -296,13 +297,11 @@ class Backtester:
         
         Args:
             portfolio: Vectorbt Portfolio object
-            
-        Returns:
+              Returns:
             Number of trades as integer
         """
         trades = portfolio.trades.records_readable
         total_trades = len(trades)
-        logger.debug(f"Total trades: {total_trades}")
         return total_trades
 
     def _calculate_average_return(self, portfolio: 'vbt.Portfolio') -> float:
@@ -310,14 +309,13 @@ class Backtester:
         
         Args:
             portfolio: Vectorbt Portfolio object
-            
-        Returns:
+              Returns:
             Average return per trade as float
         """
         trades = portfolio.trades.records_readable
         if len(trades) == 0:
             return 0.0
-          # Calculate return percentage for each trade
+        
+        # Calculate return percentage for each trade
         avg_return = (trades['Return'] / 100).mean()  # Convert from percentage
-        logger.debug(f"Average return per trade: {avg_return:.4f}")
         return float(avg_return)

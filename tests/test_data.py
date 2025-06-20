@@ -1,4 +1,4 @@
-"""Tests for Data module functions."""
+"""Tests for Data Manager module."""
 
 import os
 import shutil
@@ -119,14 +119,14 @@ class TestDataFunctions:
             'close': [102, 103, 104],
             'volume': [1000, 1100, 1200]
         })
-        test_data.set_index('date', inplace=True)
-        
         # Save data
         data._save_symbol_cache("RELIANCE", test_data, self.cache_dir)
-        
         # Load and verify
         loaded_data = data._load_symbol_cache("RELIANCE", self.cache_dir)
-        pd.testing.assert_frame_equal(test_data, loaded_data)
+
+        # The expected data is the original data with the 'date' column as index.
+        expected_data = test_data.set_index('date')
+        pd.testing.assert_frame_equal(expected_data, loaded_data)
     
     def test_get_price_data_with_date_filtering(self):
         """Test get_price_data with date filtering."""
@@ -139,8 +139,8 @@ class TestDataFunctions:
             'close': range(102, 112),
             'volume': range(1000, 1010)
         })
-        test_data.set_index('date', inplace=True)
-        data._save_symbol_cache("RELIANCE", test_data, self.cache_dir)        # Test filtering
+        data._save_symbol_cache("RELIANCE", test_data, self.cache_dir)
+        # Test filtering
         result = data.get_price_data(
             "RELIANCE",
             self.cache_dir,
@@ -154,7 +154,7 @@ class TestDataFunctions:
     
     def test_get_price_data_with_freeze_date(self):
         """Test get_price_data respects freeze_date."""
-        # Create cached data 
+        # Create cached data
         test_data = pd.DataFrame({
             'date': pd.date_range('2023-01-01', periods=10),
             'open': range(100, 110),
@@ -163,15 +163,15 @@ class TestDataFunctions:
             'close': range(102, 112),
             'volume': range(1000, 1010)
         })
-        test_data.set_index('date', inplace=True)
         data._save_symbol_cache("RELIANCE", test_data, self.cache_dir)
-          # Test with freeze date
+        # Test with freeze date
         result = data.get_price_data(
             "RELIANCE",
             self.cache_dir,
             30,  # refresh_days
             1,   # years
-            freeze_date=date(2023, 1, 3)        )
+            freeze_date=date(2023, 1, 3)
+        )
         
         assert len(result) == 3
         assert result.index.max().date() == date(2023, 1, 3)

@@ -96,8 +96,7 @@ def get_price_data(
     
     # Apply date filtering
     if start_date:
-        data = data[data.index >= pd.to_datetime(start_date)]
-    
+        data = data[data.index >= pd.to_datetime(start_date)]    
     if end_date:
         data = data[data.index <= pd.to_datetime(end_date)]
     
@@ -108,7 +107,10 @@ def get_price_data(
     if data.empty:
         raise ValueError(f"No data available for {symbol} in requested date range")
     
-    logger.debug(f"Served {len(data)} rows for {symbol}")
+    # Only log in verbose mode for individual symbol data serving
+    if len(data) < 50:
+        logger.warning(f"Limited data for {symbol}: only {len(data)} rows")
+    
     return data
 
 
@@ -235,7 +237,8 @@ def _validate_data_quality(data: pd.DataFrame, symbol: str) -> bool:
 
 
 def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool:
-    """Save symbol data to cache file.    
+    """Save symbol data to cache file.
+    
     Args:
         symbol: Symbol name (without .NS suffix)
         data: DataFrame to save
@@ -248,8 +251,7 @@ def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool
     
     try:
         # Save with index=True to preserve the date index
-        data.to_csv(cache_file, index=True)
-        logger.debug(f"Saved cache for {symbol}")
+        data.to_csv(cache_file, index=False)
         return True
     except Exception as e:
         logger.error(f"Failed to save cache for {symbol}: {e}")
@@ -259,7 +261,17 @@ def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool
 def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
     """Load symbol data from cache file."""
     cache_file = cache_dir / f"{symbol}.NS.csv"
-    return pd.read_csv(cache_file, index_col=0, parse_dates=True)
+    data = pd.read_csv(cache_file)
+    
+    # Set the date column as index and parse as datetime
+    if 'date' in data.columns:
+        data['date'] = pd.to_datetime(data['date'])
+        data = data.set_index('date')
+    else:
+        # Fallback to treating first column as date index
+        data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+    
+    return data
 
 
 def refresh_market_data(
@@ -314,8 +326,7 @@ def refresh_market_data(
     for symbol in symbols_to_fetch:
         symbol_with_suffix = _add_ns_suffix(symbol)
         
-        # Fetch data with retry logic
-        data = None
+        # Fetch data with retry logic        data = None
         for attempt in range(3):  # Max 3 retries
             data = _fetch_symbol_data(symbol_with_suffix, years, freeze_date)
             if data is not None:
@@ -327,7 +338,10 @@ def refresh_market_data(
         if data is not None and _validate_data_quality(data, symbol):
             success = _save_symbol_cache(symbol, data, cache_path)
             results[symbol] = success
+            if not success:
+                logger.warning(f"Failed to save cache for {symbol}")
         else:
+            logger.warning(f"Failed to fetch or validate data for {symbol}")
             results[symbol] = False
     
     successful = sum(1 for success in results.values() if success)

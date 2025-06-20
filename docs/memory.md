@@ -102,3 +102,40 @@
 **Prevention**: Re-affirm the principle: to ensure testability and predictable error handling, avoid relying on framework-level "magic" for validation that is critical to the application's control flow. For file paths that the application must validate itself, accept them as `str` at the CLI boundary and convert them to `Path` objects within the application code. This makes the application's behavior explicit and independent of potential changes or subtleties in the framework's default behaviors.
 
 ---
+
+### Incomplete Refactoring and Test/Component Desynchronization (2025-06-23)
+**Issue**: Multiple, seemingly unrelated test failures across `test_backtester.py`, `test_cli.py`, and `test_integration.py`. Failures included `ValueError` for non-existent rules, `TypeError` for incorrect arguments/types, `AssertionError` for wrong exit codes, and `PermissionError` during test teardown.
+**Root Cause**: A cascade of structural issues originating from incomplete refactoring and a lack of synchronization between components and their tests.
+1.  **Broken Component Logic (`backtester.py`)**: The backtester's signal generation method was broken. It attempted to evaluate a non-existent `'baseline'` rule and its logic for executing rule functions was flawed, a remnant of a partial refactoring.
+2.  **Out-of-Sync Tests**:
+    *   `test_cli.py` failed to invoke the correct `run` subcommand, testing the framework's help output instead of the application logic.
+    *   `test_integration.py` passed incorrect data types (`str` instead of `pathlib.Path`) and used obsolete keyword arguments (`min_trades` vs. `min_trades_threshold`), demonstrating a drift between the tests and the component APIs.
+3.  **Resource Leak (Logging)**: The CLI's logging setup function removed old log handlers without closing them, leaving file handles open and causing `PermissionError` when test fixtures attempted to clean up temporary directories.
+
+**Fix**:
+1.  **Corrected Backtester Logic**: The `backtester._generate_signals` method was rewritten to correctly look up and execute rule functions from the `rules` module, removing the flawed 'baseline' concept. The corresponding tests were updated to use valid rule stacks.
+2.  **Synchronized Tests**:
+    *   `test_cli.py` was fixed to explicitly invoke the `run` subcommand in all relevant tests.
+    *   `test_integration.py` was corrected to pass `pathlib.Path` objects and use the correct `min_trades_threshold` keyword argument, realigning the tests with the component's actual interface.
+3.  **Fixed Resource Management**: The `cli.setup_logging` function was modified to explicitly call `handler.close()` on all logging handlers before removing them, ensuring file resources are properly released.
+
+**Prevention**: When refactoring a component, ensure that its internal logic, its public API, and all corresponding tests (unit, integration) are updated in lockstep. A component's contract is defined by its API and enforced by its tests; allowing them to drift apart inevitably leads to a brittle and unreliable system. Always ensure resource-managing code (like file handlers) includes robust setup and teardown logic (e.g., using context managers or explicit `close()` calls in `finally` blocks) to maintain test isolation and prevent resource leaks.
+
+---
+
+### Test Suite Desynchronization and Brittle Data Contracts (2025-06-24)
+**Issue**: A large number of seemingly unrelated test failures across `test_data.py`, `test_backtester.py`, and `test_integration.py`. Errors included `TypeError` on DataFrame operations, `AssertionError` on data shapes, `ValueError` on business logic, and `KeyError` on data structures.
+**Root Cause**: A structural failure of test-component synchronization, manifesting in two primary ways:
+1.  **Brittle Data Contract in Tests**: The data caching mechanism requires DataFrames to be saved to CSV with a `date` column and a standard `RangeIndex`. The `_load_symbol_cache` function is responsible for converting this 'date' column back into a `DatetimeIndex` upon loading. Several tests violated this contract by setting the `date` as an index *before* saving, creating malformed cache files that broke data loading and filtering logic downstream.
+2.  **API and Logic Drift**: Core components (`backtester.py`) were refactored, but their corresponding unit and integration tests were not updated. This included changed method signatures (`find_optimal_strategies`), modified business logic (handling of empty rule sets), and obsolete data structure checks in tests.
+
+**Fix**:
+1.  **Enforced Data Contract**: Corrected all data-related tests to adhere to the persistence contract. Test data is now prepared for caching with a `date` column, not a `DatetimeIndex`. Assertions were updated to handle the `DatetimeIndex` present on loaded data, making the tests robust and aligned with the application's data flow.
+2.  **Synchronized Tests and APIs**:
+    *   Re-aligned the `backtester`'s empty rule stack logic with the test's expectation of it being a "pass-through" filter, removing a recently added `ValueError`.
+    *   Updated integration tests to call methods with their correct, current signatures (e.g., removing an obsolete `symbol` parameter).
+    *   Removed assertions against obsolete data structures in integration tests and replaced them with checks against the current, valid structure.
+
+**Prevention**: Tests must be treated as first-class citizens and refactored in lock-step with the code they cover. Data contracts, especially at persistence boundaries (like caching), must be explicitly defined and rigorously enforced in all test setups to prevent the creation of malformed test artifacts that lead to misleading downstream failures.
+
+---

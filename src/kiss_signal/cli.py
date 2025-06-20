@@ -15,7 +15,7 @@ from . import data, backtester
 
 __all__ = ["app"]
 
-app = typer.Typer()
+app = typer.Typer(help="KISS Signal CLI - Keep-It-Simple Signal Generation")
 console = Console()
 
 logger = logging.getLogger(__name__)
@@ -24,10 +24,33 @@ logger = logging.getLogger(__name__)
 def setup_logging(verbose: bool = False) -> None:
     """Configure logging based on verbosity level."""
     level = logging.DEBUG if verbose else logging.INFO
+
+    log_filename = "run_log.txt"
+
+    # Close and remove any existing handlers
+    for handler in logging.root.handlers[:]:
+        handler.close()
+        logging.root.removeHandler(handler)
+
+    # Configure logging with both console and file output
     logging.basicConfig(
         level=level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(),  # Console output
+            logging.FileHandler(log_filename, mode='w')  # File output (overwrite)
+        ]
     )
+
+    # Silence noisy third-party loggers
+    logging.getLogger('numba.core.ssa').setLevel(logging.WARNING)
+    logging.getLogger('numba.core').setLevel(logging.WARNING)
+    logging.getLogger('numba').setLevel(logging.WARNING)
+    logging.getLogger('vectorbt').setLevel(logging.WARNING)
+
+    # Log the start of the run
+    logger = logging.getLogger(__name__)
+    logger.info(f"=== KISS Signal CLI Run Started - Log file: {log_filename} ===")
 
 
 def _show_banner() -> None:
@@ -65,19 +88,35 @@ def _run_backtests(
                     years=app_config.historical_data_years,
                     freeze_date=freeze_date,
                 )
-
+                
                 if price_data is None or len(price_data) < 100:
                     logger.warning(f"Insufficient data for {symbol}, skipping")
                     continue
 
+                # Convert individual rules to rule combinations (for now, test each rule individually)
+                rule_combinations = []
+                for rule in rules_config:
+                    rule_combo = {
+                        'rule_stack': [rule['type']],  # Use rule type (function name) instead of name
+                        'parameters': {rule['type']: rule.get('params', {})},
+                        'display_name': rule['name']  # Keep display name for results
+                    }
+                    rule_combinations.append(rule_combo)
+
                 strategies = bt.find_optimal_strategies(
-                    rule_combinations=rules_config,
+                    rule_combinations=rule_combinations,
                     price_data=price_data,
                     freeze_date=freeze_date,
                 )
-
+                
                 for strategy in strategies:
                     strategy["symbol"] = symbol
+                    # Replace rule type with display name for better output
+                    if 'rule_stack' in strategy and len(rule_combinations) > 0:
+                        for j, rule_combo in enumerate(rule_combinations):
+                            if rule_combo['rule_stack'] == strategy['rule_stack']:
+                                strategy['rule_stack'] = [rule_combo['display_name']]
+                                break
                     all_results.append(strategy)
 
             except Exception as e:
@@ -125,7 +164,7 @@ def _print_results(results: List[Dict[str, Any]]) -> None:
     )
 
 
-@app.command()
+@app.command(name="run")
 def run(
     verbose: bool = typer.Option(False, "--verbose", help="Enable verbose logging"),
     config_path_str: str = typer.Option("config.yaml", "--config", help="Path to config file"),
@@ -137,15 +176,9 @@ def run(
     _show_banner()
 
     config_path = Path(config_path_str)
-    rules_path = Path(rules_path_str)
-
-    logger.debug(
-        "Running CLI run command with verbose=%s, freeze_date=%s, config=%s, rules=%s",
-        verbose,
-        freeze_date_str,
-        config_path,
-        rules_path,
-    )
+    rules_path = Path(rules_path_str)    # Log basic command info only in verbose mode
+    if verbose:
+        logger.info(f"Starting analysis with freeze_date={freeze_date_str}")
 
     try:
         # Parse freeze date if provided
@@ -162,17 +195,16 @@ def run(
         # Load configuration
         app_config = load_config(config_path)
         rules_config = load_rules(rules_path)
-        console.print("[1/4] Configuration loaded.")
-
-        # Step 2: Refresh market data if needed
+        console.print("[1/4] Configuration loaded.")        # Step 2: Refresh market data if needed
         if freeze_date:
-            logger.debug(f"Freeze mode active: {freeze_date}")
+            if verbose:
+                logger.info(f"Freeze mode active: {freeze_date}")
             console.print("[2/4] Skipping data refresh (freeze mode).")
         else:
-            logger.debug("Refreshing market data")
+            if verbose:
+                logger.info("Refreshing market data")
             console.print("[2/4] Refreshing market data...")
-            data.refresh_market_data(
-                universe_path=app_config.universe_path,
+            data.refresh_market_data(                universe_path=app_config.universe_path,
                 cache_dir=app_config.cache_dir,
                 refresh_days=app_config.cache_refresh_days,
                 years=app_config.historical_data_years,
@@ -202,6 +234,23 @@ def run(
         if verbose:
             console.print_exception()
         raise typer.Exit(1)
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    version: bool = typer.Option(False, "--version", help="Show version and exit")
+) -> None:
+    """KISS Signal CLI - Keep-It-Simple Signal Generation for NSE stocks."""
+    if version:
+        console.print("KISS Signal CLI v1.4")
+        raise typer.Exit()
+    
+    # If no command provided, show help
+    if ctx.invoked_subcommand is None:
+        console.print("No command specified. Use 'run' to execute the signal analysis.")
+        console.print("Try 'python run.py --help' for help.")
+        raise typer.Exit()
 
 
 if __name__ == "__main__":
