@@ -93,30 +93,14 @@ def _run_backtests(
                     logger.warning(f"Insufficient data for {symbol}, skipping")
                     continue
 
-                # Convert individual rules to rule combinations (for now, test each rule individually)
-                rule_combinations = []
-                for rule in rules_config:
-                    rule_combo = {
-                        'rule_stack': [rule['type']],  # Use rule type (function name) instead of name
-                        'parameters': {rule['type']: rule.get('params', {})},
-                        'display_name': rule['name']  # Keep display name for results
-                    }
-                    rule_combinations.append(rule_combo)
-
                 strategies = bt.find_optimal_strategies(
-                    rule_combinations=rule_combinations,
+                    rule_combinations=rules_config,
                     price_data=price_data,
                     freeze_date=freeze_date,
                 )
                 
                 for strategy in strategies:
                     strategy["symbol"] = symbol
-                    # Replace rule type with display name for better output
-                    if 'rule_stack' in strategy and len(rule_combinations) > 0:
-                        for j, rule_combo in enumerate(rule_combinations):
-                            if rule_combo['rule_stack'] == strategy['rule_stack']:
-                                strategy['rule_stack'] = [rule_combo['display_name']]
-                                break
                     all_results.append(strategy)
 
             except Exception as e:
@@ -162,6 +146,32 @@ def _print_results(results: List[Dict[str, Any]]) -> None:
         f"\n[green]✨ Analysis complete. Found {len(results)} valid strategies "
         f"across {len(set(s['symbol'] for s in results))} symbols.[/green]"
     )
+
+
+def _save_results(app_config: Config, results: List[Dict[str, Any]]) -> None:
+    """Save analysis results to the database."""
+    if not results:
+        return
+
+    console.print("[5/5] Saving results...", style="blue")
+    try:
+        db_path = Path(app_config.database_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        run_timestamp = datetime.now().isoformat()
+
+        persistence.create_database(db_path)
+        success = persistence.save_strategies_batch(db_path, results, run_timestamp)
+
+        if success:
+            logger.info(f"Saved {len(results)} strategies to database at {db_path}")
+        else:
+            console.print("⚠️  Failed to save results to database.", style="yellow")
+            logger.warning("Persistence failed but continuing execution.")
+
+    except Exception as e:
+        console.print(f"⚠️  Database error: {e}", style="yellow")
+        logger.error(f"Persistence error: {e}", exc_info=True)
+        # Continue execution - don't crash CLI on persistence failure
 
 
 @app.command(name="run")
@@ -219,30 +229,9 @@ def run(
         # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
         _print_results(all_results)
-    
-        # [5/5] Saving results...
-        console.print("[5/5] Saving results...", style="blue")
-        
-        try:
-            db_path = Path(app_config.database_path)
-            run_timestamp = datetime.now().isoformat()
-            
-            # Ensure database exists with proper schema
-            persistence.create_database(db_path)
-            
-            # Save strategies to database
-            success = persistence.save_strategies_batch(db_path, all_results, run_timestamp)
-            
-            if success:
-                logger.info(f"Saved {len(all_results)} strategies to database")
-            else:
-                console.print("⚠️  Failed to save results to database", style="yellow")
-                logger.warning("Persistence failed but continuing execution")
-        
-        except Exception as e:
-            console.print(f"⚠️  Database error: {e}", style="yellow")
-            logger.error(f"Persistence error: {e}")
-            # Continue execution - don't crash CLI on persistence failure
+
+        # Step 5: Save results
+        _save_results(app_config, all_results)
     
     except typer.Exit:
         raise

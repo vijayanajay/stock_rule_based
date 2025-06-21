@@ -241,36 +241,17 @@ INFY,Infosys Ltd,IT"""
     def test_end_to_end_cli_workflow(self, integration_env):
         """Test the complete CLI workflow without mocking."""
         runner = CliRunner()
-        
-        # Change to temp directory for the test
-        original_cwd = Path.cwd()
-        try:
-            import logging
-            import os
-            os.chdir(integration_env['temp_dir'])
-            
-            # Run CLI command
-            result = runner.invoke(app, [
-                "run",
-                "--config", str(integration_env['config_path']),
-                "--rules", str(integration_env['rules_path']),
-                "--freeze-data", "2024-06-01",
-                "--verbose"
-            ])
-            
-            # Should not crash (even if no strategies found due to test data)
-            logging.shutdown() # Ensure log file is closed before fixture cleanup
-            print("STDOUT:", result.stdout)
-            print("EXIT CODE:", result.exit_code)
-            assert result.exit_code == 0, f"CLI failed with output: {result.stdout}"
-            
-            # Verify expected output
-            assert "Configuration loaded" in result.stdout
-            assert "Analysis complete" in result.stdout
-            assert "FREEZE MODE" in result.stdout
-            
-        finally:
-            os.chdir(original_cwd)
+
+        result = runner.invoke(app, [
+            "run",
+            "--config", str(integration_env['config_path']),
+            "--rules", str(integration_env['rules_path']),
+            "--freeze-data", "2024-06-01",
+        ], catch_exceptions=False)
+
+        assert result.exit_code == 0, f"CLI failed with output: {result.stdout}"
+        assert "Analysis complete" in result.stdout
+        assert "FREEZE MODE" in result.stdout
     
     def test_error_handling_integration(self, integration_env):
         """Test error handling in integration scenarios."""

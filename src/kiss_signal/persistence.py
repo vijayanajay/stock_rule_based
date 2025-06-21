@@ -40,14 +40,12 @@ def create_database(db_path: Path) -> None:
         
     Raises:
         sqlite3.Error: If database creation or schema setup fails
-        OSError: If directory creation or file permissions fail
     """
     logger.info(f"Creating database at {db_path}")
-    
-    # Ensure parent directory exists
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    
     try:
+        # Ensure parent directory exists
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
         with sqlite3.connect(str(db_path)) as conn:
             # Enable WAL mode for concurrent access
             conn.execute("PRAGMA journal_mode=WAL")
@@ -64,11 +62,8 @@ def create_database(db_path: Path) -> None:
             conn.commit()
             logger.info(f"Successfully created database at {db_path}")
             
-    except sqlite3.Error as e:
+    except (sqlite3.Error, OSError) as e:
         logger.error(f"Failed to create database at {db_path}: {e}")
-        raise
-    except OSError as e:
-        logger.error(f"Failed to create directory or access file {db_path}: {e}")
         raise
 
 def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_timestamp: str) -> bool:
@@ -137,7 +132,7 @@ def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_t
                 pass  # Rollback can fail if connection is broken
         logger.error(f"Batch save failed: {e}")
         return False
-    except (KeyError, TypeError, json.JSONEncodeError) as e:
+    except (KeyError, TypeError, json.JSONDecodeError) as e:
         if conn:
             try:
                 conn.rollback()

@@ -5,7 +5,7 @@ This module handles backtesting of rule combinations and edge score calculation.
 
 import logging
 from datetime import date
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -13,22 +13,22 @@ import vectorbt as vbt
 
 from . import rules
 
+__all__ = ["Backtester"]
+
 logger = logging.getLogger(__name__)
 
 
 class Backtester:
     """Handles strategy backtesting and edge score calculation."""
-    
-    def __init__(self, hold_period: int = 20, min_trades_threshold: int = 10):
-        """Initialize the backtester.
-        
-        Args:
-            hold_period: Days to hold positions (time-based exit)
-            min_trades_threshold: Minimum trades required for valid backtest
-        """
+
+    def __init__(self, hold_period: int = 20, min_trades_threshold: int = 10) -> None:
+        """Initialize the backtester."""
         self.hold_period = hold_period
         self.min_trades_threshold = min_trades_threshold
-        logger.info(f"Backtester initialized: hold_period={hold_period}, min_trades={min_trades_threshold}")
+        logger.info(
+            f"Backtester initialized: hold_period={hold_period}, "
+            f"min_trades={min_trades_threshold}"
+        )
     
     def find_optimal_strategies(
         self, 
@@ -77,16 +77,16 @@ class Backtester:
                 portfolio = self._create_portfolio(entry_signals, exit_signals, price_data)
                 
                 # Calculate metrics
-                total_trades = self._calculate_total_trades(portfolio)
+                total_trades = portfolio.trades.count()
                 
                 # Skip strategies with insufficient trades
                 if total_trades < self.min_trades_threshold:
                     logger.debug(f"Skipping strategy with {total_trades} trades (< {self.min_trades_threshold})")
                     continue
                 
-                win_pct = self._calculate_win_percentage(portfolio)
-                sharpe = self._calculate_sharpe_ratio(portfolio)
-                avg_return = self._calculate_average_return(portfolio)
+                win_pct = portfolio.win_rate()
+                sharpe = portfolio.sharpe_ratio()
+                avg_return = portfolio.trades.records_readable['Return'].mean() if total_trades > 0 else 0.0
                 
                 # Calculate edge score
                 edge_score = self.calc_edge_score(win_pct, sharpe, edge_score_weights)
@@ -250,72 +250,3 @@ class Backtester:
         )
         
         return portfolio
-
-    def _calculate_win_percentage(self, portfolio: 'vbt.Portfolio') -> float:
-        """Calculate win percentage from portfolio trades.
-        
-        Args:
-            portfolio: Vectorbt Portfolio object
-              Returns:
-            Win percentage as float (0.0 to 1.0)
-        """
-        trades = portfolio.trades.records_readable
-        if len(trades) == 0:
-            return 0.0
-        
-        winning_trades = (trades['PnL'] > 0).sum()
-        total_trades = len(trades)
-        win_pct = winning_trades / total_trades
-        
-        return float(win_pct)
-
-    def _calculate_sharpe_ratio(self, portfolio: 'vbt.Portfolio', risk_free_rate: float = 0.05) -> float:
-        """Calculate Sharpe ratio from portfolio returns.
-        
-        Args:
-            portfolio: Vectorbt Portfolio object
-            risk_free_rate: Annual risk-free rate (default 5%)
-              Returns:
-            Sharpe ratio as float
-        """
-        returns = portfolio.returns()
-        if len(returns) == 0 or returns.std() == 0:
-            return 0.0
-        
-        # Convert to annual figures
-        annual_return = returns.mean() * 252  # 252 trading days
-        annual_volatility = returns.std() * (252 ** 0.5)
-        
-        if annual_volatility == 0:
-            return 0.0
-        
-        sharpe = (annual_return - risk_free_rate) / annual_volatility
-        return float(sharpe)
-
-    def _calculate_total_trades(self, portfolio: 'vbt.Portfolio') -> int:
-        """Calculate total number of trades.
-        
-        Args:
-            portfolio: Vectorbt Portfolio object
-              Returns:
-            Number of trades as integer
-        """
-        trades = portfolio.trades.records_readable
-        total_trades = len(trades)
-        return total_trades
-
-    def _calculate_average_return(self, portfolio: 'vbt.Portfolio') -> float:
-        """Calculate average return per trade.
-        
-        Args:
-            portfolio: Vectorbt Portfolio object
-              Returns:
-            Average return per trade as float
-        """
-        trades = portfolio.trades.records_readable
-        if len(trades) == 0:
-            return 0.0
-        
-        # Calculate return percentage for each trade
-        avg_return = (trades['Return'] / 100).mean()  # Convert from percentage
-        return float(avg_return)

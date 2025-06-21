@@ -1,19 +1,38 @@
-2025-06-21 18:05:00,815 - kiss_signal.cli - INFO - === KISS Signal CLI Run Started - Log file: run_log.txt ===
-2025-06-21 18:05:00,917 - kiss_signal.data - INFO - Loaded 7 symbols from universe
-2025-06-21 18:05:00,919 - kiss_signal.data - INFO - All symbols are fresh, no refresh needed
-2025-06-21 18:05:00,921 - kiss_signal.data - INFO - Loaded 7 symbols from universe
-2025-06-21 18:05:00,921 - kiss_signal.backtester - INFO - Backtester initialized: hold_period=20, min_trades=10
-2025-06-21 18:05:01,006 - kiss_signal.backtester - INFO - Backtesting 3 rule combinations
-2025-06-21 18:05:08,567 - kiss_signal.backtester - INFO - Found 3 valid strategies (>= 10 trades)
-2025-06-21 18:05:08,611 - kiss_signal.backtester - INFO - Backtesting 3 rule combinations
-2025-06-21 18:05:08,675 - kiss_signal.backtester - INFO - Found 1 valid strategies (>= 10 trades)
-2025-06-21 18:05:08,723 - kiss_signal.backtester - INFO - Backtesting 3 rule combinations
-2025-06-21 18:05:08,803 - kiss_signal.backtester - INFO - Found 2 valid strategies (>= 10 trades)
-2025-06-21 18:05:08,833 - kiss_signal.backtester - INFO - Backtesting 3 rule combinations
-2025-06-21 18:05:08,914 - kiss_signal.backtester - INFO - Found 2 valid strategies (>= 10 trades)
-2025-06-21 18:05:08,961 - kiss_signal.backtester - INFO - Backtesting 3 rule combinations
-2025-06-21 18:05:09,042 - kiss_signal.backtester - INFO - Found 2 valid strategies (>= 10 trades)
-2025-06-21 18:05:09,079 - kiss_signal.backtester - INFO - Backtesting 3 rule combinations
-2025-06-21 18:05:09,162 - kiss_signal.backtester - INFO - Found 2 valid strategies (>= 10 trades)
-2025-06-21 18:05:09,198 - kiss_signal.backtester - INFO - Backtesting 3 rule combinations
-2025-06-21 18:05:09,283 - kiss_signal.backtester - INFO - Found 2 valid strategies (>= 10 trades)
+2025-06-21 23:42:16,451 - kiss_signal.cli - INFO - === KISS Signal CLI Run Started - Log file: run_log.txt ===
+2025-06-21 23:42:16,472 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpq6h4kqul.db
+2025-06-21 23:42:16,492 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpq6h4kqul.db
+2025-06-21 23:42:16,496 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpd4j29xan.db
+2025-06-21 23:42:16,514 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpd4j29xan.db
+2025-06-21 23:42:16,514 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpd4j29xan.db
+2025-06-21 23:42:16,515 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpd4j29xan.db
+2025-06-21 23:42:16,518 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpbhihimp2.db
+2025-06-21 23:42:16,536 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpbhihimp2.db
+2025-06-21 23:42:16,537 - kiss_signal.persistence - INFO - Saving 2 strategies to C:\Users\user\AppData\Local\Temp\tmpbhihimp2.db
+2025-06-21 23:42:16,539 - kiss_signal.persistence - INFO - Successfully saved 2 strategies
+2025-06-21 23:42:16,543 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpnb0uavlb.db
+2025-06-21 23:42:16,563 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpnb0uavlb.db
+2025-06-21 23:42:16,563 - kiss_signal.persistence - INFO - No strategies to save - skipping batch save
+2025-06-21 23:42:16,567 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpzeeyr6f1.db
+2025-06-21 23:42:16,585 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpzeeyr6f1.db
+2025-06-21 23:42:16,585 - kiss_signal.persistence - INFO - Saving 1 strategies to C:\Users\user\AppData\Local\Temp\tmpzeeyr6f1.db
+2025-06-21 23:42:16,586 - kiss_signal.persistence - ERROR - Invalid strategy data: 'edge_score'
+2025-06-21 23:42:16,589 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpptcakx0l.db
+2025-06-21 23:42:16,609 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpptcakx0l.db
+2025-06-21 23:42:16,610 - kiss_signal.persistence - INFO - Saving 1 strategies to C:\Users\user\AppData\Local\Temp\tmpptcakx0l.db
+2025-06-21 23:42:16,610 - kiss_signal.persistence - ERROR - Invalid strategy data: Object of type function is not JSON serializable
+2025-06-21 23:42:16,612 - kiss_signal.persistence - INFO - Saving 2 strategies to \tmp\non_existent.db
+2025-06-21 23:42:16,613 - kiss_signal.persistence - ERROR - Batch save failed: no such table: strategies
+2025-06-21 23:42:16,616 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpqclarrxm.db
+2025-06-21 23:42:16,634 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpqclarrxm.db
+2025-06-21 23:42:16,634 - kiss_signal.persistence - INFO - Saving 2 strategies to C:\Users\user\AppData\Local\Temp\tmpqclarrxm.db
+2025-06-21 23:42:16,637 - kiss_signal.persistence - INFO - Successfully saved 2 strategies
+2025-06-21 23:42:16,638 - kiss_signal.persistence - INFO - Saving 2 strategies to C:\Users\user\AppData\Local\Temp\tmpqclarrxm.db
+2025-06-21 23:42:16,640 - kiss_signal.persistence - INFO - Successfully saved 2 strategies
+2025-06-21 23:42:16,645 - kiss_signal.persistence - INFO - Creating database at C:\Users\user\AppData\Local\Temp\tmpz955lfmj.db
+2025-06-21 23:42:16,664 - kiss_signal.persistence - INFO - Successfully created database at C:\Users\user\AppData\Local\Temp\tmpz955lfmj.db
+2025-06-21 23:42:16,664 - kiss_signal.persistence - INFO - Saving 2 strategies to C:\Users\user\AppData\Local\Temp\tmpz955lfmj.db
+2025-06-21 23:42:16,667 - kiss_signal.persistence - INFO - Successfully saved 2 strategies
+2025-06-21 23:42:16,674 - kiss_signal.rules - WARNING - Insufficient data: 3 rows, need 10
+2025-06-21 23:42:16,696 - kiss_signal.rules - WARNING - Insufficient data for RSI: 3 rows, need 15
+2025-06-21 23:42:16,703 - kiss_signal.rules - WARNING - Insufficient data: 0 rows, need 10
+2025-06-21 23:42:16,706 - kiss_signal.rules - WARNING - Insufficient data: 1 rows, need 10

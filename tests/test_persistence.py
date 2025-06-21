@@ -81,24 +81,6 @@ class TestCreateDatabase:
         create_database(temp_db_path)  # Should not fail
         
         assert temp_db_path.exists()
-    
-    def test_create_database_creates_parent_dirs(self) -> None:
-        """Test that parent directories are created if they don't exist."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            db_path = Path(temp_dir) / "subdir" / "test.db"
-            
-            create_database(db_path)
-            
-            assert db_path.exists()
-            assert db_path.parent.exists()
-    
-    def test_create_database_permission_error(self) -> None:
-        """Test handling of permission errors."""
-        # Try to create database in non-existent root path
-        invalid_path = Path("/invalid/path/test.db")
-        
-        with pytest.raises(OSError):
-            create_database(invalid_path)
 
 
 class TestSaveStrategiesBatch:

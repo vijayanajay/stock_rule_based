@@ -177,62 +177,13 @@ class TestBacktester:
         with pytest.raises(Exception):
             backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
 
-    def test_calculate_win_percentage_basic(self, sample_price_data):
-        """Test win percentage calculation."""
+    def test_create_portfolio_invalid_signals(self, sample_price_data):
+        """Test error on mismatched entry/exit signals."""
         backtester = Backtester()
-        
-        # Create portfolio with some trades
-        entry_signals = pd.Series(False, index=sample_price_data.index)
-        exit_signals = pd.Series(False, index=sample_price_data.index)
-        
-        # Add entry/exit pairs
-        entry_signals.iloc[10] = True
-        exit_signals.iloc[30] = True
-        entry_signals.iloc[50] = True
-        exit_signals.iloc[70] = True
-        
-        portfolio = backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
-        win_pct = backtester._calculate_win_percentage(portfolio)
-        
-        assert isinstance(win_pct, float)
-        assert 0.0 <= win_pct <= 1.0
-
-    def test_calculate_sharpe_ratio_basic(self, sample_price_data):
-        """Test Sharpe ratio calculation."""
-        backtester = Backtester()
-        
-        # Create portfolio
-        entry_signals = pd.Series(False, index=sample_price_data.index)
-        exit_signals = pd.Series(False, index=sample_price_data.index)
-        
-        entry_signals.iloc[10] = True
-        exit_signals.iloc[30] = True
-        
-        portfolio = backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
-        sharpe = backtester._calculate_sharpe_ratio(portfolio)
-        
-        assert isinstance(sharpe, float)
-        # Sharpe can be negative, so no lower bound check
-
-    def test_calculate_total_trades(self, sample_price_data):
-        """Test total trades calculation."""
-        backtester = Backtester()
-        
-        # Create portfolio with known number of trades
-        entry_signals = pd.Series(False, index=sample_price_data.index)
-        exit_signals = pd.Series(False, index=sample_price_data.index)
-        
-        # Add 2 complete trades
-        entry_signals.iloc[10] = True
-        exit_signals.iloc[30] = True
-        entry_signals.iloc[50] = True
-        exit_signals.iloc[70] = True
-        
-        portfolio = backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
-        total_trades = backtester._calculate_total_trades(portfolio)
-        
-        assert isinstance(total_trades, int)
-        assert total_trades >= 0
+        entry_signals = pd.Series([True, False, True], index=sample_price_data.index[:3])
+        exit_signals = pd.Series([False, True, False], index=sample_price_data.index[:3])
+        with pytest.raises(Exception):
+            backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
 
 @pytest.fixture
 def sample_price_data():
