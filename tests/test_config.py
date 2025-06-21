@@ -1,50 +1,34 @@
-from tempfile import NamedTemporaryFile
+import pytest
+from pydantic import ValidationError
 from pathlib import Path
+from typing import Any, Dict
 
-from kiss_signal.config import Config
+from kiss_signal.config import Config, load_config
 
-def test_config_database_path_field():
-    """Test that database_path field is properly configured."""
-    # Create a temporary file for universe_path validation
-    with NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-        f.write("symbol\nRELIANCE.NS\n")
-        temp_path = f.name
-    
-    try:
-        config_data = {
-            "universe_path": temp_path,
-            "edge_score_weights": {
-                "win_pct": 0.4,
-                "sharpe": 0.6
-            },
-            "hold_period": 5,
-            "database_path": "custom/path/database.db"
-        }
-        
-        config = Config(**config_data)
-        
-        assert config.database_path == "custom/path/database.db"
-    finally:
-        Path(temp_path).unlink()
 
-def test_config_database_path_default():
-    """Test that database_path has correct default value."""
-    # Create a temporary file for universe_path validation
-    with NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-        f.write("symbol\nRELIANCE.NS\n")
-        temp_path = f.name
-    
-    try:
-        config_data = {
-            "universe_path": temp_path,
-            "edge_score_weights": {
-                "win_pct": 0.4,
-                "sharpe": 0.6
-            }
-        }
-        
-        config = Config(**config_data)
-        
-        assert config.database_path == "data/kiss_signal.db"
-    finally:
-        Path(temp_path).unlink()
+def test_config_model_valid(sample_config: Dict[str, Any], tmp_path: Path) -> None:
+    """Test that a valid config dictionary loads correctly."""
+    universe_path = tmp_path / "universe.csv"
+    universe_path.touch()
+    sample_config["universe_path"] = str(universe_path)
+
+    config = Config(**sample_config)
+    assert config.hold_period == 20
+    assert config.edge_score_weights.win_pct == 0.6
+
+
+def test_config_model_invalid_weights(sample_config: Dict[str, Any], tmp_path: Path) -> None:
+    """Test that weights not summing to 1.0 raises a validation error."""
+    universe_path = tmp_path / "universe.csv"
+    universe_path.touch()
+    sample_config["universe_path"] = str(universe_path)
+    sample_config["edge_score_weights"]["win_pct"] = 0.5  # 0.5 + 0.4 != 1.0
+
+    with pytest.raises(ValidationError, match="Weights must sum to 1.0"):
+        Config(**sample_config)
+
+
+def test_load_config_missing_file(tmp_path: Path) -> None:
+    """Test that loading a non-existent config file raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError):
+        load_config(tmp_path / "nonexistent.yaml")

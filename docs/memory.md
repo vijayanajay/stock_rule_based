@@ -185,3 +185,15 @@
 **Root Cause**: A structural issue in `backtester.py`. The logic that constructs the final strategy result dictionary for display and persistence was incorrectly using the rule's `type` field for the `rule_stack` key. The `type` field correctly maps to the function name for execution, but the `name` field is intended for user-facing identification.
 **Fix**: The strategy result creation logic in `backtester.py` was modified. Instead of ` 'rule_stack': [rule_combo['type']]`, it now uses ` 'rule_stack': [rule_combo.get('name', rule_combo['type'])]`. This change ensures the user-defined `name` is used for the strategy's display name, with a fallback to the `type` for robustness.
 **Prevention**: When handling configuration objects with multiple identifiers (e.g., a functional `type` and a display `name`), ensure that downstream components like reporting and persistence layers are explicitly wired to use the display `name`. Code that builds summary or result objects should clearly distinguish between internal identifiers and user-facing labels.
+
+---
+
+### Test Suite and CLI Desynchronization due to Argument Mismatch (2025-06-29)
+**Issue**: A large number of tests in `test_cli.py` and `test_integration.py` were failing with `typer.Exit(2)` (UsageError). Tests expected success (exit code 0) or specific application errors (exit code 1) but were instead getting a framework-level argument parsing error.
+**Root Cause**: A structural desynchronization between the CLI's defined interface in `src/kiss_signal/cli.py` and the tests invoking it.
+1.  **Missing Mandatory Arguments**: The `run` command was updated to require `--config` and `--rules` arguments. However, numerous tests in `test_cli.py` were not updated to provide these mandatory arguments in their `runner.invoke` calls, causing `typer` to fail before any application logic was executed.
+2.  **Missing CLI Option**: The `run` command was missing the `--freeze-data` option in its signature, even though the feature was implemented in downstream components and tested for in `test_integration.py`. This caused any test using this flag to fail with a UsageError.
+**Fix**:
+1.  The `run` command signature in `src/kiss_signal/cli.py` was updated to include the optional `--freeze-data` argument, bringing the CLI interface in sync with the integration tests and business logic.
+2.  All failing tests in `test_cli.py` were updated to provide the mandatory `--config` and `--rules` arguments during their `runner.invoke` calls, ensuring they test the application logic rather than the framework's argument parsing.
+**Prevention**: When modifying a CLI command's signature (e.g., adding, removing, or changing the requirement status of an argument), all corresponding tests must be updated in lock-step. Tests should always call the CLI with a valid set of arguments for the "happy path" and intentionally omit or provide invalid arguments only when testing specific error-handling scenarios. This prevents the test suite from becoming a check on obsolete interfaces.

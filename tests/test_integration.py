@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 from datetime import date
 import tempfile
 import shutil
+import numpy as np
 
 from kiss_signal.cli import app
 from kiss_signal.config import load_config, load_rules
@@ -46,22 +47,29 @@ INFY,Infosys Ltd,IT"""
             universe_path.write_text(universe_content)
               # Create sample price data for cache
             sample_dates = pd.date_range('2023-01-01', '2024-12-31', freq='D')
+            np.random.seed(42) # for reproducibility
             
             for symbol in ['RELIANCE', 'INFY']:
-                # Create realistic price data with some trends
+                # Create more realistic price data using a random walk
                 base_price = 100.0
+                returns = np.random.normal(loc=0.0005, scale=0.02, size=len(sample_dates))
+                
+                close_prices = [base_price]
+                for r in returns:
+                    close_prices.append(close_prices[-1] * (1 + r))
+                
                 prices = []
                 for i, date in enumerate(sample_dates):
-                    # Add some trend and volatility
-                    trend = i * 0.01
-                    volatility = (i % 10 - 5) * 0.5
-                    price = base_price + trend + volatility
+                    close = close_prices[i+1]
+                    open_price = close * np.random.uniform(0.99, 1.01)
+                    high_price = max(open_price, close) * np.random.uniform(1.0, 1.02)
+                    low_price = min(open_price, close) * np.random.uniform(0.98, 1.0)
                     prices.append({
                         'date': date,
-                        'open': price * 0.995,
-                        'high': price * 1.015,
-                        'low': price * 0.985,
-                        'close': price,
+                        'open': open_price,
+                        'high': high_price,
+                        'low': low_price,
+                        'close': close,
                         'volume': 1000000 + (i % 100) * 10000
                     })
                 
@@ -188,19 +196,9 @@ INFY,Infosys Ltd,IT"""
             years=config.historical_data_years
         )
         
-        # Convert individual rules to rule combinations format expected by backtester
-        rule_combinations = []
-        for rule in rules_config:
-            rule_combo = {
-                'rule_stack': [rule['type']],
-                'parameters': {rule['type']: rule.get('params', {})},
-                'display_name': rule['name']
-            }
-            rule_combinations.append(rule_combo)
-        
         # This should not raise an exception
         strategies = backtester.find_optimal_strategies(
-            rule_combinations=rule_combinations,
+            rule_combinations=rules_config,
             price_data=price_data,
             freeze_date=date(2024, 6, 1),
         )
@@ -214,30 +212,6 @@ INFY,Infosys Ltd,IT"""
             assert 'sharpe' in strategy
             assert 'total_trades' in strategy
     
-    def test_cli_rule_configuration_compatibility(self, integration_env):
-        """Test that CLI properly converts rules to format expected by backtester."""
-        rules_config = load_rules(integration_env['rules_path'])
-        
-        # Test the rule combination conversion that CLI should do
-        rule_combinations = []
-        for rule in rules_config:
-            rule_combo = {
-                'rule_stack': [rule['type']],
-                'parameters': {rule['type']: rule.get('params', {})},
-                'display_name': rule['name']
-            }
-            rule_combinations.append(rule_combo)
-        
-        # Verify structure
-        assert len(rule_combinations) == len(rules_config)
-        for combo in rule_combinations:
-            assert 'rule_stack' in combo
-            assert 'parameters' in combo
-            assert 'display_name' in combo
-            # The following was based on an old data structure.
-            # The current structure is flat. We can verify the stack has one rule.
-            assert len(combo['rule_stack']) == 1
-    
     def test_end_to_end_cli_workflow(self, integration_env):
         """Test the complete CLI workflow without mocking."""
         runner = CliRunner()
@@ -247,11 +221,15 @@ INFY,Infosys Ltd,IT"""
             "--config", str(integration_env['config_path']),
             "--rules", str(integration_env['rules_path']),
             "--freeze-data", "2024-06-01",
-        ], catch_exceptions=False)
+        ])
 
         assert result.exit_code == 0, f"CLI failed with output: {result.stdout}"
         assert "Analysis complete" in result.stdout
-        assert "FREEZE MODE" in result.stdout
+        # Check for freeze mode message, case-insensitively
+        assert "freeze mode" in result.stdout.lower()
+        # Check that strategies were actually found
+        assert "No valid strategies found" not in result.stdout
+        assert "Top Strategies by Edge Score" in result.stdout
     
     def test_error_handling_integration(self, integration_env):
         """Test error handling in integration scenarios."""

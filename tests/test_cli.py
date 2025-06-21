@@ -53,7 +53,9 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         mock_bt_instance = mock_backtester.return_value
         mock_bt_instance.find_optimal_strategies.return_value = []
 
-        result = runner.invoke(app, ["run"])
+        result = runner.invoke(
+            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+        )
         assert result.exit_code == 0, result.stdout
         assert "Analysis complete." in result.stdout
         assert "No valid strategies found" in result.stdout
@@ -87,7 +89,9 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
         mock_bt_instance = mock_backtester.return_value
         mock_bt_instance.find_optimal_strategies.return_value = []
 
-        result = runner.invoke(app, ["run", "--verbose"])
+        result = runner.invoke(
+            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml", "--verbose"]
+        )
         assert result.exit_code == 0, result.stdout
 
 
@@ -111,9 +115,11 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
         config_dir.mkdir(exist_ok=True)
         (config_dir / "rules.yaml").write_text("rules: []")
 
-        result = runner.invoke(app, ["run", "--freeze-data", "2025-01-01"])
+        result = runner.invoke(
+            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml", "--freeze-data", "2025-01-01"]
+        )
         assert result.exit_code == 0, result.stdout
-        assert "FREEZE MODE" in result.stdout
+        assert "skipping data refresh (freeze mode)" in result.stdout.lower()
         mock_data.refresh_market_data.assert_not_called()
 
 
@@ -147,7 +153,9 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
             'symbol': 'RELIANCE', 'rule_stack': ['baseline'], 'edge_score': 0.5,            'win_pct': 0.5, 'sharpe': 0.5, 'total_trades': 12
         }]
 
-        result = runner.invoke(app, ["run"])
+        result = runner.invoke(
+            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+        )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
         assert "RELIANCE" in result.stdout
@@ -170,15 +178,19 @@ def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
         config_dir.mkdir(exist_ok=True)
         (config_dir / "rules.yaml").write_text("rules: []")
 
-        result = runner.invoke(app, ["run", "--freeze-data", "invalid-date"])
+        result = runner.invoke(
+            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml", "--freeze-data", "invalid-date"]
+        )
         assert result.exit_code == 1
         assert "Invalid isoformat string" in result.stdout
 
 
 def test_run_command_no_config() -> None:
-    """Test run command without config file to see the error."""
+    """Test run command with a missing config file."""
     with runner.isolated_filesystem():
-        result = runner.invoke(app, ["run"])
+        # Create a dummy rules file so only the config is missing
+        Path("rules.yaml").write_text("rules: []")
+        result = runner.invoke(app, ["run", "--config", "nonexistent.yaml", "--rules", "rules.yaml"])
         assert result.exit_code == 1
         assert "Configuration file not found" in result.stdout
 
@@ -236,7 +248,9 @@ def test_run_command_with_persistence(
         config_dir.mkdir(exist_ok=True)
         (config_dir / "rules.yaml").write_text("rules: []")
 
-        result = runner.invoke(app, ["run"])
+        result = runner.invoke(
+            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+        )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
         assert "RELIANCE" in result.stdout
@@ -279,7 +293,9 @@ def test_run_command_persistence_failure_handling(
         # Mock persistence failure
         mock_save_batch.side_effect = sqlite3.OperationalError("disk I/O error")
 
-        result = runner.invoke(app, ["run"])
+        result = runner.invoke(
+            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+        )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
         assert "Database error: disk I/O error" in result.stdout

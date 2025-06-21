@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
+from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.table import Table
 
@@ -16,7 +17,7 @@ from . import data, backtester, persistence
 __all__ = ["app"]
 
 app = typer.Typer(help="KISS Signal CLI - Keep-It-Simple Signal Generation")
-console = Console()
+console = Console(record=True)
 
 logger = logging.getLogger(__name__)
 
@@ -25,21 +26,18 @@ def setup_logging(verbose: bool = False) -> None:
     """Configure logging based on verbosity level."""
     level = logging.DEBUG if verbose else logging.INFO
 
-    log_filename = "run_log.txt"
-
     # Close and remove any existing handlers
     for handler in logging.root.handlers[:]:
         handler.close()
         logging.root.removeHandler(handler)
 
-    # Configure logging with both console and file output
+    # Configure logging to use RichHandler, which prints to our console object
+    # This will show logs on screen. The console object records them.
     logging.basicConfig(
         level=level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(),  # Console output
-            logging.FileHandler(log_filename, mode='w')  # File output (overwrite)
-        ]
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(console=console, show_path=False)]
     )
 
     # Silence noisy third-party loggers
@@ -50,7 +48,7 @@ def setup_logging(verbose: bool = False) -> None:
 
     # Log the start of the run
     logger = logging.getLogger(__name__)
-    logger.info(f"=== KISS Signal CLI Run Started - Log file: {log_filename} ===")
+    logger.info("=== KISS Signal CLI Run Started ===")
 
 
 def _show_banner() -> None:
@@ -176,36 +174,38 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]]) -> None:
 
 @app.command(name="run")
 def run(
+    config_path_str: str = typer.Option(..., "--config", help="Path to config.yaml"),
+    rules_path_str: str = typer.Option(..., "--rules", help="Path to rules.yaml"),
     verbose: bool = typer.Option(False, "--verbose", help="Enable verbose logging"),
-    config_path_str: str = typer.Option("config.yaml", "--config", help="Path to config file"),
-    rules_path_str: str = typer.Option("config/rules.yaml", "--rules", help="Path to rules file"),
-    freeze_date_str: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)")
-) -> None:
+    freeze_date_str: Optional[str] = typer.Option(
+        None, "--freeze-data", help="Run analysis on data up to this date (YYYY-MM-DD)"
+    ),
+):
     """Run the KISS Signal analysis pipeline."""
     setup_logging(verbose)
     _show_banner()
 
     config_path = Path(config_path_str)
-    rules_path = Path(rules_path_str)    # Log basic command info only in verbose mode
-    if verbose:
-        logger.info(f"Starting analysis with freeze_date={freeze_date_str}")
+    rules_path = Path(rules_path_str)
+
+    freeze_date: Optional[date] = None
+    if freeze_date_str:
+        try:
+            freeze_date = date.fromisoformat(freeze_date_str)
+        except ValueError:
+            console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_date_str}'[/red]")
+            raise typer.Exit(1)
 
     try:
-        # Parse freeze date if provided
-        freeze_date = date.fromisoformat(freeze_date_str) if freeze_date_str else None
-        if freeze_date:
-            console.print(f"[yellow]⚠️  FREEZE MODE: Using data only up to {freeze_date}[/yellow]")
-        
         # Load configuration - check if files exist before loading
         if not config_path.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
         if not rules_path.exists():
             raise FileNotFoundError(f"Rules file not found: {rules_path}")
-            
-        # Load configuration
         app_config = load_config(config_path)
         rules_config = load_rules(rules_path)
-        console.print("[1/4] Configuration loaded.")        # Step 2: Refresh market data if needed
+        console.print("[1/4] Configuration loaded.")
+        # Step 2: Refresh market data if needed
         if freeze_date:
             if verbose:
                 logger.info(f"Freeze mode active: {freeze_date}")
@@ -214,25 +214,22 @@ def run(
             if verbose:
                 logger.info("Refreshing market data")
             console.print("[2/4] Refreshing market data...")
-            data.refresh_market_data(                universe_path=app_config.universe_path,
+            data.refresh_market_data(
+                universe_path=app_config.universe_path,
                 cache_dir=app_config.cache_dir,
                 refresh_days=app_config.cache_refresh_days,
                 years=app_config.historical_data_years,
                 freeze_date=freeze_date
             )
-
         # Step 3: Analyze strategies for each ticker
         console.print("[3/4] Analyzing strategies for each ticker...")
         symbols = data.load_universe(app_config.universe_path)
         all_results = _run_backtests(app_config, rules_config, symbols, freeze_date)
-
         # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
         _print_results(all_results)
-
         # Step 5: Save results
         _save_results(app_config, all_results)
-    
     except typer.Exit:
         raise
     except FileNotFoundError as e:
@@ -247,6 +244,16 @@ def run(
         if verbose:
             console.print_exception()
         raise typer.Exit(1)
+    finally:
+        # Always save the log, even if errors occurred
+        try:
+            console.save_text("run_log.txt")
+            # This message will be on console but not in the saved file.
+            console.print("\n[green]Log file saved to [bold]run_log.txt[/bold][/green]")
+        except Exception as e:
+            # Fallback to standard print if console is broken
+            import sys
+            print(f"\nCritical error: Could not save log file: {e}", file=sys.stderr)
 
 
 @app.callback(invoke_without_command=True)
