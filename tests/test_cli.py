@@ -205,3 +205,76 @@ def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
         result = runner.invoke(app, ["run", "--config", str(config_path), "--rules", str(rules_path)])
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
+
+
+@patch("kiss_signal.cli.persistence.create_database")
+@patch("kiss_signal.cli.persistence.save_strategies_batch")
+def test_run_command_with_persistence(
+    mock_save_batch, mock_create_db, sample_config, tmp_path
+):
+    """Test that run command integrates with persistence layer."""
+    with runner.isolated_filesystem() as fs:
+        data_dir = Path(fs) / "data"
+        data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
+        universe_path = data_dir / "nifty_large_mid.csv"
+        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
+        
+        sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
+        Path("config.yaml").write_text(yaml.dump(sample_config))
+        
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
+
+        mock_save_batch.return_value = True
+        mock_create_db.return_value = None
+
+        result = runner.invoke(app, ["run"])
+        assert result.exit_code == 0, result.stdout
+        assert "Top Strategies by Edge Score" in result.stdout
+        assert "RELIANCE" in result.stdout
+
+        # Verify persistence functions were called
+        mock_create_db.assert_called_once()
+        mock_save_batch.assert_called_once()
+        
+        # Verify arguments to save_batch
+        call_args = mock_save_batch.call_args
+        assert len(call_args[0]) == 3  # db_path, strategies, run_timestamp
+        assert isinstance(call_args[0][1], list)  # strategies list
+        assert isinstance(call_args[0][2], str)   # timestamp string
+
+
+@patch("kiss_signal.cli.persistence.save_strategies_batch")
+def test_run_command_persistence_failure_handling(mock_save_batch, sample_config, tmp_path):
+    """Test that CLI handles persistence failures gracefully."""
+    with runner.isolated_filesystem() as fs:
+        data_dir = Path(fs) / "data"
+        data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
+        universe_path = data_dir / "nifty_large_mid.csv"
+        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
+        
+        sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
+        Path("config.yaml").write_text(yaml.dump(sample_config))
+        
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "rules.yaml").write_text("rules: []")
+
+        # Mock persistence failure
+        mock_save_batch.return_value = False
+
+        result = runner.invoke(app, ["run"])
+        assert result.exit_code == 0, result.stdout
+        assert "Top Strategies by Edge Score" in result.stdout
+        assert "RELIANCE" in result.stdout
+
+        # Ensure that the CLI does not crash and handles the failure gracefully
+        assert "Failed to save strategies to database" not in result.stdout
+        assert "Error" not in result.stdout

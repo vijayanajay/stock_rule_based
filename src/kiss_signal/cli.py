@@ -1,7 +1,7 @@
 """CLI entry point using Typer framework."""
 
 import logging
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -11,7 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .config import Config, load_config, load_rules
-from . import data, backtester
+from . import data, backtester, persistence
 
 __all__ = ["app"]
 
@@ -219,6 +219,30 @@ def run(
         # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
         _print_results(all_results)
+    
+        # [5/5] Saving results...
+        console.print("[5/5] Saving results...", style="blue")
+        
+        try:
+            db_path = Path(app_config.database_path)
+            run_timestamp = datetime.now().isoformat()
+            
+            # Ensure database exists with proper schema
+            persistence.create_database(db_path)
+            
+            # Save strategies to database
+            success = persistence.save_strategies_batch(db_path, all_results, run_timestamp)
+            
+            if success:
+                logger.info(f"Saved {len(all_results)} strategies to database")
+            else:
+                console.print("⚠️  Failed to save results to database", style="yellow")
+                logger.warning("Persistence failed but continuing execution")
+        
+        except Exception as e:
+            console.print(f"⚠️  Database error: {e}", style="yellow")
+            logger.error(f"Persistence error: {e}")
+            # Continue execution - don't crash CLI on persistence failure
     
     except typer.Exit:
         raise

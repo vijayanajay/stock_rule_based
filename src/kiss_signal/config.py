@@ -39,6 +39,7 @@ class Config(BaseModel):
         default_factory=lambda: EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
     )
     freeze_date: Optional[date] = Field(default=None)
+    database_path: str = Field(default="data/kiss_signal.db")
 
     @field_validator("universe_path")
     @classmethod

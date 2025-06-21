@@ -23,3 +23,6 @@ min_trades_threshold: 10
 edge_score_weights:
   win_pct: 0.6    # Weight for win percentage
   sharpe: 0.4     # Weight for Sharpe ratio
+
+# Path to the SQLite database file
+database_path: "data/kiss_signal.db"
