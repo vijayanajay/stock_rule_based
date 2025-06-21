@@ -177,3 +177,11 @@
 **Prevention**:
 1.  When refactoring a component's internal implementation, always update its corresponding unit tests in lock-step. Tests should primarily focus on the public contract (inputs and outputs). If they test internal helpers, they must be kept synchronized or removed if the helpers become obsolete.
 2.  Avoid writing I/O tests that rely on specific filesystem permission structures or behaviors that are not consistent across all development and CI environments. Such tests are inherently brittle. Focus on testing the component's success path and its handling of errors that can be reliably simulated (e.g., by mocking).
+
+---
+
+### Rule Name Display Mismatch in Backtest Results (2025-06-28)
+**Issue**: The backtesting results table displayed generic rule `type` names (e.g., `sma_crossover`) instead of the specific, user-defined `name` from `rules.yaml` (e.g., `sma_10_20_crossover`).
+**Root Cause**: A structural issue in `backtester.py`. The logic that constructs the final strategy result dictionary for display and persistence was incorrectly using the rule's `type` field for the `rule_stack` key. The `type` field correctly maps to the function name for execution, but the `name` field is intended for user-facing identification.
+**Fix**: The strategy result creation logic in `backtester.py` was modified. Instead of ` 'rule_stack': [rule_combo['type']]`, it now uses ` 'rule_stack': [rule_combo.get('name', rule_combo['type'])]`. This change ensures the user-defined `name` is used for the strategy's display name, with a fallback to the `type` for robustness.
+**Prevention**: When handling configuration objects with multiple identifiers (e.g., a functional `type` and a display `name`), ensure that downstream components like reporting and persistence layers are explicitly wired to use the display `name`. Code that builds summary or result objects should clearly distinguish between internal identifiers and user-facing labels.

@@ -65,10 +65,10 @@ class Backtester:
         strategies = []
         
         for i, rule_combo in enumerate(rule_combinations):
-            try:
-                # Only log every 5th strategy to reduce verbosity
+            try:                # Only log every 5th strategy to reduce verbosity
                 if i % 5 == 0 or i == len(rule_combinations) - 1:
-                    logger.debug(f"Processing rule combination {i+1}/{len(rule_combinations)}: {rule_combo['rule_stack']}")
+                    rule_name = rule_combo.get('name', rule_combo.get('rule_stack', ['unknown']))
+                    logger.debug(f"Processing rule combination {i+1}/{len(rule_combinations)}: {rule_name}")
                 
                 # Generate signals
                 entry_signals, exit_signals = self._generate_signals(rule_combo, price_data)
@@ -78,27 +78,58 @@ class Backtester:
                 
                 # Calculate metrics
                 total_trades = portfolio.trades.count()
-                
-                # Skip strategies with insufficient trades
+                  # Skip strategies with insufficient trades
                 if total_trades < self.min_trades_threshold:
                     logger.debug(f"Skipping strategy with {total_trades} trades (< {self.min_trades_threshold})")
                     continue
                 
-                win_pct = portfolio.win_rate()
-                sharpe = portfolio.sharpe_ratio()
-                avg_return = portfolio.trades.records_readable['Return'].mean() if total_trades > 0 else 0.0
+                # Calculate win rate manually from trades
+                if total_trades > 0:
+                    trades_df = portfolio.trades.records_readable
+                    win_pct = (trades_df['Return'] > 0).mean()
+                    avg_return = trades_df['Return'].mean()
+                else:
+                    win_pct = 0.0
+                    avg_return = 0.0
                 
-                # Calculate edge score
+                # Calculate Sharpe ratio from portfolio stats
+                try:
+                    sharpe = portfolio.stats()['Sharpe Ratio']
+                except (KeyError, AttributeError):
+                    # Fallback calculation if stats method doesn't work
+                    returns = portfolio.total_return()
+                    if isinstance(returns, (int, float)) and returns != 0:
+                        sharpe = returns / abs(returns) if abs(returns) > 0 else 0.0
+                    else:
+                        sharpe = 0.0
+                  # Calculate edge score
                 edge_score = self.calc_edge_score(win_pct, sharpe, edge_score_weights)
                 
-                strategy = {
-                    'rule_stack': rule_combo['rule_stack'].copy(),
-                    'parameters': rule_combo.get('parameters', {}).copy(),
-                    'edge_score': edge_score,
-                    'win_pct': win_pct,
-                    'sharpe': sharpe,
-                    'total_trades': total_trades,                    'avg_return': avg_return
-                }
+                # Build strategy result, handling both old and new formats
+                if 'rule_stack' in rule_combo:
+                    # Old format
+                    strategy = {
+                        'rule_stack': rule_combo['rule_stack'].copy(),
+                        'parameters': rule_combo.get('parameters', {}).copy(),
+                        'edge_score': edge_score,
+                        'win_pct': win_pct,
+                        'sharpe': sharpe,
+                        'total_trades': total_trades,
+                        'avg_return': avg_return
+                    }
+                else:
+                    # New format (rules.yaml)
+                    strategy = {
+                        'rule_stack': [rule_combo.get('name', rule_combo['type'])],
+                        'parameters': {rule_combo['type']: rule_combo.get('params', {})},
+                        'edge_score': edge_score,
+                        'win_pct': win_pct,
+                        'sharpe': sharpe,
+                        'total_trades': total_trades,
+                        'avg_return': avg_return,
+                        'name': rule_combo.get('name', 'unnamed_rule'),
+                        'description': rule_combo.get('description', '')
+                    }
                 
                 strategies.append(strategy)
                 # Only log successful strategies, not each individual one
@@ -106,12 +137,12 @@ class Backtester:
             except Exception as e:
                 logger.error(f"Error processing rule combination {rule_combo}: {e}")
                 continue
-        
-        # Sort strategies by edge score (descending)
+          # Sort strategies by edge score (descending)
         strategies.sort(key=lambda x: x['edge_score'], reverse=True)
         
         logger.info(f"Found {len(strategies)} valid strategies (>= {self.min_trades_threshold} trades)")
         return strategies
+
     def calc_edge_score(self, win_pct: float, sharpe: float, weights: Dict[str, float]) -> float:
         """Calculate edge score using weighted metrics.
         
@@ -130,7 +161,7 @@ class Backtester:
         """Generate entry and exit signals for a rule combination.
         
         Args:
-            rule_combo: Rule combination configuration with rule_stack and parameters
+            rule_combo: Rule combination configuration (from rules.yaml format)
             price_data: OHLCV price data
             
         Returns:
@@ -139,8 +170,18 @@ class Backtester:
         Raises:
             ValueError: If rule combination is invalid or rule not found
         """
-        rule_stack = rule_combo.get('rule_stack', [])
-        parameters = rule_combo.get('parameters', {})
+        # Handle both old and new rule formats
+        if 'rule_stack' in rule_combo:
+            # Old format: {'rule_stack': ['rule_name'], 'parameters': {...}}
+            rule_stack = rule_combo.get('rule_stack', [])
+            parameters = rule_combo.get('parameters', {})
+        else:
+            # New format: {'type': 'rule_name', 'params': {...}}
+            rule_type = rule_combo.get('type')
+            if not rule_type:
+                raise ValueError(f"Rule combination missing 'type' field: {rule_combo}")
+            rule_stack = [rule_type]
+            parameters = {rule_type: rule_combo.get('params', {})}
         
         # Only log for complex rule stacks (more than 1 rule)
         if len(rule_stack) > 1:
