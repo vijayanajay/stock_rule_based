@@ -341,72 +341,46 @@ class TestIdentifyNewSignals:
 
 
 class TestGenerateDailyReport:
-    """Test generate_daily_report main function."""
+    """Test daily report generation."""
     
-    @patch('src.kiss_signal.reporter._identify_new_signals')
-    def test_generate_report_structure_with_signals(self, mock_identify, sample_config):
-        """Test report structure and content when new signals are present."""
-        # Arrange: Mock new buy signals
-        mock_identify.return_value = [
-            {
-                'ticker': 'RELIANCE',
-                'date': '2025-06-29',
-                'entry_price': 2950.75,
-                'rule_stack': 'sma_10_20_crossover',
-                'edge_score': 0.68
-            }
-        ]
-        output_dir = Path(sample_config.reports_output_dir)
-        output_dir.mkdir(exist_ok=True)
-        db_path = Path(sample_config.database_path)
-        db_path.touch()
-
-        # Act
-        report_path = reporter.generate_daily_report(db_path, 'test_timestamp', sample_config)
-
-        # Assert: File creation
-        assert report_path is not None
-        assert report_path.exists()
-        assert "signals_" in report_path.name
-        assert report_path.suffix == ".md"
-
-        # Check content
-        content = report_path.read_text(encoding='utf-8')
-
-        # Check all sections are present
-        assert "# Signal Report:" in content
-        assert "## NEW BUYS" in content
-        assert "## OPEN POSITIONS" in content
-        assert "## POSITIONS TO SELL" in content        # Check summary line
-        assert "**Summary:** 1 New Buy Signals, 0 Open Positions, 0 Positions to Sell." in content
-
-        # Check NEW BUYS content
-        assert "RELIANCE" in content
-        assert "2950.75" in content
-        assert "sma_10_20_crossover" in content
-
-        # Check placeholder content for other sections
-        assert "*Full position tracking will be implemented in a future story.*" in content
-
-    @patch('src.kiss_signal.reporter._identify_new_signals')
-    def test_generate_report_structure_no_signals(self, mock_identify, sample_config):
-        """Test report structure and content when there are no new signals."""
-        # Arrange: Mock no new signals
-        mock_identify.return_value = []
-        output_dir = Path(sample_config.reports_output_dir)
-        output_dir.mkdir(exist_ok=True)
-        db_path = Path(sample_config.database_path)
-        db_path.touch()
-
-        # Act
-        report_path = reporter.generate_daily_report(db_path, 'test_timestamp', sample_config)
-
-        # Assert
-        assert report_path is not None
-        content = report_path.read_text(encoding='utf-8')
-        assert "## NEW BUYS" in content
-        assert "## OPEN POSITIONS" in content
-        assert "## POSITIONS TO SELL" in content
-        assert "**Summary:** 0 New Buy Signals, 0 Open Positions, 0 Positions to Sell." in content
-        assert "*No new buy signals found.*" in content
-        assert "*Full position tracking will be implemented in a future story.*" in content
+    def test_generate_report_structure_with_positions(self, temp_db: str, sample_data_dir: str) -> None:
+        """Test report structure includes positions when enabled."""
+        # Add some test trades
+        from kiss_signal.positions import save_trade, Trade
+        from decimal import Decimal
+        from datetime import date
+        
+        trade = Trade("TEST", 100, Decimal("50.0"), date.today(), "BUY")
+        save_trade(temp_db, trade)
+        
+        universe_file = Path(sample_data_dir) / "universe.txt"
+        universe_file.write_text("TEST\n")
+        
+        report = reporter.generate_daily_report(
+            temp_db, 
+            sample_data_dir, 
+            str(universe_file),
+            include_positions=True
+        )
+        
+        assert "positions" in report
+        assert "portfolio_summary" in report
+        assert isinstance(report["positions"], dict)
+        assert isinstance(report["portfolio_summary"], dict)
+    
+    def test_generate_report_without_positions(self, temp_db: str, sample_data_dir: str) -> None:
+        """Test report generation without position tracking."""
+        universe_file = Path(sample_data_dir) / "universe.txt"
+        universe_file.write_text("TEST\n")
+        
+        report = reporter.generate_daily_report(
+            temp_db, 
+            sample_data_dir, 
+            str(universe_file),
+            include_positions=False
+        )
+        
+        assert "positions" in report
+        assert "portfolio_summary" in report
+        assert report["positions"] == {}
+        assert report["portfolio_summary"] == {}

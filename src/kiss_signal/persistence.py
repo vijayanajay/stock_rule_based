@@ -27,9 +27,28 @@ CREATE TABLE IF NOT EXISTS strategies (
 );
 """
 
+CREATE_TRADES_TABLE = """
+CREATE TABLE IF NOT EXISTS trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    price TEXT NOT NULL,
+    trade_date TEXT NOT NULL,
+    trade_type TEXT NOT NULL CHECK (trade_type IN ('BUY', 'SELL')),
+    strategy_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (strategy_id) REFERENCES strategies (id)
+);
+"""
+
 CREATE_INDEX_STRATEGIES = """
 CREATE INDEX IF NOT EXISTS idx_strategies_symbol_timestamp 
 ON strategies(symbol, run_timestamp);
+"""
+
+CREATE_INDEX_TRADES = """
+CREATE INDEX IF NOT EXISTS idx_trades_symbol_date 
+ON trades (symbol, trade_date);
 """
 
 def create_database(db_path: Path) -> None:
@@ -55,9 +74,17 @@ def create_database(db_path: Path) -> None:
             conn.execute(CREATE_STRATEGIES_TABLE)
             logger.debug("Created strategies table")
             
-            # Create index for performance
+            # Create trades table
+            conn.execute(CREATE_TRADES_TABLE)
+            logger.debug("Created trades table")
+            
+            # Create index for strategies table
             conn.execute(CREATE_INDEX_STRATEGIES)
             logger.debug("Created index on strategies table")
+            
+            # Create index for trades table
+            conn.execute(CREATE_INDEX_TRADES)
+            logger.debug("Created index on trades table")
             
             conn.commit()
             logger.info(f"Successfully created database at {db_path}")

@@ -2,6 +2,7 @@
 
 import logging
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -13,6 +14,7 @@ from rich.table import Table
 
 from .config import Config, load_config, load_rules
 from . import data, backtester, persistence, reporter
+from .positions import get_current_positions, save_trade, Trade
 
 __all__ = ["app"]
 
@@ -260,6 +262,120 @@ def run(
             # Fallback to standard print if console is broken
             import sys
             print(f"\nCritical error: Could not save log file: {e}", file=sys.stderr)
+
+
+@app.command()
+def positions(
+    db_path: str = typer.Option(DEFAULT_DB_PATH, help="Database file path"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")
+) -> None:
+    """Show current portfolio positions."""
+    setup_logging(verbose)
+    
+    try:
+        positions = get_current_positions(db_path)
+        
+        if not positions:
+            console.print("[yellow]No current positions found[/yellow]")
+            return
+        
+        # Create table for positions
+        table = Table(title="Current Positions")
+        table.add_column("Symbol", style="cyan")
+        table.add_column("Quantity", justify="right")
+        table.add_column("Avg Cost", justify="right")
+        table.add_column("Current Price", justify="right")
+        table.add_column("Market Value", justify="right")
+        table.add_column("Unrealized P&L", justify="right")
+        
+        total_value = Decimal('0')
+        total_pnl = Decimal('0')
+        
+        for symbol, position in positions.items():
+            pnl_style = "green" if position.unrealized_pnl >= 0 else "red"
+            
+            table.add_row(
+                symbol,
+                str(position.quantity),
+                f"${position.avg_cost:.2f}",
+                f"${position.current_price:.2f}",
+                f"${position.market_value:.2f}",
+                f"[{pnl_style}]${position.unrealized_pnl:.2f}[/{pnl_style}]"
+            )
+            
+            total_value += position.market_value
+            total_pnl += position.unrealized_pnl
+        
+        console.print(table)
+        
+        # Portfolio summary
+        summary_table = Table(title="Portfolio Summary")
+        summary_table.add_column("Metric")
+        summary_table.add_column("Value", justify="right")
+        
+        pnl_style = "green" if total_pnl >= 0 else "red"
+        summary_table.add_row("Total Positions", str(len(positions)))
+        summary_table.add_row("Total Market Value", f"${total_value:.2f}")
+        summary_table.add_row("Total Unrealized P&L", f"[{pnl_style}]${total_pnl:.2f}[/{pnl_style}]")
+        
+        console.print(summary_table)
+        
+    except Exception as e:
+        logger.error(f"Error displaying positions: {e}")
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+@app.command()
+def add_trade(
+    symbol: str = typer.Argument(..., help="Stock symbol"),
+    quantity: int = typer.Argument(..., help="Number of shares"),
+    price: float = typer.Argument(..., help="Trade price per share"),
+    trade_type: str = typer.Argument(..., help="Trade type (BUY/SELL)"),
+    db_path: str = typer.Option(DEFAULT_DB_PATH, help="Database file path"),
+    trade_date: str = typer.Option(None, help="Trade date (YYYY-MM-DD, default: today)"),
+    strategy_id: int = typer.Option(None, help="Associated strategy ID"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")
+) -> None:
+    """Add a trade to the portfolio."""
+    setup_logging(verbose)
+    
+    try:
+        # Validate trade type
+        if trade_type.upper() not in ['BUY', 'SELL']:
+            console.print("[red]Error: Trade type must be BUY or SELL[/red]")
+            raise typer.Exit(1)
+        
+        # Parse trade date
+        if trade_date:
+            try:
+                parsed_date = datetime.strptime(trade_date, "%Y-%m-%d").date()
+            except ValueError:
+                console.print("[red]Error: Invalid date format. Use YYYY-MM-DD[/red]")
+                raise typer.Exit(1)
+        else:
+            parsed_date = date.today()
+        
+        # Create trade
+        trade = Trade(
+            symbol=symbol.upper(),
+            quantity=quantity,
+            price=Decimal(str(price)),
+            trade_date=parsed_date,
+            trade_type=trade_type.upper(),
+            strategy_id=strategy_id
+        )
+        
+        # Save trade
+        save_trade(db_path, trade)
+        
+        console.print(f"[green]Trade added successfully:[/green]")
+        console.print(f"  {trade_type.upper()} {quantity} shares of {symbol.upper()} at ${price:.2f}")
+        console.print(f"  Date: {parsed_date}")
+        
+    except Exception as e:
+        logger.error(f"Error adding trade: {e}")
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @app.callback(invoke_without_command=True)
