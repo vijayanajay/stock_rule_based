@@ -289,3 +289,23 @@ The tests were not updated in lock-step and were still testing the obsolete, non
 **Prevention**: When writing integration tests for logic that depends on specific data patterns (e.g., trends, volatility spikes, mean reversion), use deterministic, purpose-built test data. Avoid using purely random data, as it cannot guarantee that the necessary conditions for the test will be met, leading to flaky and unreliable test suites.
 
 ---
+
+### Test/Component Desynchronization in Reporter Module (2025-07-06)
+**Issue**: Two tests in `test_reporter.py` were failing with a `fixture not found` error during test setup.
+**Root Cause**: A structural desynchronization between the tests and the component they were intended to verify. The failing tests were calling the `reporter.generate_daily_report` function with an obsolete signature and were dependent on non-existent test fixtures (`temp_db`, `sample_data_dir`). Furthermore, they attempted to import from a module (`kiss_signal.positions`) that does not exist in the current architecture. This indicates the tests were remnants of a previous implementation and had not been updated in lock-step with the application code.
+**Fix**: The two obsolete and non-functional tests were replaced with new, correct tests that are synchronized with the current `reporter.py` API. The new tests use available fixtures (`tmp_path`, `sample_config`), mock dependencies correctly, and accurately verify the report generation logic for various scenarios, including when open and closed positions are present.
+**Prevention**: When refactoring a component's public API or changing its dependencies, all corresponding tests must be updated as part of the same atomic change. Allowing tests to become desynchronized from the code they are meant to validate makes the test suite unreliable and can hide regressions. Tests should be treated as first-class citizens of the codebase.
+
+---
+
+### Incomplete Test Implementation Leading to Suite Failure (2025-07-07)
+**Issue**: A test in `test_reporter.py` was failing with `sqlite3.ProgrammingError: Incorrect number of bindings supplied`.
+**Root Cause**: A structural issue of **test suite incompleteness**. The failing test, `test_generate_report_with_positions`, was a complex integration test that had been scaffolded but not fully implemented. The test setup included a call to `sqlite3.connect().execute()` to populate a test database, but the required data parameters for the SQL query were missing. This is a classic example of test code not being held to the same quality standard as application code, leading to a failure within the test suite itself rather than the application.
+**Fix**:
+1.  The incomplete test was fully implemented. This involved providing the missing parameters to the `conn.execute()` call to correctly set up the initial database state for both "open" and "to-be-closed" positions.
+2.  Mocks for the test's external dependencies (`_identify_new_signals`, `data.get_price_data`) were correctly configured to simulate a realistic reporting scenario.
+3.  Comprehensive assertions were added to verify the final state of the database (e.g., positions correctly closed) and the content of the generated report.
+4.  Other minor test errors in the same file (an incorrect function call signature and a non-hermetic fixture) were also corrected, bringing the entire module's test suite into a healthy, synchronized state.
+**Prevention**: Treat test code as a first-class citizen with the same quality standards as application code. Incomplete or "scaffolding" tests should not be committed to the main branch. All tests must be complete, self-contained (hermetic), and passing before a feature is considered "done". This prevents the test suite from becoming a source of noise and ensures it accurately reflects the health and correctness of the application.
+
+---

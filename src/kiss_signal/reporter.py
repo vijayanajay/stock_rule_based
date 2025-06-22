@@ -7,16 +7,15 @@ positions to sell.
 """
 
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date
 from typing import List, Dict, Any, Optional
 import logging
 import json
 import sqlite3
 import pandas as pd
 
-from . import data, rules
+from . import data, rules, persistence
 from .config import Config
-from .positions import get_current_positions, Position
 
 __all__ = ["generate_daily_report"]
 
@@ -190,6 +189,65 @@ def _identify_new_signals(
     return signals
 
 
+def _calculate_open_position_metrics(
+    open_positions: List[Dict[str, Any]], config: Config
+) -> List[Dict[str, Any]]:
+    """Calculate metrics for open positions for reporting."""
+    if not open_positions:
+        return []
+
+    augmented_positions = []
+    today = date.today()
+
+    for pos in open_positions:
+        try:
+            entry_date = date.fromisoformat(pos["entry_date"])
+            days_held = (today - entry_date).days
+
+            price_data = data.get_price_data(
+                symbol=pos["symbol"],
+                cache_dir=Path(config.cache_dir),
+                refresh_days=config.cache_refresh_days,
+                years=1,
+                freeze_date=config.freeze_date,
+            )
+            if price_data is None or price_data.empty:
+                continue
+
+            current_price = price_data['close'].iloc[-1]
+            return_pct = (current_price - pos["entry_price"]) / pos["entry_price"] * 100
+
+            nifty_data = data.get_price_data(
+                symbol="^NSEI",
+                cache_dir=Path(config.cache_dir),
+                refresh_days=config.cache_refresh_days,
+                start_date=entry_date,
+                end_date=today,
+                freeze_date=config.freeze_date,
+            )
+            
+            nifty_return_pct = 0.0
+            if nifty_data is not None and not nifty_data.empty:
+                nifty_start_price = nifty_data['close'].iloc[0]
+                nifty_end_price = nifty_data['close'].iloc[-1]
+                if nifty_start_price > 0:
+                    nifty_return_pct = (nifty_end_price - nifty_start_price) / nifty_start_price * 100
+
+            pos.update({
+                "current_price": current_price,
+                "return_pct": return_pct,
+                "nifty_return_pct": nifty_return_pct,
+                "days_held": days_held,
+            })
+            augmented_positions.append(pos)
+
+        except Exception as e:
+            logger.error(f"Error calculating metrics for position {pos['symbol']}: {e}")
+            continue
+            
+    return augmented_positions
+
+
 def generate_daily_report(
     db_path: Path,
     run_timestamp: str,
@@ -207,78 +265,123 @@ def generate_daily_report(
         Path to generated report file, or None on failure
     """
     try:
-        # 1. Call _identify_new_signals to get new buy signals
-        signals = _identify_new_signals(db_path, run_timestamp, config)
-        
-        # 2. Create markdown content using string formatting
-        report_date = date.today().strftime('%Y-%m-%d')
-        
+        # 1. Identify and save new buy signals
+        new_signals = _identify_new_signals(db_path, run_timestamp, config)
+        if new_signals:
+            strategies = _fetch_best_strategies(db_path, run_timestamp, 0.0)
+            strategy_map = {s['symbol']: s['rule_stack'] for s in strategies}
+            for signal in new_signals:
+                signal['rule_stack_used'] = strategy_map.get(signal['ticker'], "[]")
+            persistence.add_new_positions_from_signals(db_path, new_signals)
+            logger.info(f"Added {len(new_signals)} new positions to the database.")
+
+        # 2. Fetch all open positions and determine their status
+        open_positions = persistence.get_open_positions(db_path)
+        positions_to_hold = []
+        positions_to_close = []
+        today = date.today()
+
+        for pos in open_positions:
+            entry_date = date.fromisoformat(pos["entry_date"])
+            days_held = (today - entry_date).days
+            if days_held >= config.hold_period:
+                price_data = data.get_price_data(
+                    symbol=pos["symbol"], cache_dir=Path(config.cache_dir),
+                    refresh_days=config.cache_refresh_days, years=1,
+                    freeze_date=config.freeze_date
+                )
+                if price_data is not None and not price_data.empty:
+                    pos['exit_price'] = price_data['close'].iloc[-1]
+                    pos['exit_date'] = price_data.index[-1].strftime('%Y-%m-%d')
+                    pos['days_held'] = days_held
+                    pos['final_return_pct'] = (pos['exit_price'] - pos['entry_price']) / pos['entry_price'] * 100
+                    nifty_data = data.get_price_data(
+                        symbol="^NSEI", cache_dir=Path(config.cache_dir),
+                        start_date=entry_date, end_date=today,
+                        freeze_date=config.freeze_date
+                    )
+                    pos['final_nifty_return_pct'] = 0.0
+                    if nifty_data is not None and not nifty_data.empty:
+                        nifty_start = nifty_data['close'].iloc[0]
+                        nifty_end = nifty_data['close'].iloc[-1]
+                        if nifty_start > 0:
+                            pos['final_nifty_return_pct'] = (nifty_end - nifty_start) / nifty_start * 100
+                positions_to_close.append(pos)
+            else:
+                positions_to_hold.append(pos)
+
+        # 3. Calculate metrics for reporting (on-the-fly for open positions)
+        reportable_open_positions = _calculate_open_position_metrics(positions_to_hold, config)
+
+        # 4. Close positions that have met their exit criteria
+        if positions_to_close:
+            persistence.close_positions_batch(db_path, positions_to_close)
+            logger.info(f"Closed {len(positions_to_close)} positions.")
+
+        # 5. Generate the report content
+        report_date_str = today.strftime("%Y-%m-%d")
+        summary_line = (
+            f"**Summary:** {len(new_signals)} New Buy Signals, "
+            f"{len(reportable_open_positions)} Open Positions, "
+            f"{len(positions_to_close)} Positions to Sell."
+        )
+
         # Format NEW BUYS table
-        if signals:
+        if new_signals:
             new_buys_table = "| Ticker | Recommended Buy Date | Entry Price | Rule Stack | Edge Score |\n"
             new_buys_table += "|:-------|:---------------------|:------------|:-----------|:-----------|\n"
-            
-            for signal in signals:
+            for signal in new_signals:
                 new_buys_table += f"| {signal['ticker']} | {signal['date']} | {signal['entry_price']:.2f} | {signal['rule_stack']} | {signal['edge_score']:.2f} |\n"
         else:
             new_buys_table = "*No new buy signals found.*"
-        
-        # 3. Get current positions
-        include_positions = True
-        positions = {}
-        portfolio_summary = {}
-        
-        if include_positions:
-            try:
-                positions = get_current_positions(db_path)
-                
-                # Calculate portfolio summary
-                total_value = sum(pos.market_value for pos in positions.values())
-                total_pnl = sum(pos.unrealized_pnl for pos in positions.values())
-                
-                portfolio_summary = {
-                    "total_positions": len(positions),
-                    "total_market_value": str(total_value),
-                    "total_unrealized_pnl": str(total_pnl)
-                }
-                
-                logger.info(f"Portfolio: {len(positions)} positions, value: {total_value}")
-            except Exception as e:
-                logger.error(f"Error fetching positions: {e}")
-                positions = {}
-                portfolio_summary = {}
-        
-        # Create full report content
-        report_content = f"""# Signal Report: {report_date}
 
-**Summary:** {len(signals)} New Buy Signals, {len(positions)} Open Positions, 0 Positions to Sell.
+        # Format OPEN POSITIONS table
+        open_pos_table = "*No open positions.*"
+        if reportable_open_positions:
+            open_pos_table = "| Ticker | Entry Date | Entry Price | Current Price | Return % | NIFTY Period Return % | Day in Trade |\n"
+            open_pos_table += "|:-------|:-----------|:------------|:--------------|:---------|:----------------------|:-------------|\n"
+            for pos in reportable_open_positions:
+                open_pos_table += (
+                    f"| {pos['symbol']} | {pos['entry_date']} | {pos['entry_price']:.2f} | "
+                    f"{pos['current_price']:.2f} | {pos['return_pct']:+.2f}% | "
+                    f"{pos['nifty_return_pct']:+.2f}% | {pos['days_held']} / {config.hold_period} |\n"
+                )
+
+        # Format POSITIONS TO SELL table
+        sell_pos_table = "*No positions to sell.*"
+        if positions_to_close:
+            sell_pos_table = "| Ticker | Status | Reason |\n"
+            sell_pos_table += "|:-------|:-------|:-------|\n"
+            for pos in positions_to_close:
+                sell_pos_table += f"| {pos['symbol']} | SELL | Exit: End of {config.hold_period}-day holding period. |\n"
+
+        # Create full report content
+        report_content = f"""# Signal Report: {report_date_str}
+
+{summary_line}
 
 ## NEW BUYS
 {new_buys_table}
 
 ## OPEN POSITIONS
-*Full position tracking will be implemented in a future story.*
+{open_pos_table}
 
 ## POSITIONS TO SELL
-*Full position tracking will be implemented in a future story.*
+{sell_pos_table}
 
 ---
-*Report generated by KISS Signal CLI v1.4 on {report_date}*
+*Report generated by KISS Signal CLI v1.4 on {report_date_str}*
 """
         
-        # 4. Write the report to a file
+        # 6. Write the report to a file
         output_dir = Path(config.reports_output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        report_file = output_dir / f"signals_{report_date}.md"
+        report_file = output_dir / f"signals_{report_date_str}.md"
         report_file.write_text(report_content, encoding='utf-8')
         
         logger.info(f"Report generated: {report_file}")
         return report_file
-        
-    except OSError as e:
-        logger.error(f"Failed to write report: {e}")
-        return None
     except Exception as e:
-        logger.error(f"Unexpected error generating report: {e}")
+        logger.error(f"Failed to generate report: {e}")
         return None

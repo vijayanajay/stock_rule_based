@@ -7,7 +7,13 @@ import sqlite3
 import json
 import logging
 
-__all__ = ["create_database", "save_strategies_batch"]
+__all__ = [
+    "create_database",
+    "save_strategies_batch",
+    "add_new_positions_from_signals",
+    "get_open_positions",
+    "close_positions_batch",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -15,29 +21,33 @@ logger = logging.getLogger(__name__)
 CREATE_STRATEGIES_TABLE = """
 CREATE TABLE IF NOT EXISTS strategies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_timestamp TEXT NOT NULL,
     symbol TEXT NOT NULL,
+    run_timestamp TEXT NOT NULL,
     rule_stack TEXT NOT NULL,
     edge_score REAL NOT NULL,
     win_pct REAL NOT NULL,
     sharpe REAL NOT NULL,
     total_trades INTEGER NOT NULL,
     avg_return REAL NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(symbol, rule_stack, run_timestamp)
 );
 """
 
-CREATE_TRADES_TABLE = """
-CREATE TABLE IF NOT EXISTS trades (
+CREATE_POSITIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS positions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     symbol TEXT NOT NULL,
-    quantity INTEGER NOT NULL,
-    price TEXT NOT NULL,
-    trade_date TEXT NOT NULL,
-    trade_type TEXT NOT NULL CHECK (trade_type IN ('BUY', 'SELL')),
-    strategy_id INTEGER,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (strategy_id) REFERENCES strategies (id)
+    entry_date TEXT NOT NULL,
+    entry_price REAL NOT NULL,
+    exit_date TEXT,
+    exit_price REAL,
+    status TEXT NOT NULL CHECK(status IN ('OPEN', 'CLOSED')),
+    rule_stack_used TEXT NOT NULL,
+    final_return_pct REAL,
+    final_nifty_return_pct REAL,
+    days_held INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -46,9 +56,8 @@ CREATE INDEX IF NOT EXISTS idx_strategies_symbol_timestamp
 ON strategies(symbol, run_timestamp);
 """
 
-CREATE_INDEX_TRADES = """
-CREATE INDEX IF NOT EXISTS idx_trades_symbol_date 
-ON trades (symbol, trade_date);
+CREATE_INDEX_POSITIONS = """
+CREATE INDEX IF NOT EXISTS idx_positions_status_symbol ON positions(status, symbol);
 """
 
 def create_database(db_path: Path) -> None:
@@ -74,17 +83,17 @@ def create_database(db_path: Path) -> None:
             conn.execute(CREATE_STRATEGIES_TABLE)
             logger.debug("Created strategies table")
             
-            # Create trades table
-            conn.execute(CREATE_TRADES_TABLE)
-            logger.debug("Created trades table")
+            # Create positions table
+            conn.execute(CREATE_POSITIONS_TABLE)
+            logger.debug("Created positions table")
             
             # Create index for strategies table
             conn.execute(CREATE_INDEX_STRATEGIES)
             logger.debug("Created index on strategies table")
             
-            # Create index for trades table
-            conn.execute(CREATE_INDEX_TRADES)
-            logger.debug("Created index on trades table")
+            # Create index for positions table
+            conn.execute(CREATE_INDEX_POSITIONS)
+            logger.debug("Created index on positions table")
             
             conn.commit()
             logger.info(f"Successfully created database at {db_path}")
@@ -92,6 +101,90 @@ def create_database(db_path: Path) -> None:
     except (sqlite3.Error, OSError) as e:
         logger.error(f"Failed to create database at {db_path}: {e}")
         raise
+
+# impure
+def add_new_positions_from_signals(db_path: Path, signals: List[Dict[str, Any]]) -> None:
+    """Adds new buy signals to the positions table with status 'OPEN'."""
+    if not signals:
+        return
+
+    insert_sql = """
+    INSERT INTO positions (symbol, entry_date, entry_price, status, rule_stack_used)
+    VALUES (?, ?, ?, 'OPEN', ?);
+    """
+    
+    with sqlite3.connect(str(db_path)) as conn:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN TRANSACTION")
+        try:
+            open_symbols = {
+                row[0] for row in cursor.execute("SELECT symbol FROM positions WHERE status = 'OPEN'").fetchall()
+            }
+            
+            for signal in signals:
+                symbol = signal['ticker']
+                if symbol in open_symbols:
+                    logger.info(f"Skipping new position for {symbol} as one is already open.")
+                    continue
+                
+                rule_stack_json = signal.get('rule_stack_used', json.dumps([signal.get('rule_stack', 'unknown')]))
+
+                cursor.execute(insert_sql, (
+                    symbol,
+                    signal['date'],
+                    signal['entry_price'],
+                    rule_stack_json
+                ))
+                logger.info(f"Added new OPEN position for {symbol} at {signal['entry_price']}.")
+            
+            cursor.execute("COMMIT")
+        except sqlite3.Error as e:
+            logger.error(f"Failed to add new positions: {e}")
+            cursor.execute("ROLLBACK")
+
+# impure
+def get_open_positions(db_path: Path) -> List[Dict[str, Any]]:
+    """Fetches all positions with status 'OPEN'."""
+    query = "SELECT id, symbol, entry_date, entry_price, rule_stack_used FROM positions WHERE status = 'OPEN' ORDER BY entry_date;"
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(query)
+            positions = [dict(row) for row in cursor.fetchall()]
+            logger.info(f"Fetched {len(positions)} open positions.")
+            return positions
+    except sqlite3.Error as e:
+        logger.error(f"Failed to fetch open positions: {e}")
+        return []
+
+# impure
+def close_positions_batch(db_path: Path, closed_positions: List[Dict[str, Any]]) -> None:
+    """Updates positions to 'CLOSED' and records exit details."""
+    if not closed_positions:
+        return
+
+    update_sql = """
+    UPDATE positions
+    SET status = 'CLOSED', exit_date = ?, exit_price = ?, final_return_pct = ?, 
+        final_nifty_return_pct = ?, days_held = ?
+    WHERE id = ?;
+    """
+    
+    with sqlite3.connect(str(db_path)) as conn:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN TRANSACTION")
+        try:
+            for pos in closed_positions:
+                cursor.execute(update_sql, (
+                    pos.get('exit_date'), pos.get('exit_price'), pos.get('final_return_pct'),
+                    pos.get('final_nifty_return_pct'), pos.get('days_held'), pos['id']
+                ))
+            cursor.execute("COMMIT")
+            logger.info(f"Closed {len(closed_positions)} positions.")
+        except sqlite3.Error as e:
+            logger.error(f"Failed to close positions: {e}")
+            cursor.execute("ROLLBACK")
 
 def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_timestamp: str) -> bool:
     """Save a batch of strategy results in a single transaction.

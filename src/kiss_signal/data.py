@@ -147,6 +147,8 @@ def _add_ns_suffix(symbol: str) -> str:
     Returns:
         Symbol with .NS suffix
     """
+    if symbol.startswith('^'):  # Handle indices like ^NSEI
+        return symbol
     return f"{symbol}.NS" if not symbol.endswith('.NS') else symbol
 
 
