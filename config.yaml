@@ -26,3 +26,7 @@ edge_score_weights:
 
 # Path to the SQLite database file
 database_path: "data/kiss_signal.db"
+
+# Reporting configuration
+reports_output_dir: "reports/"
+edge_score_threshold: 0.50

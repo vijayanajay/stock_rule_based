@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .config import Config, load_config, load_rules
-from . import data, backtester, persistence
+from . import data, backtester, persistence, reporter
 
 __all__ = ["app"]
 
@@ -174,26 +174,24 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]]) -> None:
 
 @app.command(name="run")
 def run(
-    config_path_str: str = typer.Option(..., "--config", help="Path to config.yaml"),
-    rules_path_str: str = typer.Option(..., "--rules", help="Path to rules.yaml"),
-    verbose: bool = typer.Option(False, "--verbose", help="Enable verbose logging"),
-    freeze_date_str: Optional[str] = typer.Option(
-        None, "--freeze-data", help="Run analysis on data up to this date (YYYY-MM-DD)"
-    ),
-):
+    config_path: str = typer.Option(..., help="Path to config YAML file"),
+    rules_path: str = typer.Option(..., help="Path to rules YAML file"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)")
+) -> None:
     """Run the KISS Signal analysis pipeline."""
     setup_logging(verbose)
     _show_banner()
 
-    config_path = Path(config_path_str)
-    rules_path = Path(rules_path_str)
+    config_path = Path(config_path)
+    rules_path = Path(rules_path)
 
     freeze_date: Optional[date] = None
-    if freeze_date_str:
+    if freeze_data:
         try:
-            freeze_date = date.fromisoformat(freeze_date_str)
+            freeze_date = date.fromisoformat(freeze_data)
         except ValueError:
-            console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_date_str}'[/red]")
+            console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
             raise typer.Exit(1)
 
     try:
@@ -230,6 +228,25 @@ def run(
         _print_results(all_results)
         # Step 5: Save results
         _save_results(app_config, all_results)
+
+        console.print("[5/5] Generating report...", style="blue")
+        try:
+            report_path = reporter.generate_daily_report(
+                db_path=Path(app_config.database_path),
+                run_timestamp=run_timestamp,
+                config=app_config,
+                rules_config=rules_config
+            )
+            
+            if report_path:
+                console.print(f"✨ Report generated: {report_path}", style="green")
+            else:
+                console.print("⚠️  Report generation failed", style="yellow")
+                
+        except Exception as e:
+            console.print(f"⚠️  Report error: {e}", style="yellow")
+            logger.error(f"Report generation error: {e}", exc_info=True)
+
     except typer.Exit:
         raise
     except FileNotFoundError as e:

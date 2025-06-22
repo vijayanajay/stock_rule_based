@@ -40,6 +40,8 @@ class Config(BaseModel):
     )
     freeze_date: Optional[date] = Field(default=None)
     database_path: str = Field(default="data/kiss_signal.db")
+    reports_output_dir: str = Field(default="reports/")
+    edge_score_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
 
     @field_validator("universe_path")
     @classmethod

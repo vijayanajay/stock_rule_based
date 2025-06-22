@@ -1,3 +1,15 @@
+## Antipatterns Reference
+
+- **Manual os.chdir() in CLI Tests**: Use test runner isolation helpers (e.g., `runner.isolated_filesystem()`), not global CWD changes.
+- **Magic Path Resolution in CLI**: Require explicit config file paths; avoid searching multiple locations.
+- **Path Type in Typer Option**: Use `str` for CLI path options, convert to `Path` inside the command.
+- **Patching Deferred Imports at Module Level**: Patch where the dependency is actually imported/used.
+- **Non-Hermetic Integration Tests**: Mock all external dependencies, use isolated filesystems.
+- **Inconsistent Test Fixtures and Mock Contracts**: Ensure test data matches real schema and setup.
+- **Duplicated Core Logic Across Modules**: Centralize core logic, avoid duplicate implementations.
+
+---
+
 ### Regression of Brittle I/O Tests in Persistence Layer (2025-06-27)
 **Issue**: Two tests in `test_persistence.py` were failing: one with a `PermissionError` during test cleanup, and another with `Failed: DID NOT RAISE <class 'OSError'>`.
 **Root Cause**: This is a regression of a previously identified structural problem. The test suite contained brittle I/O tests that were not robust against environmental differences and had been re-introduced into the codebase.
