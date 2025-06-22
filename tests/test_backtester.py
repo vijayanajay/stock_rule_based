@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pandas as pd
 import numpy as np
-import vectorbt as vbt
 
 from kiss_signal.backtester import Backtester
 
@@ -89,13 +88,10 @@ class TestBacktester:
             'params': {'fast_period': 5, 'slow_period': 10}
         }
         
-        entry_signals, exit_signals = backtester._generate_signals(rule_combo, sample_price_data)
+        entry_signals = backtester._generate_signals(rule_combo, sample_price_data)
         assert isinstance(entry_signals, pd.Series)
-        assert isinstance(exit_signals, pd.Series)
         assert len(entry_signals) == len(sample_price_data)
-        assert len(exit_signals) == len(sample_price_data)
         assert entry_signals.dtype == bool
-        assert exit_signals.dtype == bool
 
     def test_generate_signals_invalid_rule(self, sample_price_data):
         """Test signal generation with invalid rule name."""
@@ -114,58 +110,6 @@ class TestBacktester:
         
         with pytest.raises(ValueError, match="Missing parameters for rule 'sma_crossover'"):
             backtester._generate_signals(rule_combo, sample_price_data)
-
-    def test_create_portfolio_basic(self, sample_price_data):
-        """Test basic portfolio creation with entry/exit signals."""
-        backtester = Backtester()
-        
-        # Create simple entry/exit signals
-        entry_signals = pd.Series(False, index=sample_price_data.index)
-        exit_signals = pd.Series(False, index=sample_price_data.index)
-        
-        # Add a few entry/exit pairs
-        entry_signals.iloc[10] = True
-        exit_signals.iloc[30] = True
-        entry_signals.iloc[50] = True
-        exit_signals.iloc[70] = True
-        
-        portfolio = backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
-        
-        # Verify portfolio object
-        assert portfolio is not None
-        assert hasattr(portfolio, 'total_return')
-        assert hasattr(portfolio, 'trades')
-
-    def test_create_portfolio_no_signals(self, sample_price_data):
-        """Test portfolio creation with no signals."""
-        backtester = Backtester()
-          # No signals
-        entry_signals = pd.Series(False, index=sample_price_data.index)
-        exit_signals = pd.Series(False, index=sample_price_data.index)
-        
-        portfolio = backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
-        
-        assert isinstance(portfolio, vbt.Portfolio)
-        stats = portfolio.stats()
-        assert stats['Total Trades'] == 0
-
-    def test_create_portfolio_mismatched_length(self, sample_price_data):
-        """Test portfolio creation with mismatched signal lengths."""
-        backtester = Backtester()
-        # Mismatched length signals
-        entry_signals = pd.Series(False, index=sample_price_data.index[:50])
-        exit_signals = pd.Series(False, index=sample_price_data.index)
-        # vectorbt should raise an error if signal/price shapes are incompatible
-        with pytest.raises(Exception):
-            backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
-
-    def test_create_portfolio_invalid_signals(self, sample_price_data):
-        """Test error on mismatched entry/exit signals."""
-        backtester = Backtester()
-        entry_signals = pd.Series([True, False, True], index=sample_price_data.index[:3])
-        exit_signals = pd.Series([False, True, False], index=sample_price_data.index[:3])
-        with pytest.raises(Exception):
-            backtester._create_portfolio(entry_signals, exit_signals, sample_price_data)
 
 @pytest.fixture
 def sample_price_data():

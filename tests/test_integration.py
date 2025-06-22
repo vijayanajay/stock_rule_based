@@ -50,17 +50,23 @@ INFY,Infosys Ltd,IT"""
             np.random.seed(42) # for reproducibility
             
             for symbol in ['RELIANCE', 'INFY']:
-                # Create more realistic price data using a random walk
-                base_price = 100.0
-                returns = np.random.normal(loc=0.0005, scale=0.02, size=len(sample_dates))
-                
-                close_prices = [base_price]
-                for r in returns:
-                    close_prices.append(close_prices[-1] * (1 + r))
+                # Generate deterministic data with clear trends to ensure signals are triggered.
+                n_total = len(sample_dates)
+                n_up = n_total // 3
+                n_down = n_total // 3
+                n_side = n_total - n_up - n_down
+
+                up_trend = np.linspace(100, 150, n_up)
+                down_trend = np.linspace(150, 80, n_down)
+                side_trend = np.linspace(80, 90, n_side)
+
+                # Add some noise to make it more realistic
+                noise = np.random.normal(loc=0, scale=2.5, size=n_total)
+                close_prices = np.concatenate([up_trend, down_trend, side_trend]) + noise
                 
                 prices = []
                 for i, date in enumerate(sample_dates):
-                    close = close_prices[i+1]
+                    close = close_prices[i]
                     open_price = close * np.random.uniform(0.99, 1.01)
                     high_price = max(open_price, close) * np.random.uniform(1.0, 1.02)
                     low_price = min(open_price, close) * np.random.uniform(0.98, 1.0)

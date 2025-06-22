@@ -26,18 +26,13 @@ def setup_logging(verbose: bool = False) -> None:
     """Configure logging based on verbosity level."""
     level = logging.DEBUG if verbose else logging.INFO
 
-    # Close and remove any existing handlers
-    for handler in logging.root.handlers[:]:
-        handler.close()
-        logging.root.removeHandler(handler)
-
-    # Configure logging to use RichHandler, which prints to our console object
-    # This will show logs on screen. The console object records them.
+    # Configure logging to use RichHandler. `force=True` removes existing handlers.
     logging.basicConfig(
         level=level,
         format="%(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler(console=console, show_path=False)]
+        handlers=[RichHandler(console=console, show_path=False)],
+        force=True,
     )
 
     # Silence noisy third-party loggers
@@ -107,8 +102,12 @@ def _run_backtests(
     return all_results
 
 
-def _build_results_table(results: List[Dict[str, Any]]) -> Table:
-    """Build a Rich Table to display top strategies."""
+def _display_results(results: List[Dict[str, Any]]) -> None:
+    """Build and display a Rich Table of top strategies."""
+    if not results:
+        console.print("[red]No valid strategies found. Check data quality and rule configurations.[/red]")
+        return
+
     table = Table(title="Top Strategies by Edge Score")
     table.add_column("Symbol", style="cyan")
     table.add_column("Rule Stack", style="green")
@@ -116,9 +115,9 @@ def _build_results_table(results: List[Dict[str, Any]]) -> Table:
     table.add_column("Win %", justify="right", style="blue")
     table.add_column("Sharpe", justify="right", style="magenta")
     table.add_column("Trades", justify="right", style="white")
-
+ 
     top_strategies = sorted(results, key=lambda x: x["edge_score"], reverse=True)[:10]
-
+ 
     for strategy in top_strategies:
         # The rule_stack now contains full rule definition dicts.
         # We extract the name for display purposes.
@@ -131,16 +130,7 @@ def _build_results_table(results: List[Dict[str, Any]]) -> Table:
             f"{strategy['sharpe']:.2f}",
             str(strategy["total_trades"]),
         )
-    return table
-
-
-def _print_results(results: List[Dict[str, Any]]) -> None:
-    """Print the results summary table."""
-    if not results:
-        console.print("[red]No valid strategies found. Check data quality and rule configurations.[/red]")
-        return
-
-    table = _build_results_table(results)
+ 
     console.print(table)
     console.print(
         f"\n[green]✨ Analysis complete. Found {len(results)} valid strategies "
@@ -225,7 +215,7 @@ def run(
         symbols = data.load_universe(app_config.universe_path)
         all_results = _run_backtests(app_config, rules_config, symbols, freeze_date)        # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
-        _print_results(all_results)
+        _display_results(all_results)
         # Step 5: Save results
         run_timestamp = datetime.now().isoformat()
         _save_results(app_config, all_results, run_timestamp)

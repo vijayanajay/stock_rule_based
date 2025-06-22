@@ -24,52 +24,40 @@ logger = logging.getLogger(__name__)
 
 def _fetch_best_strategies(db_path: Path, run_timestamp: str, threshold: float) -> List[Dict[str, Any]]:
     """
-    Private helper to fetch the best strategy for each symbol from a run.
+    Fetches the single best strategy for each symbol from a specific run,
+    using a SQL window function for efficiency.
     
     Args:
-        db_path: Path to SQLite database
-        run_timestamp: Timestamp of the backtesting run
-        threshold: Minimum edge score threshold
+        db_path: Path to SQLite database.
+        run_timestamp: Timestamp of the backtesting run.
+        threshold: Minimum edge score to consider.
         
     Returns:
-        List of strategy records with highest edge_score per symbol
+        A list of strategy records, one for each symbol.
     """
     try:
-        with sqlite3.connect(db_path) as conn:
-            # Query to get the best strategy per symbol above threshold
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row  # To get dict-like rows
             query = """
+            WITH ranked_strategies AS (
+                SELECT
+                    *,
+                    ROW_NUMBER() OVER(PARTITION BY symbol ORDER BY edge_score DESC) as rn
+                FROM strategies
+                WHERE run_timestamp = ? AND edge_score >= ?
+            )
             SELECT symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return
-            FROM strategies 
-            WHERE run_timestamp = ? AND edge_score >= ?
-            ORDER BY symbol, edge_score DESC
+            FROM ranked_strategies
+            WHERE rn = 1
+            ORDER BY symbol;
             """
-            
             cursor = conn.execute(query, (run_timestamp, threshold))
-            rows = cursor.fetchall()
+            strategies = [dict(row) for row in cursor.fetchall()]
             
-            if not rows:
+            if not strategies:
                 logger.warning(f"No strategies found for timestamp {run_timestamp} above threshold {threshold}")
-                return []
-            
-            # Convert to list of dicts and deduplicate by symbol (keeping highest edge_score)
-            strategies = []
-            seen_symbols = set()
-            
-            for row in rows:
-                symbol = row[0]
-                if symbol not in seen_symbols:
-                    strategies.append({
-                        'symbol': symbol,
-                        'rule_stack': row[1],
-                        'edge_score': row[2],
-                        'win_pct': row[3],
-                        'sharpe': row[4],
-                        'total_trades': row[5],
-                        'avg_return': row[6]
-                    })
-                    seen_symbols.add(symbol)
-            
-            logger.info(f"Found {len(strategies)} optimal strategies above threshold {threshold}")
+            else:
+                logger.info(f"Found {len(strategies)} optimal strategies above threshold {threshold}")
             return strategies
             
     except sqlite3.Error as e:

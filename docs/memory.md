@@ -1,12 +1,22 @@
 ## Antipatterns Reference
 
-- **Manual os.chdir() in CLI Tests**: Use test runner isolation helpers (e.g., `runner.isolated_filesystem()`), not global CWD changes.
-- **Magic Path Resolution in CLI**: Require explicit config file paths; avoid searching multiple locations.
-- **Path Type in Typer Option**: Use `str` for CLI path options, convert to `Path` inside the command.
-- **Patching Deferred Imports at Module Level**: Patch where the dependency is actually imported/used.
-- **Non-Hermetic Integration Tests**: Mock all external dependencies, use isolated filesystems.
-- **Inconsistent Test Fixtures and Mock Contracts**: Ensure test data matches real schema and setup.
-- **Duplicated Core Logic Across Modules**: Centralize core logic, avoid duplicate implementations.
+- Manual os.chdir() in CLI Tests: Use test runner isolation helpers (e.g., `runner.isolated_filesystem()`), not global CWD changes.
+- Magic Path Resolution in CLI: Require explicit config file paths; avoid searching multiple locations.
+- Path Type in Typer Option: Use `str` for CLI path options, convert to `Path` inside the command.
+- Patching Deferred Imports at Module Level: Patch where the dependency is actually imported/used.
+- Non-Hermetic Integration Tests: Mock all external dependencies, use isolated filesystems.
+- Inconsistent Test Fixtures and Mock Contracts: Ensure test data matches real schema and setup.
+- Duplicated Core Logic Across Modules: Centralize core logic, avoid duplicate implementations.
+- Brittle I/O Tests: Avoid tests that depend on specific filesystem permissions, non-portable paths, or resource-locking timing; prefer mocks or in-memory filesystems.
+- Inconsistent Data Contracts: Enforce clear, system-wide data contracts (e.g., column casing, schema) at all component boundaries.
+- Component/Test Desynchronization: Always update tests in lock-step with code changes; focus on public contracts, remove or update tests for obsolete internals.
+- Brittle Path Handling: Components should be self-sufficient for I/O (e.g., create parent dirs as needed), not rely on caller setup.
+- Brittle/Random Test Data: Use deterministic, purpose-built data for tests that depend on specific patterns; avoid random data for business logic tests.
+- Framework Pre-emption: Avoid framework-level validation that pre-empts application logic (e.g., Typer's Path/exists=True); handle validation in app code.
+- Non-Hermetic Fixtures: Test fixtures must create all their own dependencies and match real data contracts.
+- Argument Type/Signature Drift: Ensure CLI/test runner arguments are always the correct type (e.g., str, not Path); update all tests when CLI signatures change.
+- Brittle Reporter/Config Coupling: Persist full, immutable definitions for strategies; don't rely on current config state for historical data.
+- Redundant Defensive Code: Remove defensive code that compensates for inconsistent upstream data; enforce contracts instead.
 
 ---
 
@@ -119,7 +129,7 @@
 
 ### CLI Framework Pre-emption Regression (2025-06-21)
 **Issue**: Multiple tests in `test_cli.py` were failing with `typer.Exit(2)` (UsageError) instead of the expected application-level exit code 1. This indicated the CLI framework was pre-empting application logic.
-**Root Cause**: This was a regression of a previously identified structural issue. The application's CLI layer used `pathlib.Path` as a type hint for file path options in `typer`. By default, `typer` applies an `exists=True` validation to `Path` objects, causing it to fail with exit code 2 before the application's own file validation logic (which is designed to exit with code 1) could execute. While an `exists=False` parameter was present, it was not preventing the framework's pre-emptive validation, leading to a structural conflict where the framework's "magic" undermined the application's explicit control flow.
+**Root Cause**: This was a regression of a previously identified structural issue. The application's CLI layer used `pathlib.Path` as a type hint for file path options in `typer`. By default, `typer` applies an `exists=True` validation to `Path` objects, causing it to fail with exit code 2 before the application's own file validation logic (which was designed to exit with code 1) could execute. While an `exists=False` parameter was present, it was not preventing the framework's pre-emptive validation, leading to a structural conflict where the framework's "magic" undermined the application's explicit control flow.
 **Fix**: The `typer.Option` parameters for file paths (`config_path`, `rules_path`) in `src/kiss_signal/cli.py` were changed from being type-hinted as `Path` to `str`. The string paths are then converted to `Path` objects inside the command function. This change removes the special `Path`-handling behavior from `typer`, ensuring that file existence and validation are handled solely by the application's logic as intended.
 **Prevention**: Re-affirm the principle: to ensure testability and predictable error handling, avoid relying on framework-level "magic" for validation that is critical to the application's control flow. For file paths that the application must validate itself, accept them as `str` at the CLI boundary and convert them to `Path` objects within the application code. This makes the application's behavior explicit and independent of potential changes or subtleties in the framework's default behaviors.
 
@@ -248,5 +258,26 @@
 3.  **Removed Brittle Code**: Deleted the non-portable I/O test (`test_generate_report_permission_error`) and fixed the assertion that relied on incorrect ordering assumptions.
 
 **Prevention**: Treat tests as first-class citizens that must be refactored alongside application code. Ensure test fixtures are hermetic: they must create complete and valid objects that satisfy the full data contract of the component under test. This prevents a single broken test setup from causing a cascade of misleading failures across the entire suite.
+
+---
+
+### Test/Component Desynchronization After Refactoring (2025-07-03)
+**Issue**: Multiple tests in `test_backtester.py` were failing with `ValueError`, `AttributeError`, and `AssertionError`. An end-to-end integration test also failed, unable to find any valid strategies.
+**Root Cause**: A structural desynchronization between the `backtester.py` component and its test suite (`test_backtester.py`). The component had been refactored to simplify its internal API and logic:
+1.  The `_generate_signals` method's signature was changed to return only entry signals, with exit logic moved to the `vectorbt` portfolio creation step.
+2.  The private `_create_portfolio` helper method was removed and its logic inlined into the main `find_optimal_strategies` method.
+The tests were not updated in lock-step and were still testing the obsolete, non-existent internal structure, causing them to fail. A minor logic bug (incorrect validation order) in the refactored component was also exposed by the failing tests.
+**Fix**:
+1.  **Re-aligned Tests**: The tests in `test_backtester.py` were updated to match the component's current public contract and internal design. Tests for obsolete private methods were deleted, and tests for existing methods were updated to match their current signatures and behavior.
+2.  **Corrected Component Logic**: A minor validation logic error in `backtester.py` (checking for parameters before function existence) was corrected.
+**Prevention**: When refactoring a component's internal implementation, its corresponding unit tests must be updated in lock-step. Tests should primarily focus on the public contract (inputs and outputs). If they do test internal helpers, they must be kept synchronized or removed if the helpers become obsolete. Allowing tests and components to drift apart makes the test suite brittle and unreliable, hiding the true state of the system's health.
+
+---
+
+### Brittle Integration Tests Due to Non-Deterministic Data (2025-07-04)
+**Issue**: The end-to-end integration test (`test_end_to_end_cli_workflow`) was failing because it relied on randomly generated price data. The random data did not reliably produce the specific market conditions (e.g., trends, oversold states) required to trigger the rule-based strategies under test, leading to "No valid strategies found" errors.
+**Root Cause**: A structural flaw in the testing strategy. Integration tests that verify business logic which depends on specific data patterns should not use stochastic inputs. This makes the test non-deterministic and brittle; it might pass or fail based on luck rather than on the correctness of the code.
+**Fix**: The test fixture (`integration_env`) was modified to generate a deterministic price series with predictable phases (e.g., a clear uptrend followed by a downtrend and sideways movement). This guarantees that the conditions needed to trigger the strategies under test are always present, making the test robust and reliable.
+**Prevention**: When writing integration tests for logic that depends on specific data patterns (e.g., trends, volatility spikes, mean reversion), use deterministic, purpose-built test data. Avoid using purely random data, as it cannot guarantee that the necessary conditions for the test will be met, leading to flaky and unreliable test suites.
 
 ---
