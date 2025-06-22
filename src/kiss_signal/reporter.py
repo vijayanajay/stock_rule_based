@@ -123,7 +123,6 @@ def _identify_new_signals(
     db_path: Path,
     run_timestamp: str,
     config: Config,
-    rules_config: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
     """
     Identifies new buy signals by applying optimal strategies to latest data.
@@ -132,7 +131,6 @@ def _identify_new_signals(
         db_path: Path to SQLite database
         run_timestamp: Timestamp of the backtesting run
         config: Application configuration
-        rules_config: List of rule definitions from rules.yaml
         
     Returns:
         List of signal dictionaries ready for report generation
@@ -143,81 +141,56 @@ def _identify_new_signals(
     if not strategies:
         logger.info("No strategies found above threshold, no signals to generate")
         return []
-    
-    # 2. Create a lookup map from rule name to rule definition
-    rules_lookup = {}
-    for rule in rules_config:
-        if 'name' in rule:
-            rules_lookup[rule['name']] = rule
-        # Also allow lookup by type for fallback
-        if 'type' in rule:
-            rules_lookup[rule['type']] = rule
-    
+        
     signals = []
     
     # 3. For each strategy, check for active signals
     for strategy in strategies:
         symbol = strategy['symbol']
         rule_stack_json = strategy['rule_stack']
-        
         try:
             # Parse rule stack from JSON
-            rule_stack = json.loads(rule_stack_json)
+            # It's a list of rule definition dictionaries.
+            rule_stack_defs = json.loads(rule_stack_json)
             
-            if not rule_stack:
+            if not rule_stack_defs:
                 continue
                 
             # For now, handle single rule per strategy (as per current design)
-            rule_name = rule_stack[0]
-            
-            # 4. Look up the full rule definition
-            if rule_name not in rules_lookup:
-                logger.warning(f"Rule {rule_name} not found in rules config for symbol {symbol}")
-                continue
-                
-            rule_def = rules_lookup[rule_name]
-            
+            # The full rule definition is now self-contained in the persisted record.
+            rule_def = rule_stack_defs[0]
+                        
             # 5. Get latest price data
             try:
                 price_data = data.get_price_data(
-                    symbol, 
-                    config.cache_dir, 
-                    config.cache_refresh_days,
-                    freeze_date=config.freeze_date
+                    symbol,
+                    cache_dir=config.cache_dir,
+                    freeze_date=config.freeze_date,
                 )
-                
-                if price_data is None or len(price_data) == 0:
-                    logger.warning(f"No price data available for {symbol}")
-                    continue
-                    
             except Exception as e:
-                logger.error(f"Failed to get price data for {symbol}: {e}")
+                logger.warning(f"Failed to load price data for {symbol}: {e}")
                 continue
-            
-            # 6. Use _check_for_signal to see if rule is active today
-            if _check_for_signal(price_data, rule_def):
-                # 7. Construct signal dict
-                entry_price = float(price_data['close'].iloc[-1])
-                signal_date = price_data.index[-1].strftime('%Y-%m-%d')
-                
+            # 6. Check for entry signal on latest date
+            if price_data.empty:
+                continue
+            latest_date = price_data.index[-1]
+            entry_signal, _ = rules.check_signal(rule_def, price_data)
+            if entry_signal.iloc[-1]:
+                entry_price = price_data['close'].iloc[-1]
+                signal_date = latest_date.strftime('%Y-%m-%d')
                 signals.append({
                     'ticker': symbol,
                     'date': signal_date,
                     'entry_price': entry_price,
-                    'rule_stack': rule_name,
+                    'rule_stack': rule_def.get('name', rule_def['type']),
                     'edge_score': strategy['edge_score']
                 })
                 
-                logger.info(f"New signal: {symbol} at {entry_price} using {rule_name}")
+                logger.info(f"New signal: {symbol} at {entry_price} using {rule_def.get('name', rule_def['type'])}")
         
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse rule stack for {symbol}: {e}")
             continue
-        except Exception as e:
-            logger.error(f"Error processing strategy for {symbol}: {e}")
-            continue
-    
-    logger.info(f"Identified {len(signals)} new buy signals")
     return signals
 
 
@@ -225,7 +198,6 @@ def generate_daily_report(
     db_path: Path,
     run_timestamp: str,
     config: Config,
-    rules_config: List[Dict[str, Any]]
 ) -> Optional[Path]:
     """
     Generates the main daily markdown report.
@@ -234,14 +206,13 @@ def generate_daily_report(
         db_path: Path to SQLite database
         run_timestamp: Timestamp of the backtesting run
         config: Application configuration
-        rules_config: List of rule definitions from rules.yaml
         
     Returns:
         Path to generated report file, or None on failure
     """
     try:
         # 1. Call _identify_new_signals to get new buy signals
-        signals = _identify_new_signals(db_path, run_timestamp, config, rules_config)
+        signals = _identify_new_signals(db_path, run_timestamp, config)
         
         # 2. Create markdown content using string formatting
         report_date = date.today().strftime('%Y-%m-%d')

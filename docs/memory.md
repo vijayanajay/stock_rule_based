@@ -126,7 +126,7 @@
 ---
 
 ### Incomplete Refactoring and Test/Component Desynchronization (2025-06-23)
-**Issue**: Multiple, seemingly unrelated test failures across `test_backtester.py`, `test_cli.py`, and `test_integration.py`. Failures included `ValueError` for non-existent rules, `TypeError` for incorrect arguments/types, `AssertionError` for wrong exit codes, and `PermissionError` during test teardown.
+**Issue**: Multiple, seemingly unrelated test failures across `test_backtester.py`, `test_cli.py`, and `test_integration.py`. Failures included `ValueError` for non-existent rules, `TypeError` for incorrect arguments/types, `AssertionError` on wrong exit codes, and `PermissionError` during test teardown.
 **Root Cause**: A cascade of structural issues originating from incomplete refactoring and a lack of synchronization between components and their tests.
 1.  **Broken Component Logic (`backtester.py`)**: The backtester's signal generation method was broken. It attempted to evaluate a non-existent `'baseline'` rule and its logic for executing rule functions was flawed, a remnant of a partial refactoring.
 2.  **Out-of-Sync Tests**:
@@ -209,3 +209,28 @@
 1.  The `run` command signature in `src/kiss_signal/cli.py` was updated to include the optional `--freeze-data` argument, bringing the CLI interface in sync with the integration tests and business logic.
 2.  All failing tests in `test_cli.py` were updated to provide the mandatory `--config` and `--rules` arguments during their `runner.invoke` calls, ensuring they test the application logic rather than the framework's argument parsing.
 **Prevention**: When modifying a CLI command's signature (e.g., adding, removing, or changing the requirement status of an argument), all corresponding tests must be updated in lock-step. Tests should always call the CLI with a valid set of arguments for the "happy path" and intentionally omit or provide invalid arguments only when testing specific error-handling scenarios. This prevents the test suite from becoming a check on obsolete interfaces.
+
+---
+
+### Test Suite and CLI Desynchronization due to Argument Type Mismatch (2025-06-30)
+**Issue**: A large number of tests in `test_cli.py` and `test_integration.py` were failing with `typer.Exit(2)` (UsageError). Tests expected success (exit code 0) or specific application errors (exit code 1) but were instead getting a framework-level argument parsing error.
+**Root Cause**: A structural type mismatch between the test harness and the CLI entrypoint. The `typer.testing.CliRunner.invoke` method expects a list of strings for its arguments. However, several tests were passing `pathlib.Path` objects directly into this list for file path arguments. This caused `typer`'s internal argument parser to fail before any application logic could be executed. Additionally, a test fixture in `test_reporter.py` was not hermetic, causing `ValidationError` on startup, and a separate test had a brittle assertion based on non-deterministic ordering.
+**Fix**:
+1.  All `runner.invoke` calls in `test_cli.py` and `test_integration.py` were updated to explicitly cast `pathlib.Path` objects to `str`. This ensures the argument list passed to the CLI runner has the correct type contract.
+2.  The `sample_config` fixture in `test_reporter.py` was fixed to create a dummy universe file within a temporary directory, making the test hermetic and resolving the `ValidationError`.
+3.  The assertion in `test_reporter.py::test_fetch_strategies_success` was corrected to match the deterministic `ORDER BY symbol` behavior of the underlying database query.
+**Prevention**: Always ensure that arguments passed to test runners like `CliRunner.invoke` adhere to the expected type contract (typically `List[str]`). Explicitly convert `pathlib.Path` objects and other non-string types to `str` before including them in the command-line arguments list for tests. Test fixtures that interact with the filesystem must be hermetic and create all their own dependencies.
+
+---
+
+### Incomplete Strategy Persistence and Brittle Reporter Dependency (2025-07-01)
+**Issue**: The application was susceptible to failures if the `rules.yaml` configuration changed between the time a strategy was backtested/persisted and when a daily report was generated. The reporter module would fail to find rule definitions if names were altered.
+**Root Cause**: A structural flaw in the data persistence pipeline. The `backtester` module identified an optimal strategy (composed of a rule `type` and its `params`) but the `persistence` layer only saved its user-facing display `name`. The `reporter` module, when checking for live signals, had to use this display name to look up the rule's technical definition (`type` and `params`) in the current `rules.yaml` file. This created a brittle dependency: the reporter's logic was dependent on the state of a configuration file at runtime, rather than on the immutable, historical data from the database. The persisted strategy was not self-contained.
+**Fix**:
+1.  The data contract for a persisted strategy was strengthened. The `backtester` was modified to store the *entire rule definition dictionary* (containing `type`, `params`, `name`, etc.) as a JSON object in the `strategies.rule_stack` database field.
+2.  This makes each persisted strategy a self-contained record. The `reporter` module was simplified to use this self-contained definition directly, removing the need for it to perform fragile lookups in `rules.yaml`.
+3.  The CLI's results table was updated to parse this richer data structure for display, ensuring no loss of user-facing functionality.
+4.  Obsolete logic for handling an old, alternative rule format was removed from the backtester, simplifying the codebase.
+**Prevention**: Ensure that data persisted to a database is self-contained and includes all information necessary for future components to interpret and act on it without referring back to the application's runtime configuration. Avoid persisting display names or other volatile identifiers as functional keys; persist the full, immutable definition of an object instead. This decouples historical data from the current application state, making the system more robust and reliable over time.
+
+---

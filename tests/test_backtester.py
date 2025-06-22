@@ -74,31 +74,19 @@ class TestBacktester:
     def test_generate_signals_empty_rule_stack(self, sample_price_data):
         """Test signal generation with an empty rule stack."""
         backtester = Backtester()
-        rule_combo = {
-            'rule_stack': [],
-            'parameters': {}
-        }
+        # An empty rule combo is invalid and should raise an error
+        rule_combo = {}
         
-        entry_signals, exit_signals = backtester._generate_signals(rule_combo, sample_price_data)
-        
-        # With no rules, entry signals should be all True before exit logic
-        assert entry_signals.all()
-        assert entry_signals.dtype == bool
-        # Exit signals should be generated for every entry
-        assert exit_signals.sum() > 0
+        with pytest.raises(ValueError, match="Rule combination missing 'type' field"):
+            backtester._generate_signals(rule_combo, sample_price_data)
 
     def test_generate_signals_sma_crossover(self, sample_price_data):
         """Test signal generation with SMA crossover rule."""
         backtester = Backtester()
         
         rule_combo = {
-            'rule_stack': ['sma_crossover'],
-            'parameters': {
-                'sma_crossover': {
-                    'fast_period': 5,
-                    'slow_period': 10
-                }
-            }
+            'type': 'sma_crossover',
+            'params': {'fast_period': 5, 'slow_period': 10}
         }
         
         entry_signals, exit_signals = backtester._generate_signals(rule_combo, sample_price_data)
@@ -113,10 +101,7 @@ class TestBacktester:
         """Test signal generation with invalid rule name."""
         backtester = Backtester()
         
-        rule_combo = {
-            'rule_stack': ['nonexistent_rule'],
-            'parameters': {}
-        }
+        rule_combo = {'type': 'nonexistent_rule', 'params': {}}
         
         with pytest.raises(ValueError, match="Rule function 'nonexistent_rule' not found"):
             backtester._generate_signals(rule_combo, sample_price_data)
@@ -125,10 +110,7 @@ class TestBacktester:
         """Test signal generation with missing rule parameters."""
         backtester = Backtester()
         
-        rule_combo = {
-            'rule_stack': ['sma_crossover'],
-            'parameters': {}  # Missing sma_crossover parameters
-        }
+        rule_combo = {'type': 'sma_crossover', 'params': {}}
         
         with pytest.raises(ValueError, match="Missing parameters for rule 'sma_crossover'"):
             backtester._generate_signals(rule_combo, sample_price_data)
@@ -221,21 +203,14 @@ def sample_rule_combinations():
     """Generate sample rule combinations for testing."""
     return [
         {
-            'rule_stack': ['sma_crossover'],
-            'parameters': {
-                'sma_crossover': {
-                    'fast_period': 10,
-                    'slow_period': 20
-                }
-            }
+            'name': 'sma_crossover_test',
+            'type': 'sma_crossover',
+            'params': {'fast_period': 10, 'slow_period': 20}
         },
         {
-            'rule_stack': ['rsi_oversold'],
-            'parameters': {
-                'rsi_oversold': {
-                    'period': 14, 'oversold_threshold': 30.0
-                }
-            }
+            'name': 'rsi_oversold_test',
+            'type': 'rsi_oversold',
+            'params': {'period': 14, 'oversold_threshold': 30.0}
         }
     ]
 

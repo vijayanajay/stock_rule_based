@@ -54,7 +54,7 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         mock_bt_instance.find_optimal_strategies.return_value = []
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
         )
         assert result.exit_code == 0, result.stdout
         assert "Analysis complete." in result.stdout
@@ -90,7 +90,7 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
         mock_bt_instance.find_optimal_strategies.return_value = []
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml", "--verbose"]
+            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--verbose"]
         )
         assert result.exit_code == 0, result.stdout
 
@@ -116,7 +116,7 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
         (config_dir / "rules.yaml").write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml", "--freeze-data", "2025-01-01"]
+            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--freeze-data", "2025-01-01"]
         )
         assert result.exit_code == 0, result.stdout
         assert "skipping data refresh (freeze mode)" in result.stdout.lower()
@@ -154,7 +154,7 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
         }]
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
@@ -179,7 +179,7 @@ def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
         (config_dir / "rules.yaml").write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml", "--freeze-data", "invalid-date"]
+            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--freeze-data", "invalid-date"]
         )
         assert result.exit_code == 1
         assert "Invalid isoformat string" in result.stdout
@@ -249,7 +249,7 @@ def test_run_command_with_persistence(
         (config_dir / "rules.yaml").write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
@@ -294,7 +294,7 @@ def test_run_command_persistence_failure_handling(
         mock_save_batch.side_effect = sqlite3.OperationalError("disk I/O error")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", "config/rules.yaml"]
+            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout

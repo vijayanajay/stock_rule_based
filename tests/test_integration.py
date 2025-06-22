@@ -239,8 +239,8 @@ INFY,Infosys Ltd,IT"""
         result = runner.invoke(app, [
             "run", 
             "--config", "nonexistent.yaml",
-            "--rules", str(integration_env['rules_path'])
-        ])
+            "--rules", str(integration_env['rules_path']),
+         ])
         assert result.exit_code == 1
         assert "Configuration file not found" in result.stdout
         
@@ -248,7 +248,7 @@ INFY,Infosys Ltd,IT"""
         result = runner.invoke(app, [
             "run",
             "--config", str(integration_env['config_path']),
-            "--rules", "nonexistent.yaml"
+            "--rules", "nonexistent.yaml",
         ])
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
@@ -258,7 +258,7 @@ INFY,Infosys Ltd,IT"""
             "run",
             "--config", str(integration_env['config_path']),
             "--rules", str(integration_env['rules_path']),
-            "--freeze-data", "invalid-date"
+            "--freeze-data", "invalid-date",
         ])
         assert result.exit_code == 1
 

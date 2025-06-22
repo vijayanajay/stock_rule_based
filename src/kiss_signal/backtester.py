@@ -105,31 +105,16 @@ class Backtester:
                   # Calculate edge score
                 edge_score = self.calc_edge_score(win_pct, sharpe, edge_score_weights)
                 
-                # Build strategy result, handling both old and new formats
-                if 'rule_stack' in rule_combo:
-                    # Old format
-                    strategy = {
-                        'rule_stack': rule_combo['rule_stack'].copy(),
-                        'parameters': rule_combo.get('parameters', {}).copy(),
-                        'edge_score': edge_score,
-                        'win_pct': win_pct,
-                        'sharpe': sharpe,
-                        'total_trades': total_trades,
-                        'avg_return': avg_return
-                    }
-                else:
-                    # New format (rules.yaml)
-                    strategy = {
-                        'rule_stack': [rule_combo.get('name', rule_combo['type'])],
-                        'parameters': {rule_combo['type']: rule_combo.get('params', {})},
-                        'edge_score': edge_score,
-                        'win_pct': win_pct,
-                        'sharpe': sharpe,
-                        'total_trades': total_trades,
-                        'avg_return': avg_return,
-                        'name': rule_combo.get('name', 'unnamed_rule'),
-                        'description': rule_combo.get('description', '')
-                    }
+                # Build strategy result. The rule_stack now contains the full
+                # rule definition, making the persisted record self-contained.
+                strategy = {
+                    'rule_stack': [rule_combo],  # Persist the entire rule definition
+                    'edge_score': edge_score,
+                    'win_pct': win_pct,
+                    'sharpe': sharpe,
+                    'total_trades': total_trades,
+                    'avg_return': avg_return,
+                }
                 
                 strategies.append(strategy)
                 # Only log successful strategies, not each individual one
@@ -158,30 +143,17 @@ class Backtester:
         return edge_score
 
     def _generate_signals(self, rule_combo: Dict[str, Any], price_data: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
-        """Generate entry and exit signals for a rule combination.
-        
-        Args:
-            rule_combo: Rule combination configuration (from rules.yaml format)
-            price_data: OHLCV price data
-            
-        Returns:
-            Tuple of (entry_signals, exit_signals) as boolean Series
-            
+        """
+        Generates entry and exit signals for a given rule combination.
         Raises:
             ValueError: If rule combination is invalid or rule not found
         """
-        # Handle both old and new rule formats
-        if 'rule_stack' in rule_combo:
-            # Old format: {'rule_stack': ['rule_name'], 'parameters': {...}}
-            rule_stack = rule_combo.get('rule_stack', [])
-            parameters = rule_combo.get('parameters', {})
-        else:
-            # New format: {'type': 'rule_name', 'params': {...}}
-            rule_type = rule_combo.get('type')
-            if not rule_type:
-                raise ValueError(f"Rule combination missing 'type' field: {rule_combo}")
-            rule_stack = [rule_type]
-            parameters = {rule_type: rule_combo.get('params', {})}
+        # Simplified to handle only the standard rule format from rules.yaml
+        rule_type = rule_combo.get('type')
+        if not rule_type:
+            raise ValueError(f"Rule combination missing 'type' field: {rule_combo}")
+        rule_stack = [rule_type]
+        parameters = {rule_type: rule_combo.get('params', {})}
         
         # Only log for complex rule stacks (more than 1 rule)
         if len(rule_stack) > 1:

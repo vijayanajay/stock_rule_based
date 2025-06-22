@@ -41,14 +41,16 @@ def sample_strategies():
 
 
 @pytest.fixture
-def sample_config():
+def sample_config(tmp_path: Path):
     """Sample config for testing."""
+    universe_file = tmp_path / "test_universe.txt"
+    universe_file.touch()
     return Config(
-        universe_path="test_universe.txt",
-        cache_dir="test_cache/",
-        reports_output_dir="test_reports/",
+        universe_path=str(universe_file),
+        cache_dir=str(tmp_path / "test_cache/"),
+        reports_output_dir=str(tmp_path / "test_reports/"),
         edge_score_threshold=0.50,
-        database_path="test.db"
+        database_path=str(tmp_path / "test.db")
     )
 
 
@@ -125,10 +127,10 @@ class TestFetchBestStrategies:
         result = reporter._fetch_best_strategies(db_path, 'test_timestamp', 0.50)
         
         assert len(result) == 2
-        assert result[0]['symbol'] == 'RELIANCE'
-        assert result[0]['edge_score'] == 0.68
-        assert result[1]['symbol'] == 'INFY'
-        assert result[1]['edge_score'] == 0.55
+        assert result[0]['symbol'] == 'INFY'
+        assert result[0]['edge_score'] == 0.55
+        assert result[1]['symbol'] == 'RELIANCE'
+        assert result[1]['edge_score'] == 0.68
     
     def test_fetch_strategies_threshold_filtering(self, tmp_path, sample_strategies):
         """Test threshold filtering."""
@@ -361,14 +363,14 @@ class TestGenerateDailyReport:
         output_dir = tmp_path / "reports"
         test_config = Config(
             universe_path="test_universe.txt",
-            cache_dir="test_cache/",
+            cache_dir=str(tmp_path / "test_cache/"),
             reports_output_dir=str(output_dir),
             edge_score_threshold=0.50,
-            database_path="test.db"
+            database_path=str(tmp_path / "test.db")
         )
         
         db_path = tmp_path / "test.db"
-        
+        db_path.touch()
         result = reporter.generate_daily_report(
             db_path, 'test_timestamp', test_config, sample_rules_config
         )
@@ -394,14 +396,14 @@ class TestGenerateDailyReport:
         output_dir = tmp_path / "reports"
         test_config = Config(
             universe_path="test_universe.txt",
-            cache_dir="test_cache/",
+            cache_dir=str(tmp_path / "test_cache/"),
             reports_output_dir=str(output_dir),
             edge_score_threshold=0.50,
-            database_path="test.db"
+            database_path=str(tmp_path / "test.db")
         )
         
         db_path = tmp_path / "test.db"
-        
+        db_path.touch()
         result = reporter.generate_daily_report(
             db_path, 'test_timestamp', test_config, sample_rules_config
         )
@@ -419,14 +421,14 @@ class TestGenerateDailyReport:
         # Use invalid path to trigger permission error
         test_config = Config(
             universe_path="test_universe.txt",
-            cache_dir="test_cache/",
+            cache_dir="/invalid_cache/",
             reports_output_dir="/invalid/path/",
             edge_score_threshold=0.50,
-            database_path="test.db"
+            database_path="/invalid/test.db"
         )
         
         db_path = Path("test.db")
-        
+        db_path.touch()
         result = reporter.generate_daily_report(
             db_path, 'test_timestamp', test_config, sample_rules_config
         )

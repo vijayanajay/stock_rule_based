@@ -120,7 +120,9 @@ def _build_results_table(results: List[Dict[str, Any]]) -> Table:
     top_strategies = sorted(results, key=lambda x: x["edge_score"], reverse=True)[:10]
 
     for strategy in top_strategies:
-        rule_stack_str = " + ".join(strategy["rule_stack"])
+        # The rule_stack now contains full rule definition dicts.
+        # We extract the name for display purposes.
+        rule_stack_str = " + ".join([r.get('name', r.get('type', '')) for r in strategy["rule_stack"]])
         table.add_row(
             strategy["symbol"],
             rule_stack_str,
@@ -146,7 +148,7 @@ def _print_results(results: List[Dict[str, Any]]) -> None:
     )
 
 
-def _save_results(app_config: Config, results: List[Dict[str, Any]]) -> None:
+def _save_results(app_config: Config, results: List[Dict[str, Any]], run_timestamp: str) -> None:
     """Save analysis results to the database."""
     if not results:
         return
@@ -155,7 +157,6 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]]) -> None:
     try:
         db_path = Path(app_config.database_path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        run_timestamp = datetime.now().isoformat()
 
         persistence.create_database(db_path)
         success = persistence.save_strategies_batch(db_path, results, run_timestamp)
@@ -222,12 +223,12 @@ def run(
         # Step 3: Analyze strategies for each ticker
         console.print("[3/4] Analyzing strategies for each ticker...")
         symbols = data.load_universe(app_config.universe_path)
-        all_results = _run_backtests(app_config, rules_config, symbols, freeze_date)
-        # Step 4: Display results summary
+        all_results = _run_backtests(app_config, rules_config, symbols, freeze_date)        # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
         _print_results(all_results)
         # Step 5: Save results
-        _save_results(app_config, all_results)
+        run_timestamp = datetime.now().isoformat()
+        _save_results(app_config, all_results, run_timestamp)
 
         console.print("[5/5] Generating report...", style="blue")
         try:
@@ -235,7 +236,6 @@ def run(
                 db_path=Path(app_config.database_path),
                 run_timestamp=run_timestamp,
                 config=app_config,
-                rules_config=rules_config
             )
             
             if report_path:
