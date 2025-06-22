@@ -219,6 +219,344 @@ class Config(BaseModel):
 - **Report format mismatch:** Mitigated by creating a golden file test that compares the generated report against a known-good template.
 - **Missing signals:** Mitigated by clear threshold configuration and logging any strategies that are filtered out.
 
+## Directory Structure Impact
+
+This story will create/modify the following files in the project structure:
+
+```
+d:\Code\stock_rule_based\
+├── config.yaml                              # Modified: Add reporting config
+├── src/
+│   └── kiss_signal/
+│       ├── cli.py                           # Modified: Add [5/5] reporting step
+│       ├── config.py                        # Modified: Add reporting fields
+│       └── reporter.py                      # NEW: Core reporting functions
+├── tests/
+│   └── test_reporter.py                     # NEW: Comprehensive test suite
+└── reports/                                 # NEW: Generated reports directory
+    └── signals_YYYY-MM-DD.md               # NEW: Daily report files
+```
+
+### Key File Changes:
+
+**New Files:**
+- `src/kiss_signal/reporter.py` (~150 LOC) - Core reporting module
+- `tests/test_reporter.py` (~180 LOC) - Complete test coverage
+- `reports/` directory - Output location for daily reports
+
+**Modified Files:**
+- `config.yaml` (+3 lines) - Add reporting configuration
+- `src/kiss_signal/config.py` (+2 lines) - Add Config fields
+- `src/kiss_signal/cli.py` (+25 lines) - Integrate reporting step
+
+## Detailed Task Breakdown
+
+### Phase 1: Core Infrastructure (3 Tasks)
+
+#### Task 1.1: Create Reporter Module Foundation
+**File:** `src/kiss_signal/reporter.py`  
+**Estimated LOC:** ~50  
+**Dependencies:** None  
+
+**Specific Requirements:**
+- Create module with proper imports and logger setup
+- Implement `_fetch_best_strategies()` helper function
+- Add SQL query to get top strategy per symbol from latest run
+- Include proper error handling for database connections
+- Use explicit Path handling and no magic file resolution
+
+**SQL Query Pattern:**
+```sql
+SELECT symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return
+FROM strategies 
+WHERE run_timestamp = ? AND edge_score >= ?
+ORDER BY symbol, edge_score DESC
+```
+
+**Test Requirements:**
+- Test database query with sample data
+- Test threshold filtering behavior
+- Test error handling for missing database/invalid timestamp
+- Verify correct strategy selection (highest edge_score per symbol)
+
+---
+
+#### Task 1.2: Implement Signal Detection Logic
+**File:** `src/kiss_signal/reporter.py`  
+**Estimated LOC:** ~40  
+**Dependencies:** Task 1.1 complete  
+
+**Specific Requirements:**
+- Implement `_check_for_signal()` pure function
+- Create rule name to rule definition mapping logic
+- Apply rule functions to latest price data (last row check)
+- Handle rule function parameter passing correctly
+- Return boolean signal status with proper error handling
+
+**Rule Application Pattern:**
+```python
+def _check_for_signal(price_data: pd.DataFrame, rule_def: Dict[str, Any]) -> bool:
+    """Check if rule triggers BUY signal on last trading day."""
+    rule_func = getattr(rules, rule_def['type'])
+    signals = rule_func(price_data, **rule_def['params'])
+    return bool(signals.iloc[-1]) if len(signals) > 0 else False
+```
+
+**Test Requirements:**
+- Test with various rule types (SMA crossover, RSI, etc.)
+- Test edge cases: empty data, invalid parameters
+- Test signal detection accuracy with known test data
+- Verify pure function behavior (no side effects)
+
+---
+
+#### Task 1.3: Implement Signal Identification Orchestration
+**File:** `src/kiss_signal/reporter.py`  
+**Estimated LOC:** ~60  
+**Dependencies:** Tasks 1.1, 1.2 complete  
+
+**Specific Requirements:**
+- Implement `_identify_new_signals()` function
+- Integrate database query with signal detection
+- Get latest price data for each symbol with optimal strategy
+- Construct signal dictionaries with required fields
+- Add comprehensive logging for debugging
+
+**Signal Dictionary Format:**
+```python
+{
+    'ticker': 'RELIANCE',
+    'date': '2025-06-29',
+    'entry_price': 2950.75,
+    'rule_stack': 'sma_10_20_crossover',
+    'edge_score': 0.68
+}
+```
+
+**Test Requirements:**
+- Test end-to-end signal identification workflow
+- Test with multiple symbols and strategies
+- Test filtering by edge score threshold
+- Verify signal dictionary structure and data types
+
+---
+
+### Phase 2: Report Generation (2 Tasks)
+
+#### Task 2.1: Implement Markdown Report Generation
+**File:** `src/kiss_signal/reporter.py`  
+**Estimated LOC:** ~40  
+**Dependencies:** Phase 1 complete  
+
+**Specific Requirements:**
+- Implement `generate_daily_report()` main function
+- Create markdown content using f-string templates
+- Format tables with exact column specifications from PRD
+- Add summary line with signal counts
+- Include placeholder sections for future features
+
+**Markdown Template Structure:**
+```python
+report_content = f"""# Signal Report: {report_date}
+
+**Summary:** {len(signals)} New Buy Signals, 0 Open Positions, 0 Positions to Sell.
+
+## NEW BUYS
+{format_new_buys_table(signals)}
+
+## OPEN POSITIONS
+*Full position tracking will be implemented in a future story.*
+
+## POSITIONS TO SELL
+*Full position tracking will be implemented in a future story.*
+
+---
+*Report generated by KISS Signal CLI v1.4 on {report_date}*
+"""
+```
+
+**Test Requirements:**
+- Test markdown formatting with sample signals
+- Verify exact table format matches PRD specification
+- Test empty signals case (no new buys)
+- Validate file creation and content accuracy
+
+---
+
+#### Task 2.2: Add File I/O and Error Handling
+**File:** `src/kiss_signal/reporter.py`  
+**Estimated LOC:** ~20  
+**Dependencies:** Task 2.1 complete  
+
+**Specific Requirements:**
+- Implement file writing with proper directory creation
+- Add comprehensive error handling for I/O operations
+- Return Optional[Path] for success/failure indication
+- Use proper exception handling for file permissions
+- Follow KISS error handling principles (explicit, logged)
+
+**File Writing Pattern:**
+```python
+try:
+    output_dir = Path(config.reports_output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    report_file = output_dir / f"signals_{report_date}.md"
+    report_file.write_text(report_content, encoding='utf-8')
+    
+    logger.info(f"Report generated: {report_file}")
+    return report_file
+except OSError as e:
+    logger.error(f"Failed to write report: {e}")
+    return None
+```
+
+**Test Requirements:**
+- Test successful file creation and content
+- Test directory creation behavior
+- Test permission error handling
+- Test file overwrite behavior
+
+---
+
+### Phase 3: Configuration and Integration (2 Tasks)
+
+#### Task 3.1: Add Configuration Support
+**Files:** `src/kiss_signal/config.py`, `config.yaml`  
+**Estimated LOC:** ~5 total  
+**Dependencies:** None (can be done in parallel)  
+
+**`config.py` Changes:**
+```python
+class Config(BaseModel):
+    # ...existing fields...
+    reports_output_dir: str = Field(default="reports/")
+    edge_score_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
+```
+
+**`config.yaml` Addition:**
+```yaml
+# ... existing configuration ...
+
+# Reporting configuration
+reports_output_dir: "reports/"
+edge_score_threshold: 0.50
+```
+
+**Test Requirements:**
+- Update `test_config.py` to test new fields
+- Verify default values and validation constraints
+- Test configuration loading with new fields
+
+---
+
+#### Task 3.2: Integrate Reporting into CLI Workflow
+**File:** `src/kiss_signal/cli.py`  
+**Estimated LOC:** ~25  
+**Dependencies:** Phase 2 complete  
+
+**Specific Requirements:**
+- Add `[5/5] Generating report...` step after persistence
+- Import and call `reporter.generate_daily_report()`
+- Add proper error handling (log but don't crash)
+- Display success message with report file path
+- Pass required parameters from CLI context
+
+**CLI Integration Pattern:**
+```python
+# After _save_results() call
+console.print("[5/5] Generating report...", style="blue")
+try:
+    report_path = reporter.generate_daily_report(
+        db_path=Path(app_config.database_path),
+        run_timestamp=run_timestamp,
+        config=app_config,
+        rules_config=rules
+    )
+    
+    if report_path:
+        console.print(f"✨ Report generated: {report_path}", style="green")
+    else:
+        console.print("⚠️  Report generation failed", style="yellow")
+        
+except Exception as e:
+    console.print(f"⚠️  Report error: {e}", style="yellow")
+    logger.error(f"Report generation error: {e}", exc_info=True)
+```
+
+**Test Requirements:**
+- Update `test_cli.py` to mock reporter functions
+- Test successful report generation flow
+- Test error handling when reporter fails
+- Verify CLI doesn't crash on report failures
+
+---
+
+### Phase 4: Testing and Validation (1 Task)
+
+#### Task 4.1: Create Comprehensive Test Suite
+**File:** `tests/test_reporter.py`  
+**Estimated LOC:** ~180  
+**Dependencies:** All implementation phases complete  
+
+**Specific Requirements:**
+- Create comprehensive test file with proper fixtures
+- Test all public and private functions
+- Mock database interactions using sqlite3 in-memory
+- Mock file system operations for isolation
+- Achieve ≥90% test coverage target
+
+**Test Structure:**
+```python
+# tests/test_reporter.py
+import pytest
+from unittest.mock import Mock, patch, MagicMock
+from pathlib import Path
+import tempfile
+import sqlite3
+
+@pytest.fixture
+def sample_strategies():
+    """Sample strategy data for testing."""
+    return [
+        {
+            'symbol': 'RELIANCE',
+            'rule_stack': '["sma_10_20_crossover"]',
+            'edge_score': 0.68,
+            'win_pct': 0.65,
+            'sharpe': 1.2,
+            'total_trades': 45,
+            'avg_return': 0.025
+        }
+    ]
+
+@pytest.fixture
+def sample_config():
+    """Sample config for testing."""
+    return Config(
+        reports_output_dir="test_reports/",
+        edge_score_threshold=0.50
+    )
+
+def test_fetch_best_strategies():
+    """Test database query for best strategies."""
+    
+def test_check_for_signal():
+    """Test signal detection on price data."""
+    
+def test_identify_new_signals():
+    """Test end-to-end signal identification."""
+    
+def test_generate_daily_report():
+    """Test report generation and file creation."""
+```
+
+**Coverage Requirements:**
+- All functions in `reporter.py`: 100%
+- Error handling paths: 100%
+- Integration with config and CLI: ≥90%
+- File I/O operations: 100%
+
 ## Definition of Done Checklist
 
 - [ ] All acceptance criteria are met and have been tested.
