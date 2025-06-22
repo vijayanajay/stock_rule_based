@@ -174,9 +174,6 @@ def run(
     setup_logging(verbose)
     _show_banner()
 
-    config_path = Path(config_path)
-    rules_path = Path(rules_path)
-
     freeze_date: Optional[date] = None
     if freeze_data:
         try:
@@ -186,13 +183,15 @@ def run(
             raise typer.Exit(1)
 
     try:
+        config_path_obj = Path(config_path)
+        rules_path_obj = Path(rules_path)
         # Load configuration - check if files exist before loading
-        if not config_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {config_path}")
-        if not rules_path.exists():
-            raise FileNotFoundError(f"Rules file not found: {rules_path}")
-        app_config = load_config(config_path)
-        rules_config = load_rules(rules_path)
+        if not config_path_obj.exists():
+            raise FileNotFoundError(f"Configuration file not found: {config_path_obj}")
+        if not rules_path_obj.exists():
+            raise FileNotFoundError(f"Rules file not found: {rules_path_obj}")
+        app_config = load_config(config_path_obj)
+        rules_config = load_rules(rules_path_obj)
         console.print("[1/4] Configuration loaded.")
         # Step 2: Refresh market data if needed
         if freeze_date:

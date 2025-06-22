@@ -1,8 +1,55 @@
+[23:33:49] INFO     === KISS Signal CLI Run Started ===                                                                
+┌───────────────────────────────────────────────────── QuickEdge ─────────────────────────────────────────────────────┐
+│ KISS Signal CLI                                                                                                     │
+│ Keep-It-Simple Data Foundation                                                                                      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+[1/4] Configuration loaded.
+[2/4] Refreshing market data...
+           INFO     Loaded 7 symbols from universe                                                                     
+           INFO     All symbols are fresh, no refresh needed                                                           
+[3/4] Analyzing strategies for each ticker...
+           INFO     Loaded 7 symbols from universe                                                                     
+           INFO     Backtester initialized: hold_period=20, min_trades=10                                              
+           INFO     Backtesting 3 rule combinations                                                                    
+⠋ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...[23:33:54] INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing INFY (2/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠙ Analyzing INFY (2/7)...           INFO     Found 1 valid strategies (>= 10 trades)                                                            
+⠙ Analyzing INFY (2/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠹ Analyzing TCS (3/7)...⠹ Analyzing TCS (3/7)...[23:33:55] INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠸ Analyzing TCS (3/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠸ Analyzing HDFCBANK (4/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠼ Analyzing HDFCBANK (4/7)...⠼ Analyzing ICICIBANK (5/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠼ Analyzing ICICIBANK (5/7)...           INFO     Found 1 valid strategies (>= 10 trades)                                                            
+⠴ Analyzing ICICIBANK (5/7)...⠴ Analyzing SBIN (6/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠴ Analyzing SBIN (6/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠦ Analyzing SBIN (6/7)...⠦ Analyzing WIPRO (7/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠦ Analyzing WIPRO (7/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠧ Analyzing WIPRO (7/7)...⠧ Analyzing WIPRO (7/7)...
+[4/4] Analysis complete. Results summary:
+                       Top Strategies by Edge Score                       
+┌───────────┬─────────────────────┬────────────┬───────┬────────┬────────┐
+│ Symbol    │ Rule Stack          │ Edge Score │ Win % │ Sharpe │ Trades │
+├───────────┼─────────────────────┼────────────┼───────┼────────┼────────┤
+│ SBIN      │ ema_12_26_crossover │      0.597 │  0.6% │   1.48 │     11 │
+│ WIPRO     │ sma_10_20_crossover │      0.408 │  0.8% │   1.01 │     15 │
+│ SBIN      │ sma_10_20_crossover │      0.396 │  0.6% │   0.98 │     17 │
+│ WIPRO     │ ema_12_26_crossover │      0.388 │  0.8% │   0.96 │     11 │
+│ INFY      │ sma_10_20_crossover │      0.374 │  0.8% │   0.92 │     15 │
+│ HDFCBANK  │ ema_12_26_crossover │      0.359 │  0.7% │   0.89 │     13 │
+│ ICICIBANK │ sma_10_20_crossover │      0.356 │  0.6% │   0.88 │     15 │
+│ TCS       │ sma_10_20_crossover │      0.315 │  0.6% │   0.78 │     16 │
+│ TCS       │ ema_12_26_crossover │      0.286 │  0.6% │   0.71 │     12 │
+│ HDFCBANK  │ sma_10_20_crossover │      0.137 │  0.6% │   0.33 │     18 │
+└───────────┴─────────────────────┴────────────┴───────┴────────┴────────┘
 
-Log file saved to run_log.txt
-[22:46:13] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-Error: Rules file not found: nonexistent.yaml
+✨ Analysis complete. Found 12 valid strategies across 7 symbols.
+[5/5] Saving results...
+           INFO     Creating database at data\kiss_signal.db                                                           
+           INFO     Successfully created database at data\kiss_signal.db                                               
+           INFO     Saving 12 strategies to data\kiss_signal.db                                                        
+           INFO     Successfully saved 12 strategies                                                                   
+           INFO     Saved 12 strategies to database at data\kiss_signal.db                                             
+[5/5] Generating report...
+           INFO     Found 1 optimal strategies above threshold 0.5                                                     
+           INFO     Report generated: reports\signals_2025-06-22.md                                                    
+✨ Report generated: reports\signals_2025-06-22.md

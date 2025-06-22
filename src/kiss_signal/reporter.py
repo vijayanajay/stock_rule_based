@@ -156,8 +156,10 @@ def _identify_new_signals(
             # 5. Get latest price data
             try:
                 price_data = data.get_price_data(
-                    symbol,
-                    cache_dir=config.cache_dir,
+                    symbol=symbol,
+                    cache_dir=Path(config.cache_dir),
+                    refresh_days=config.cache_refresh_days,
+                    years=config.historical_data_years,
                     freeze_date=config.freeze_date,
                 )
             except Exception as e:
