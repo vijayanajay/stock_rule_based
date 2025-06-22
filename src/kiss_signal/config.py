@@ -53,6 +53,7 @@ class Config(BaseModel):
             raise ValueError(f"Universe path is not a file: {v}")
         return v
 
+# impure
 def load_config(config_path: Path) -> Config:
     """Load application configuration from a YAML file."""
     if not config_path.exists():
@@ -65,6 +66,7 @@ def load_config(config_path: Path) -> Config:
         raise ValueError("Config file is empty or contains only comments")
     return Config(**data)
 
+# impure
 def load_rules(rules_path: Path) -> List[Dict[str, Any]]:
     """Load trading rules from a YAML file."""
     if not rules_path.exists():

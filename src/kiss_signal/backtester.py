@@ -152,29 +152,9 @@ class Backtester:
         return edge_score
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
-        """
-        Generate exit signals based on holding period after entry signals.
-        
-        Args:
-            entry_signals: Boolean series indicating entry points
-            hold_period: Number of days to hold position after entry
-            
-        Returns:
-            Boolean series indicating exit points
-        """
-        exit_signals = pd.Series(False, index=entry_signals.index)
-        
-        # Get entry dates
-        entry_dates = entry_signals[entry_signals].index
-        
-        for entry_date in entry_dates:
-            # Calculate exit date (hold_period days after entry)
-            entry_pos = entry_signals.index.get_loc(entry_date)
-            exit_pos = min(entry_pos + hold_period, len(entry_signals) - 1)
-            exit_date = entry_signals.index[exit_pos]
-            exit_signals.loc[exit_date] = True
-            
-        return exit_signals
+        """Generate exit signals based on holding period after entry signals."""
+        # Use vectorbt's forward shift. It's clean and vectorized.
+        return entry_signals.vbt.fshift(hold_period)
 
     def _generate_signals(self, rule_combo: Dict[str, Any], price_data: pd.DataFrame) -> pd.Series:
         """

@@ -17,6 +17,7 @@ __all__ = ["get_price_data", "refresh_market_data", "load_universe"]
 logger = logging.getLogger(__name__)
 
 
+# impure
 def load_universe(universe_path: str) -> List[str]:
     """Load universe symbols from CSV file.
     

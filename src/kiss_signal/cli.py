@@ -22,6 +22,7 @@ console = Console(record=True)
 logger = logging.getLogger(__name__)
 
 
+# impure
 def setup_logging(verbose: bool = False) -> None:
     """Configure logging based on verbosity level."""
     level = logging.DEBUG if verbose else logging.INFO
@@ -163,6 +164,26 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]], run_timesta
         # Continue execution - don't crash CLI on persistence failure
 
 
+def _generate_and_save_report(
+    app_config: Config, run_timestamp: str, rules_config: List[Dict[str, Any]]
+) -> None:
+    """Generate and save the daily report, handling errors gracefully."""
+    console.print("[5/5] Generating report...", style="blue")
+    try:
+        report_path = reporter.generate_daily_report(
+            db_path=Path(app_config.database_path),
+            run_timestamp=run_timestamp,
+            config=app_config,
+        )
+        if report_path:
+            console.print(f"✨ Report generated: {report_path}", style="green")
+        else:
+            console.print("⚠️  Report generation failed", style="yellow")
+    except Exception as e:
+        console.print(f"⚠️  Report error: {e}", style="yellow")
+        logger.error(f"Report generation error: {e}", exc_info=True)
+
+
 @app.command(name="run")
 def run(
     config_path: str = typer.Option(..., "--config", help="Path to config YAML file", exists=False),
@@ -218,23 +239,7 @@ def run(
         # Step 5: Save results
         run_timestamp = datetime.now().isoformat()
         _save_results(app_config, all_results, run_timestamp)
-
-        console.print("[5/5] Generating report...", style="blue")
-        try:
-            report_path = reporter.generate_daily_report(
-                db_path=Path(app_config.database_path),
-                run_timestamp=run_timestamp,
-                config=app_config,
-            )
-            
-            if report_path:
-                console.print(f"✨ Report generated: {report_path}", style="green")
-            else:
-                console.print("⚠️  Report generation failed", style="yellow")
-                
-        except Exception as e:
-            console.print(f"⚠️  Report error: {e}", style="yellow")
-            logger.error(f"Report generation error: {e}", exc_info=True)
+        _generate_and_save_report(app_config, run_timestamp, rules_config)
 
     except typer.Exit:
         raise

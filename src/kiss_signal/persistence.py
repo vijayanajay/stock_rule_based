@@ -60,6 +60,7 @@ CREATE_INDEX_POSITIONS = """
 CREATE INDEX IF NOT EXISTS idx_positions_status_symbol ON positions(status, symbol);
 """
 
+# impure
 def create_database(db_path: Path) -> None:
     """Create SQLite database with the strategies schema and enables WAL mode.
     
@@ -186,6 +187,7 @@ def close_positions_batch(db_path: Path, closed_positions: List[Dict[str, Any]])
             logger.error(f"Failed to close positions: {e}")
             cursor.execute("ROLLBACK")
 
+# impure
 def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_timestamp: str) -> bool:
     """Save a batch of strategy results in a single transaction.
     
