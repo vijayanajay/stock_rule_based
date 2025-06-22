@@ -274,6 +274,14 @@ The tests were not updated in lock-step and were still testing the obsolete, non
 
 ---
 
+### Brittle String Assertions in Tests (2025-07-05)
+**Issue**: Tests in `test_reporter.py` were failing due to an `AssertionError` on the report's summary line.
+**Root Cause**: A structural weakness in the testing strategy. The tests contained brittle assertions that checked for an exact string match, including punctuation. The `reporter.py` component correctly generated a summary line ending with a period (`.`), but the corresponding tests were asserting against a string that was missing this period. This created a desynchronization where the test's expectation did not match the component's actual, correct output.
+**Fix**: The assertion strings in `test_reporter.py` were updated to include the trailing period, bringing the tests back in sync with the component's contract.
+**Prevention**: Avoid overly brittle string assertions in tests. When verifying text output, either make the assertion flexible enough to ignore minor formatting differences (e.g., using regular expressions or parsing the content) or ensure that the test's "golden" string is an exact match for the component's output. When a component's output format changes, the corresponding tests must be updated in lock-step to prevent desynchronization.
+
+---
+
 ### Brittle Integration Tests Due to Non-Deterministic Data (2025-07-04)
 **Issue**: The end-to-end integration test (`test_end_to_end_cli_workflow`) was failing because it relied on randomly generated price data. The random data did not reliably produce the specific market conditions (e.g., trends, oversold states) required to trigger the rule-based strategies under test, leading to "No valid strategies found" errors.
 **Root Cause**: A structural flaw in the testing strategy. Integration tests that verify business logic which depends on specific data patterns should not use stochastic inputs. This makes the test non-deterministic and brittle; it might pass or fail based on luck rather than on the correctness of the code.

@@ -76,8 +76,8 @@ tests/test_reporter.py::TestCheckForSignal::test_check_signal_unknown_rule PASSE
 tests/test_reporter.py::TestCheckForSignal::test_check_signal_rule_exception PASSED [ 80%]
 tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_success PASSED [ 82%]
 tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_no_strategies PASSED [ 83%]
-tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_success PASSED [ 84%]
-tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_no_signals PASSED [ 85%]
+tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_structure_with_signals PASSED [ 84%]
+tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_structure_no_signals PASSED [ 85%]
 tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 86%]
 tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 88%]
 tests/test_rule_funcs.py::TestSMACrossover::test_invalid_periods PASSED  [ 89%]
@@ -107,4 +107,4 @@ src\kiss_signal\reporter.py        102     20    80%
 src\kiss_signal\rules.py            48      3    94%
 ----------------------------------------------------
 TOTAL                              682    129    81%
-============================= 84 passed in 39.63s =============================
+============================= 84 passed in 22.33s =============================
