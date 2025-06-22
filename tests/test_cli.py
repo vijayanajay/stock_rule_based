@@ -39,11 +39,13 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
-        Path("config.yaml").write_text(yaml.dump(sample_config))
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
-        (config_dir / "rules.yaml").write_text("rules: []")
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text("rules: []")
 
         mock_data.load_universe.return_value = ["RELIANCE"]
         mock_data.get_price_data.return_value = pd.DataFrame(
@@ -54,7 +56,7 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         mock_bt_instance.find_optimal_strategies.return_value = []
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
         )
         assert result.exit_code == 0, result.stdout
         assert "Analysis complete." in result.stdout
@@ -75,11 +77,13 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
         
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
-        Path("config.yaml").write_text(yaml.dump(sample_config))
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
-        (config_dir / "rules.yaml").write_text("rules: []")
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text("rules: []")
 
         mock_data.load_universe.return_value = ["RELIANCE"]
         mock_data.get_price_data.return_value = pd.DataFrame(
@@ -90,7 +94,7 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
         mock_bt_instance.find_optimal_strategies.return_value = []
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--verbose"]
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path), "--verbose"]
         )
         assert result.exit_code == 0, result.stdout
 
@@ -109,14 +113,16 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
         
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
-        Path("config.yaml").write_text(yaml.dump(sample_config))
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
-        (config_dir / "rules.yaml").write_text("rules: []")
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--freeze-data", "2025-01-01"]
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path), "--freeze-data", "2025-01-01"]
         )
         assert result.exit_code == 0, result.stdout
         assert "skipping data refresh (freeze mode)" in result.stdout.lower()
@@ -137,11 +143,13 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
         
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
-        Path("config.yaml").write_text(yaml.dump(sample_config))
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
-        (config_dir / "rules.yaml").write_text("rules: []")
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text("rules: []")
 
         mock_data.load_universe.return_value = ["RELIANCE"]
         mock_data.get_price_data.return_value = pd.DataFrame(
@@ -150,11 +158,16 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
         )
         mock_bt_instance = mock_backtester.return_value
         mock_bt_instance.find_optimal_strategies.return_value = [{
-            'symbol': 'RELIANCE', 'rule_stack': ['baseline'], 'edge_score': 0.5,            'win_pct': 0.5, 'sharpe': 0.5, 'total_trades': 12
+            'symbol': 'RELIANCE', 
+            'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
+            'edge_score': 0.5,
+            'win_pct': 0.5, 
+            'sharpe': 0.5, 
+            'total_trades': 12
         }]
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
@@ -172,14 +185,16 @@ def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
-        Path("config.yaml").write_text(yaml.dump(sample_config))
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
         
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
-        (config_dir / "rules.yaml").write_text("rules: []")
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--freeze-data", "invalid-date"]
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path), "--freeze-data", "invalid-date"]
         )
         assert result.exit_code == 1
         assert "Invalid isoformat string" in result.stdout
@@ -189,8 +204,9 @@ def test_run_command_no_config() -> None:
     """Test run command with a missing config file."""
     with runner.isolated_filesystem():
         # Create a dummy rules file so only the config is missing
-        Path("rules.yaml").write_text("rules: []")
-        result = runner.invoke(app, ["run", "--config", "nonexistent.yaml", "--rules", "rules.yaml"])
+        rules_path = Path("rules.yaml")
+        rules_path.write_text("rules: []")
+        result = runner.invoke(app, ["run", "--config", "nonexistent.yaml", "--rules", str(rules_path)])
         assert result.exit_code == 1
         assert "Configuration file not found" in result.stdout
 
@@ -215,7 +231,9 @@ def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
         config_path.write_text(yaml.dump(complete_config))
         rules_path = Path("nonexistent_rules.yaml")
         
-        result = runner.invoke(app, ["run", "--config", str(config_path), "--rules", str(rules_path)])
+        result = runner.invoke(
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
+        )
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
 
@@ -229,7 +247,9 @@ def test_run_command_with_persistence(
     """Test that run command integrates with persistence layer."""
     with runner.isolated_filesystem() as fs:
         mock_run_backtests.return_value = [{
-            'symbol': 'RELIANCE', 'rule_stack': ['sma_crossover'], 'edge_score': 0.75,
+            'symbol': 'RELIANCE', 
+            'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
+            'edge_score': 0.75,
             'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
         }]
 
@@ -242,14 +262,16 @@ def test_run_command_with_persistence(
 
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
-        Path("config.yaml").write_text(yaml.dump(sample_config))
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
 
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
-        (config_dir / "rules.yaml").write_text("rules: []")
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
@@ -270,7 +292,9 @@ def test_run_command_persistence_failure_handling(
 ):
     """Test that CLI handles persistence failures gracefully."""
     mock_run_backtests.return_value = [{
-        'symbol': 'RELIANCE', 'rule_stack': ['sma_crossover'], 'edge_score': 0.75,
+        'symbol': 'RELIANCE', 
+        'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
+        'edge_score': 0.75,
         'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
     }]
 
@@ -284,17 +308,19 @@ def test_run_command_persistence_failure_handling(
 
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
-        Path("config.yaml").write_text(yaml.dump(sample_config))
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
 
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
-        (config_dir / "rules.yaml").write_text("rules: []")
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text("rules: []")
 
         # Mock persistence failure
         mock_save_batch.side_effect = sqlite3.OperationalError("disk I/O error")
 
         result = runner.invoke(
-            app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
+            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout

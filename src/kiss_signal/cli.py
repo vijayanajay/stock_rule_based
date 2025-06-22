@@ -175,8 +175,8 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]], run_timesta
 
 @app.command(name="run")
 def run(
-    config_path: str = typer.Option(..., help="Path to config YAML file"),
-    rules_path: str = typer.Option(..., help="Path to rules YAML file"),
+    config_path: str = typer.Option(..., "--config", help="Path to config YAML file", exists=False),
+    rules_path: str = typer.Option(..., "--rules", help="Path to rules YAML file", exists=False),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)")
 ) -> None:

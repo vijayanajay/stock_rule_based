@@ -159,6 +159,11 @@ def _identify_new_signals(
             # For now, handle single rule per strategy (as per current design)
             # The full rule definition is now self-contained in the persisted record.
             rule_def = rule_stack_defs[0]
+            
+            # Ensure rule_def is a dictionary
+            if isinstance(rule_def, str):
+                logger.warning(f"Expected rule definition dictionary but got string for {symbol}: {rule_def}")
+                continue
                         
             # 5. Get latest price data
             try:
@@ -174,8 +179,8 @@ def _identify_new_signals(
             if price_data.empty:
                 continue
             latest_date = price_data.index[-1]
-            entry_signal, _ = rules.check_signal(rule_def, price_data)
-            if entry_signal.iloc[-1]:
+            
+            if _check_for_signal(price_data, rule_def):
                 entry_price = price_data['close'].iloc[-1]
                 signal_date = latest_date.strftime('%Y-%m-%d')
                 signals.append({

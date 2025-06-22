@@ -4,7 +4,7 @@ cachedir: .pytest_cache
 rootdir: D:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
-collecting ... collected 104 items
+collecting ... collected 103 items
 
 tests/test_backtester.py::TestBacktester::test_init_default_parameters PASSED [  0%]
 tests/test_backtester.py::TestBacktester::test_init_custom_parameters PASSED [  1%]
@@ -24,22 +24,22 @@ tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategie
 tests/test_backtester.py::TestBacktesterFixtures::test_sample_backtest_data_fixture PASSED [ 15%]
 tests/test_cli.py::test_cli_import PASSED                                [ 16%]
 tests/test_cli.py::test_run_command_help PASSED                          [ 17%]
-tests/test_cli.py::test_run_command_basic FAILED                         [ 18%]
-tests/test_cli.py::test_run_command_verbose FAILED                       [ 19%]
-tests/test_cli.py::test_run_command_freeze_date FAILED                   [ 20%]
-tests/test_cli.py::test_run_command_success FAILED                       [ 21%]
-tests/test_cli.py::test_run_command_invalid_freeze_date FAILED           [ 22%]
-tests/test_cli.py::test_run_command_no_config FAILED                     [ 23%]
-tests/test_cli.py::test_run_command_missing_rules FAILED                 [ 24%]
-tests/test_cli.py::test_run_command_with_persistence FAILED              [ 25%]
-tests/test_cli.py::test_run_command_persistence_failure_handling FAILED  [ 25%]
-tests/test_config.py::test_config_model_valid PASSED                     [ 26%]
-tests/test_config.py::test_config_model_invalid_weights PASSED           [ 27%]
-tests/test_config.py::test_load_config_missing_file PASSED               [ 28%]
-tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 29%]
-tests/test_data.py::TestDataFunctions::test_load_universe_missing_file PASSED [ 30%]
-tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 31%]
-tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 32%]
+tests/test_cli.py::test_run_command_basic PASSED                         [ 18%]
+tests/test_cli.py::test_run_command_verbose PASSED                       [ 19%]
+tests/test_cli.py::test_run_command_freeze_date PASSED                   [ 20%]
+tests/test_cli.py::test_run_command_success PASSED                       [ 21%]
+tests/test_cli.py::test_run_command_invalid_freeze_date PASSED           [ 22%]
+tests/test_cli.py::test_run_command_no_config PASSED                     [ 23%]
+tests/test_cli.py::test_run_command_missing_rules PASSED                 [ 24%]
+tests/test_cli.py::test_run_command_with_persistence PASSED              [ 25%]
+tests/test_cli.py::test_run_command_persistence_failure_handling PASSED  [ 26%]
+tests/test_config.py::test_config_model_valid PASSED                     [ 27%]
+tests/test_config.py::test_config_model_invalid_weights PASSED           [ 28%]
+tests/test_config.py::test_load_config_missing_file PASSED               [ 29%]
+tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 30%]
+tests/test_data.py::TestDataFunctions::test_load_universe_missing_file PASSED [ 31%]
+tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 32%]
+tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 33%]
 tests/test_data.py::TestDataFunctions::test_needs_refresh_missing_file PASSED [ 33%]
 tests/test_data.py::TestDataFunctions::test_needs_refresh_fresh_file PASSED [ 34%]
 tests/test_data.py::TestDataFunctions::test_needs_refresh_stale_file PASSED [ 35%]
@@ -58,22 +58,22 @@ tests/test_data_manager.py::TestDataManager::test_load_universe_missing_file PAS
 tests/test_data_manager.py::TestDataManager::test_load_universe_malformed PASSED [ 48%]
 tests/test_data_manager.py::TestDataManager::test_needs_refresh PASSED   [ 49%]
 tests/test_data_manager.py::TestDataManager::test_add_ns_suffix PASSED   [ 50%]
-tests/test_data_manager.py::TestDataManager::test_validate_data_quality PASSED [ 50%]
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success PASSED [ 51%]
-tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure PASSED [ 52%]
-tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache PASSED [ 53%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering PASSED [ 54%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date PASSED [ 55%]
-tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache PASSED [ 56%]
-tests/test_data_manager.py::TestDataManager::test_refresh_market_data PASSED [ 57%]
-tests/test_data_manager.py::TestDataConfiguration::test_freeze_date_integration PASSED [ 58%]
-tests/test_data_manager.py::TestDataConfiguration::test_custom_cache_refresh_days PASSED [ 59%]
-tests/test_integration.py::TestCLIIntegration::test_config_loading_integration PASSED [ 60%]
-tests/test_integration.py::TestCLIIntegration::test_data_loading_integration PASSED [ 61%]
-tests/test_integration.py::TestCLIIntegration::test_backtester_with_real_rules PASSED [ 62%]
-tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow FAILED [ 63%]
-tests/test_integration.py::TestCLIIntegration::test_error_handling_integration FAILED [ 64%]
-tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_function_lookup PASSED [ 65%]
+tests/test_data_manager.py::TestDataManager::test_validate_data_quality PASSED [ 51%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_success PASSED [ 52%]
+tests/test_data_manager.py::TestDataManager::test_fetch_symbol_data_failure PASSED [ 53%]
+tests/test_data_manager.py::TestDataManager::test_save_and_load_symbol_cache PASSED [ 54%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_date_filtering PASSED [ 55%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_with_freeze_date PASSED [ 56%]
+tests/test_data_manager.py::TestDataManager::test_get_price_data_missing_cache PASSED [ 57%]
+tests/test_data_manager.py::TestDataManager::test_refresh_market_data PASSED [ 58%]
+tests/test_data_manager.py::TestDataConfiguration::test_freeze_date_integration PASSED [ 59%]
+tests/test_data_manager.py::TestDataConfiguration::test_custom_cache_refresh_days PASSED [ 60%]
+tests/test_integration.py::TestCLIIntegration::test_config_loading_integration PASSED [ 61%]
+tests/test_integration.py::TestCLIIntegration::test_data_loading_integration PASSED [ 62%]
+tests/test_integration.py::TestCLIIntegration::test_backtester_with_real_rules PASSED [ 63%]
+tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow PASSED [ 64%]
+tests/test_integration.py::TestCLIIntegration::test_error_handling_integration PASSED [ 65%]
+tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_function_lookup PASSED [ 66%]
 tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_parameter_validation PASSED [ 66%]
 tests/test_persistence.py::TestCreateDatabase::test_create_database_success PASSED [ 67%]
 tests/test_persistence.py::TestCreateDatabase::test_create_database_idempotent PASSED [ 68%]
@@ -84,20 +84,19 @@ tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_i
 tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_database_not_exists PASSED [ 73%]
 tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_multiple_batches PASSED [ 74%]
 tests/test_persistence.py::TestIntegration::test_create_and_save_workflow PASSED [ 75%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_success PASSED [ 75%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_threshold_filtering PASSED [ 76%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_no_results PASSED [ 77%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_database_error PASSED [ 78%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_with_valid_rule PASSED [ 79%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_no_signal PASSED [ 80%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_empty_data PASSED [ 81%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_unknown_rule PASSED [ 82%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_rule_exception PASSED [ 83%]
-tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_success FAILED [ 84%]
-tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_no_strategies FAILED [ 85%]
-tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_success FAILED [ 86%]
-tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_no_signals FAILED [ 87%]
-tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_permission_error FAILED [ 88%]
+tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_success PASSED [ 76%]
+tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_threshold_filtering PASSED [ 77%]
+tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_no_results PASSED [ 78%]
+tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_database_error PASSED [ 79%]
+tests/test_reporter.py::TestCheckForSignal::test_check_signal_with_valid_rule PASSED [ 80%]
+tests/test_reporter.py::TestCheckForSignal::test_check_signal_no_signal PASSED [ 81%]
+tests/test_reporter.py::TestCheckForSignal::test_check_signal_empty_data PASSED [ 82%]
+tests/test_reporter.py::TestCheckForSignal::test_check_signal_unknown_rule PASSED [ 83%]
+tests/test_reporter.py::TestCheckForSignal::test_check_signal_rule_exception PASSED [ 84%]
+tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_success PASSED [ 85%]
+tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_no_strategies PASSED [ 86%]
+tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_success PASSED [ 87%]
+tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_no_signals PASSED [ 88%]
 tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 89%]
 tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 90%]
 tests/test_rule_funcs.py::TestSMACrossover::test_invalid_periods PASSED  [ 91%]
@@ -111,549 +110,6 @@ tests/test_rule_funcs.py::TestEdgeCases::test_single_price_data PASSED   [ 98%]
 tests/test_rule_funcs.py::TestEdgeCases::test_nan_price_data PASSED      [ 99%]
 tests/test_rule_funcs.py::TestIntegration::test_all_rules_with_real_data PASSED [100%]
 
-================================== FAILURES ===================================
-___________________________ test_run_command_basic ____________________________
-
-mock_data = <MagicMock name='data' id='2507718516640'>
-mock_backtester = <MagicMock name='Backtester' id='2507725380624'>
-sample_config = {'cache_dir': 'C:\\Users\\user\\AppData\\Local\\Temp\\tmpvjdsuv5l\\data\\cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-
-    @patch("kiss_signal.cli.backtester.Backtester")
-    @patch("kiss_signal.cli.data")
-    def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
-        """Test basic run command with isolated filesystem."""
-        with runner.isolated_filesystem() as fs:
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-    
-            sample_config["universe_path"] = str(universe_path)
-            sample_config["cache_dir"] = str(cache_dir)
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-    
-            config_dir = Path("config")
-            config_dir.mkdir(exist_ok=True)
-            (config_dir / "rules.yaml").write_text("rules: []")
-    
-            mock_data.load_universe.return_value = ["RELIANCE"]
-            mock_data.get_price_data.return_value = pd.DataFrame(
-                {'close': range(101)},
-                index=pd.to_datetime(pd.date_range(start='2023-01-01', periods=101))
-            )
-            mock_bt_instance = mock_backtester.return_value
-            mock_bt_instance.find_optimal_strategies.return_value = []
-    
-            result = runner.invoke(
-                app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
-            )
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:59: AssertionError
-__________________________ test_run_command_verbose ___________________________
-
-mock_data = <MagicMock name='data' id='2507725749040'>
-mock_backtester = <MagicMock name='Backtester' id='2507725749664'>
-sample_config = {'cache_dir': 'C:\\Users\\user\\AppData\\Local\\Temp\\tmp347dwjte\\data\\cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-
-    @patch("kiss_signal.cli.backtester.Backtester")
-    @patch("kiss_signal.cli.data")
-    def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
-        """Test run command with verbose flag and isolated filesystem."""
-        with runner.isolated_filesystem() as fs:
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-    
-            sample_config["universe_path"] = str(universe_path)
-            sample_config["cache_dir"] = str(cache_dir)
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-    
-            config_dir = Path("config")
-            config_dir.mkdir(exist_ok=True)
-            (config_dir / "rules.yaml").write_text("rules: []")
-    
-            mock_data.load_universe.return_value = ["RELIANCE"]
-            mock_data.get_price_data.return_value = pd.DataFrame(
-                {'close': range(101)},
-                index=pd.to_datetime(pd.date_range(start='2023-01-01', periods=101))
-            )
-            mock_bt_instance = mock_backtester.return_value
-            mock_bt_instance.find_optimal_strategies.return_value = []
-    
-            result = runner.invoke(
-                app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--verbose"]
-            )
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:95: AssertionError
-________________________ test_run_command_freeze_date _________________________
-
-mock_data = <MagicMock name='data' id='2507726854368'>
-mock_backtester = <MagicMock name='Backtester' id='2507726854416'>
-sample_config = {'cache_dir': 'C:\\Users\\user\\AppData\\Local\\Temp\\tmp0apnu2gl\\data\\cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-
-    @patch("kiss_signal.cli.backtester.Backtester")
-    @patch("kiss_signal.cli.data")
-    def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
-        """Test run command with freeze date and isolated filesystem."""
-        with runner.isolated_filesystem() as fs:
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-    
-            sample_config["universe_path"] = str(universe_path)
-            sample_config["cache_dir"] = str(cache_dir)
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-    
-            config_dir = Path("config")
-            config_dir.mkdir(exist_ok=True)
-            (config_dir / "rules.yaml").write_text("rules: []")
-    
-            result = runner.invoke(
-                app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--freeze-data", "2025-01-01"]
-            )
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:121: AssertionError
-__________________________ test_run_command_success ___________________________
-
-mock_data = <MagicMock name='data' id='2507726583472'>
-mock_backtester = <MagicMock name='Backtester' id='2507726576128'>
-sample_config = {'cache_dir': 'C:\\Users\\user\\AppData\\Local\\Temp\\tmpbuw2kbsa\\data\\cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-
-    @patch("kiss_signal.cli.backtester.Backtester")
-    @patch("kiss_signal.cli.data")
-    def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
-        """Test a successful run command execution with mocks."""
-        with runner.isolated_filesystem() as fs:
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-    
-            sample_config["universe_path"] = str(universe_path)
-            sample_config["cache_dir"] = str(cache_dir)
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-    
-            config_dir = Path("config")
-            config_dir.mkdir(exist_ok=True)
-            (config_dir / "rules.yaml").write_text("rules: []")
-    
-            mock_data.load_universe.return_value = ["RELIANCE"]
-            mock_data.get_price_data.return_value = pd.DataFrame(
-                {'close': range(101)},
-                index=pd.to_datetime(pd.date_range(start='2023-01-01', periods=101))
-            )
-            mock_bt_instance = mock_backtester.return_value
-            mock_bt_instance.find_optimal_strategies.return_value = [{
-                'symbol': 'RELIANCE', 'rule_stack': ['baseline'], 'edge_score': 0.5,            'win_pct': 0.5, 'sharpe': 0.5, 'total_trades': 12
-            }]
-    
-            result = runner.invoke(
-                app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
-            )
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:159: AssertionError
-____________________ test_run_command_invalid_freeze_date _____________________
-
-sample_config = {'cache_dir': 'C:\\Users\\user\\AppData\\Local\\Temp\\tmpt__t7apn\\data\\cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-
-    def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
-        """Test run command with invalid freeze date."""
-        with runner.isolated_filesystem() as fs:
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-            sample_config["universe_path"] = str(universe_path)
-            sample_config["cache_dir"] = str(cache_dir)
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-    
-            config_dir = Path("config")
-            config_dir.mkdir(exist_ok=True)
-            (config_dir / "rules.yaml").write_text("rules: []")
-    
-            result = runner.invoke(
-                app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml"), "--freeze-data", "invalid-date"]
-            )
->           assert result.exit_code == 1
-E           assert 2 == 1
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:184: AssertionError
-_________________________ test_run_command_no_config __________________________
-
-    def test_run_command_no_config() -> None:
-        """Test run command with a missing config file."""
-        with runner.isolated_filesystem():
-            # Create a dummy rules file so only the config is missing
-            Path("rules.yaml").write_text("rules: []")
-            result = runner.invoke(app, ["run", "--config", "nonexistent.yaml", "--rules", "rules.yaml"])
->           assert result.exit_code == 1
-E           assert 2 == 1
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:194: AssertionError
-_______________________ test_run_command_missing_rules ________________________
-
-sample_config = {'cache_dir': 'data/cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-
-    def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
-        """Test run command with missing rules file."""
-        with runner.isolated_filesystem() as fs:
-            # Prepare data files for a complete config
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-    
-            # Complete config setup using fixture
-            complete_config = sample_config.copy()
-            complete_config["universe_path"] = str(universe_path)
-            complete_config["cache_dir"] = str(cache_dir)
-    
-            config_path = Path("config.yaml")
-            config_path.write_text(yaml.dump(complete_config))
-            rules_path = Path("nonexistent_rules.yaml")
-    
-            result = runner.invoke(app, ["run", "--config", str(config_path), "--rules", str(rules_path)])
->           assert result.exit_code == 1
-E           assert 2 == 1
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:219: AssertionError
-______________________ test_run_command_with_persistence ______________________
-
-mock_run_backtests = <MagicMock name='_run_backtests' id='2507726825344'>
-mock_save_batch = <MagicMock name='save_strategies_batch' id='2507726821072'>
-mock_create_db = <MagicMock name='create_database' id='2507726827792'>
-sample_config = {'cache_dir': 'C:\\Users\\user\\AppData\\Local\\Temp\\tmpu6gcc_jy\\data\\cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-tmp_path = WindowsPath('C:/Users/user/AppData/Local/Temp/pytest-of-user/pytest-488/test_run_command_with_persiste0')
-
-    @patch("kiss_signal.cli.persistence.create_database")
-    @patch("kiss_signal.cli.persistence.save_strategies_batch")
-    @patch("kiss_signal.cli._run_backtests")
-    def test_run_command_with_persistence(
-        mock_run_backtests, mock_save_batch, mock_create_db, sample_config, tmp_path
-    ):
-        """Test that run command integrates with persistence layer."""
-        with runner.isolated_filesystem() as fs:
-            mock_run_backtests.return_value = [{
-                'symbol': 'RELIANCE', 'rule_stack': ['sma_crossover'], 'edge_score': 0.75,
-                'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
-            }]
-    
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-    
-            sample_config["universe_path"] = str(universe_path)
-            sample_config["cache_dir"] = str(cache_dir)
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-    
-            config_dir = Path("config")
-            config_dir.mkdir(exist_ok=True)
-            (config_dir / "rules.yaml").write_text("rules: []")
-    
-            result = runner.invoke(
-                app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
-            )
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:254: AssertionError
-________________ test_run_command_persistence_failure_handling ________________
-
-mock_run_backtests = <MagicMock name='_run_backtests' id='2507725739200'>
-mock_save_batch = <MagicMock name='save_strategies_batch' id='2507725749328'>
-sample_config = {'cache_dir': 'C:\\Users\\user\\AppData\\Local\\Temp\\tmpdwq2lyqu\\data\\cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
-tmp_path = WindowsPath('C:/Users/user/AppData/Local/Temp/pytest-of-user/pytest-488/test_run_command_persistence_f0')
-
-    @patch("kiss_signal.cli.persistence.save_strategies_batch")
-    @patch("kiss_signal.cli._run_backtests")
-    def test_run_command_persistence_failure_handling(
-        mock_run_backtests, mock_save_batch, sample_config, tmp_path
-    ):
-        """Test that CLI handles persistence failures gracefully."""
-        mock_run_backtests.return_value = [{
-            'symbol': 'RELIANCE', 'rule_stack': ['sma_crossover'], 'edge_score': 0.75,
-            'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
-        }]
-    
-        with runner.isolated_filesystem() as fs:
-            data_dir = Path(fs) / "data"
-            data_dir.mkdir()
-            cache_dir = data_dir / "cache"
-            cache_dir.mkdir()
-            universe_path = data_dir / "nifty_large_mid.csv"
-            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-    
-            sample_config["universe_path"] = str(universe_path)
-            sample_config["cache_dir"] = str(cache_dir)
-            Path("config.yaml").write_text(yaml.dump(sample_config))
-    
-            config_dir = Path("config")
-            config_dir.mkdir(exist_ok=True)
-            (config_dir / "rules.yaml").write_text("rules: []")
-    
-            # Mock persistence failure
-            mock_save_batch.side_effect = sqlite3.OperationalError("disk I/O error")
-    
-            result = runner.invoke(
-                app, ["run", "--config", "config.yaml", "--rules", str(config_dir / "rules.yaml")]
-            )
->           assert result.exit_code == 0, result.stdout
-E           AssertionError: 
-E           assert 2 == 0
-E            +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_cli.py:299: AssertionError
-_______________ TestCLIIntegration.test_end_to_end_cli_workflow _______________
-
-self = <tests.test_integration.TestCLIIntegration object at 0x00000247DB903E60>
-integration_env = {'cache_dir': WindowsPath('C:/Users/user/AppData/Local/Temp/tmp4ubs1axd/data/cache'), 'config_path': WindowsPath('C:/U...p/tmp4ubs1axd/data'), 'rules_path': WindowsPath('C:/Users/user/AppData/Local/Temp/tmp4ubs1axd/config/rules.yaml'), ...}
-
-    def test_end_to_end_cli_workflow(self, integration_env):
-        """Test the complete CLI workflow without mocking."""
-        runner = CliRunner()
-    
-        result = runner.invoke(app, [
-            "run",
-            "--config", str(integration_env['config_path']),
-            "--rules", str(integration_env['rules_path']),
-            "--freeze-data", "2024-06-01",
-        ])
-    
->       assert result.exit_code == 0, f"CLI failed with output: {result.stdout}"
-E       AssertionError: CLI failed with output: 
-E       assert 2 == 0
-E        +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_integration.py:226: AssertionError
-_____________ TestCLIIntegration.test_error_handling_integration ______________
-
-self = <tests.test_integration.TestCLIIntegration object at 0x00000247DB9010D0>
-integration_env = {'cache_dir': WindowsPath('C:/Users/user/AppData/Local/Temp/tmp4qxf2659/data/cache'), 'config_path': WindowsPath('C:/U...p/tmp4qxf2659/data'), 'rules_path': WindowsPath('C:/Users/user/AppData/Local/Temp/tmp4qxf2659/config/rules.yaml'), ...}
-
-    def test_error_handling_integration(self, integration_env):
-        """Test error handling in integration scenarios."""
-        runner = CliRunner()
-    
-        # Test with missing config file
-        result = runner.invoke(app, [
-            "run",
-            "--config", "nonexistent.yaml",
-            "--rules", str(integration_env['rules_path']),
-         ])
->       assert result.exit_code == 1
-E       assert 2 == 1
-E        +  where 2 = <Result SystemExit(2)>.exit_code
-
-tests\test_integration.py:244: AssertionError
-____________ TestIdentifyNewSignals.test_identify_signals_success _____________
-
-self = <tests.test_reporter.TestIdentifyNewSignals object at 0x00000247DB916C30>
-mock_get_price_data = <MagicMock name='get_price_data' id='2507708009408'>
-tmp_path = WindowsPath('C:/Users/user/AppData/Local/Temp/pytest-of-user/pytest-488/test_identify_signals_success0')
-sample_config = Config(universe_path='C:\\Users\\user\\AppData\\Local\\Temp\\pytest-of-user\\pytest-488\\test_identify_signals_success...Data\\Local\\Temp\\pytest-of-user\\pytest-488\\test_identify_signals_success0\\test_reports', edge_score_threshold=0.5)
-sample_rules_config = [{'name': 'sma_10_20_crossover', 'params': {'long_window': 20, 'short_window': 10}, 'type': 'sma_crossover'}, {'name': 'rsi_oversold_30', 'params': {'period': 14, 'threshold': 30}, 'type': 'rsi_oversold'}]
-sample_price_data =             open  high  low  close   volume
-2025-01-01   100   105   95    102  1000000
-2025-01-02   101   106   96   ... 127   132  122    129  1000000
-2025-01-29   128   133  123    130  1000000
-2025-01-30   129   134  124    131  1000000
-
-    @patch('src.kiss_signal.reporter.data.get_price_data')
-    def test_identify_signals_success(self, mock_get_price_data, tmp_path, sample_config, sample_rules_config, sample_price_data):
-        """Test successful signal identification."""
-        db_path = tmp_path / "test.db"
-    
-        # Setup database
-        with sqlite3.connect(db_path) as conn:
-            conn.execute("""
-                CREATE TABLE strategies (
-                    symbol TEXT,
-                    rule_stack TEXT,
-                    edge_score REAL,
-                    win_pct REAL,
-                    sharpe REAL,
-                    total_trades INTEGER,
-                    avg_return REAL,
-                    run_timestamp TEXT
-                )
-            """)
-    
-            conn.execute("""
-                INSERT INTO strategies
-                (symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return, run_timestamp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, ('RELIANCE', '["sma_10_20_crossover"]', 0.68, 0.65, 1.2, 45, 0.025, 'test_timestamp'))
-    
-        # Mock price data and signal check
-        mock_get_price_data.return_value = sample_price_data
-    
-        with patch('src.kiss_signal.reporter._check_for_signal') as mock_check:
-            mock_check.return_value = True
-    
->           result = reporter._identify_new_signals(
-                db_path, 'test_timestamp', sample_config, sample_rules_config
-            )
-E           TypeError: _identify_new_signals() takes 3 positional arguments but 4 were given
-
-tests\test_reporter.py:310: TypeError
-_________ TestIdentifyNewSignals.test_identify_signals_no_strategies __________
-
-self = <tests.test_reporter.TestIdentifyNewSignals object at 0x00000247DB914CE0>
-tmp_path = WindowsPath('C:/Users/user/AppData/Local/Temp/pytest-of-user/pytest-488/test_identify_signals_no_strat0')
-sample_config = Config(universe_path='C:\\Users\\user\\AppData\\Local\\Temp\\pytest-of-user\\pytest-488\\test_identify_signals_no_stra...ata\\Local\\Temp\\pytest-of-user\\pytest-488\\test_identify_signals_no_strat0\\test_reports', edge_score_threshold=0.5)
-sample_rules_config = [{'name': 'sma_10_20_crossover', 'params': {'long_window': 20, 'short_window': 10}, 'type': 'sma_crossover'}, {'name': 'rsi_oversold_30', 'params': {'period': 14, 'threshold': 30}, 'type': 'rsi_oversold'}]
-
-    def test_identify_signals_no_strategies(self, tmp_path, sample_config, sample_rules_config):
-        """Test when no strategies are found."""
-        db_path = tmp_path / "test.db"
-    
-        with sqlite3.connect(db_path) as conn:
-            conn.execute("""
-                CREATE TABLE strategies (
-                    symbol TEXT,
-                    rule_stack TEXT,
-                    edge_score REAL,
-                    win_pct REAL,
-                    sharpe REAL,
-                    total_trades INTEGER,
-                    avg_return REAL,
-                    run_timestamp TEXT
-                )
-            """)
-    
->       result = reporter._identify_new_signals(
-            db_path, 'nonexistent_timestamp', sample_config, sample_rules_config
-        )
-E       TypeError: _identify_new_signals() takes 3 positional arguments but 4 were given
-
-tests\test_reporter.py:339: TypeError
-____________ TestGenerateDailyReport.test_generate_report_success _____________
-
-self = <tests.test_reporter.TestGenerateDailyReport object at 0x00000247DB945B20>
-mock_identify = <MagicMock name='_identify_new_signals' id='2507708012192'>
-tmp_path = WindowsPath('C:/Users/user/AppData/Local/Temp/pytest-of-user/pytest-488/test_generate_report_success0')
-sample_config = Config(universe_path='C:\\Users\\user\\AppData\\Local\\Temp\\pytest-of-user\\pytest-488\\test_generate_report_success0...pData\\Local\\Temp\\pytest-of-user\\pytest-488\\test_generate_report_success0\\test_reports', edge_score_threshold=0.5)
-sample_rules_config = [{'name': 'sma_10_20_crossover', 'params': {'long_window': 20, 'short_window': 10}, 'type': 'sma_crossover'}, {'name': 'rsi_oversold_30', 'params': {'period': 14, 'threshold': 30}, 'type': 'rsi_oversold'}]
-
-    @patch('src.kiss_signal.reporter._identify_new_signals')
-    def test_generate_report_success(self, mock_identify, tmp_path, sample_config, sample_rules_config):
-        """Test successful report generation."""
-        mock_identify.return_value = [
-            {
-                'ticker': 'RELIANCE',
-                'date': '2025-06-29',
-                'entry_price': 2950.75,
-                'rule_stack': 'sma_10_20_crossover',
-                'edge_score': 0.68
-            }
-        ]
-    
-        # Setup output directory
-        output_dir = tmp_path / "reports"
->       test_config = Config(
-            universe_path="test_universe.txt",
-            cache_dir=str(tmp_path / "test_cache/"),
-            reports_output_dir=str(output_dir),
-            edge_score_threshold=0.50,
-            database_path=str(tmp_path / "test.db")
-        )
-E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
-E       universe_path
-E         Value error, Universe file not found: test_universe.txt [type=value_error, input_value='test_universe.txt', input_type=str]
-E           For further information visit https://errors.pydantic.dev/2.11/v/value_error
-
-tests\test_reporter.py:364: ValidationError
-___________ TestGenerateDailyReport.test_generate_report_no_signals ___________
-
-self = <tests.test_reporter.TestGenerateDailyReport object at 0x00000247DB944110>
-mock_identify = <MagicMock name='_identify_new_signals' id='2507683815904'>
-tmp_path = WindowsPath('C:/Users/user/AppData/Local/Temp/pytest-of-user/pytest-488/test_generate_report_no_signal0')
-sample_config = Config(universe_path='C:\\Users\\user\\AppData\\Local\\Temp\\pytest-of-user\\pytest-488\\test_generate_report_no_signa...ata\\Local\\Temp\\pytest-of-user\\pytest-488\\test_generate_report_no_signal0\\test_reports', edge_score_threshold=0.5)
-sample_rules_config = [{'name': 'sma_10_20_crossover', 'params': {'long_window': 20, 'short_window': 10}, 'type': 'sma_crossover'}, {'name': 'rsi_oversold_30', 'params': {'period': 14, 'threshold': 30}, 'type': 'rsi_oversold'}]
-
-    @patch('src.kiss_signal.reporter._identify_new_signals')
-    def test_generate_report_no_signals(self, mock_identify, tmp_path, sample_config, sample_rules_config):
-        """Test report generation with no signals."""
-        mock_identify.return_value = []
-    
-        output_dir = tmp_path / "reports"
->       test_config = Config(
-            universe_path="test_universe.txt",
-            cache_dir=str(tmp_path / "test_cache/"),
-            reports_output_dir=str(output_dir),
-            edge_score_threshold=0.50,
-            database_path=str(tmp_path / "test.db")
-        )
-E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
-E       universe_path
-E         Value error, Universe file not found: test_universe.txt [type=value_error, input_value='test_universe.txt', input_type=str]
-E           For further information visit https://errors.pydantic.dev/2.11/v/value_error
-
-tests\test_reporter.py:397: ValidationError
-________ TestGenerateDailyReport.test_generate_report_permission_error ________
-
-self = <tests.test_reporter.TestGenerateDailyReport object at 0x00000247DB9444D0>
-mock_identify = <MagicMock name='_identify_new_signals' id='2507683917904'>
-sample_config = Config(universe_path='C:\\Users\\user\\AppData\\Local\\Temp\\pytest-of-user\\pytest-488\\test_generate_report_permissi...ata\\Local\\Temp\\pytest-of-user\\pytest-488\\test_generate_report_permissio0\\test_reports', edge_score_threshold=0.5)
-sample_rules_config = [{'name': 'sma_10_20_crossover', 'params': {'long_window': 20, 'short_window': 10}, 'type': 'sma_crossover'}, {'name': 'rsi_oversold_30', 'params': {'period': 14, 'threshold': 30}, 'type': 'rsi_oversold'}]
-
-    @patch('src.kiss_signal.reporter._identify_new_signals')
-    def test_generate_report_permission_error(self, mock_identify, sample_config, sample_rules_config):
-        """Test report generation with file permission error."""
-        mock_identify.return_value = []
-    
-        # Use invalid path to trigger permission error
->       test_config = Config(
-            universe_path="test_universe.txt",
-            cache_dir="/invalid_cache/",
-            reports_output_dir="/invalid/path/",
-            edge_score_threshold=0.50,
-            database_path="/invalid/test.db"
-        )
-E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
-E       universe_path
-E         Value error, Universe file not found: test_universe.txt [type=value_error, input_value='test_universe.txt', input_type=str]
-E           For further information visit https://errors.pydantic.dev/2.11/v/value_error
-
-tests\test_reporter.py:422: ValidationError
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -662,29 +118,12 @@ Name                             Stmts   Miss  Cover
 src\kiss_signal\__init__.py          4      0   100%
 src\kiss_signal\_version.py         13     13     0%
 src\kiss_signal\backtester.py      111     22    80%
-src\kiss_signal\cli.py             159    131    18%
-src\kiss_signal\config.py           61      9    85%
+src\kiss_signal\cli.py             159     28    82%
+src\kiss_signal\config.py           61     10    84%
 src\kiss_signal\data.py            149     26    83%
 src\kiss_signal\persistence.py      63      7    89%
-src\kiss_signal\reporter.py        107     57    47%
+src\kiss_signal\reporter.py        109     17    84%
 src\kiss_signal\rules.py            48      3    94%
 ----------------------------------------------------
-TOTAL                              715    268    63%
-=========================== short test summary info ===========================
-FAILED tests/test_cli.py::test_run_command_basic - AssertionError: 
-FAILED tests/test_cli.py::test_run_command_verbose - AssertionError: 
-FAILED tests/test_cli.py::test_run_command_freeze_date - AssertionError: 
-FAILED tests/test_cli.py::test_run_command_success - AssertionError: 
-FAILED tests/test_cli.py::test_run_command_invalid_freeze_date - assert 2 == 1
-FAILED tests/test_cli.py::test_run_command_no_config - assert 2 == 1
-FAILED tests/test_cli.py::test_run_command_missing_rules - assert 2 == 1
-FAILED tests/test_cli.py::test_run_command_with_persistence - AssertionError: 
-FAILED tests/test_cli.py::test_run_command_persistence_failure_handling - Ass...
-FAILED tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow
-FAILED tests/test_integration.py::TestCLIIntegration::test_error_handling_integration
-FAILED tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_success
-FAILED tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_no_strategies
-FAILED tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_success
-FAILED tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_no_signals
-FAILED tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_permission_error
-======================= 16 failed, 88 passed in 29.35s ========================
+TOTAL                              717    126    82%
+============================ 103 passed in 29.20s =============================

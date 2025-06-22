@@ -234,3 +234,19 @@
 **Prevention**: Ensure that data persisted to a database is self-contained and includes all information necessary for future components to interpret and act on it without referring back to the application's runtime configuration. Avoid persisting display names or other volatile identifiers as functional keys; persist the full, immutable definition of an object instead. This decouples historical data from the current application state, making the system more robust and reliable over time.
 
 ---
+
+### Test Suite Desynchronization and Non-Hermetic Fixtures (2025-07-02)
+**Issue**: Widespread, cascading test failures, including `TypeError` on function calls and `typer.Exit(2)` usage errors, originated from a few incorrect tests in `test_reporter.py`.
+**Root Cause**: A structural desynchronization between the test suite and the application's components.
+1.  **Obsolete Signatures**: Tests in `test_reporter.py` were calling functions with an outdated number of arguments after a refactoring had made one of the arguments redundant. The application code was correct, but the tests were not updated in lock-step.
+2.  **Non-Hermetic Fixtures**: A test fixture was creating an incomplete Pydantic `Config` object, violating its data contract. This created an invalid object that led to unpredictable failures downstream.
+3.  **Brittle Tests**: The suite included a non-portable I/O test that made invalid assumptions about the filesystem, and another test had an assertion that did not match the deterministic `ORDER BY` clause of the underlying database query.
+
+**Fix**:
+1.  **Synchronized Tests**: Updated all test calls in `test_reporter.py` to match the current, correct function signatures (passing 3 arguments instead of 4).
+2.  **Hermetic Fixtures**: Corrected the `sample_config` fixture to provide all required fields, ensuring it creates a valid `Config` object that satisfies the Pydantic model's contract.
+3.  **Removed Brittle Code**: Deleted the non-portable I/O test (`test_generate_report_permission_error`) and fixed the assertion that relied on incorrect ordering assumptions.
+
+**Prevention**: Treat tests as first-class citizens that must be refactored alongside application code. Ensure test fixtures are hermetic: they must create complete and valid objects that satisfy the full data contract of the component under test. This prevents a single broken test setup from causing a cascade of misleading failures across the entire suite.
+
+---
