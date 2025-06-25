@@ -223,9 +223,9 @@ INFY,Infosys Ltd,IT"""
         runner = CliRunner()
 
         result = runner.invoke(app, [
-            "run",
             "--config", str(integration_env['config_path']),
             "--rules", str(integration_env['rules_path']),
+            "run",
             "--freeze-data", "2024-06-01",
         ])
 
@@ -243,27 +243,27 @@ INFY,Infosys Ltd,IT"""
         
         # Test with missing config file
         result = runner.invoke(app, [
-            "run", 
             "--config", "nonexistent.yaml",
             "--rules", str(integration_env['rules_path']),
+            "run",
          ])
         assert result.exit_code == 1
         assert "Configuration file not found" in result.stdout
         
         # Test with missing rules file
         result = runner.invoke(app, [
-            "run",
             "--config", str(integration_env['config_path']),
             "--rules", "nonexistent.yaml",
+            "run",
         ])
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
         
         # Test with invalid freeze date
         result = runner.invoke(app, [
-            "run",
             "--config", str(integration_env['config_path']),
             "--rules", str(integration_env['rules_path']),
+            "run",
             "--freeze-data", "invalid-date",
         ])
         assert result.exit_code == 1

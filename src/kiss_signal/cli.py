@@ -165,7 +165,7 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]], run_timesta
 
 
 def _generate_and_save_report(
-    app_config: Config, run_timestamp: str, rules_config: List[Dict[str, Any]]
+    app_config: Config, run_timestamp: str
 ) -> None:
     """Generate and save the daily report, handling errors gracefully."""
     console.print("[5/5] Generating report...", style="blue")
@@ -184,40 +184,56 @@ def _generate_and_save_report(
         logger.error(f"Report generation error: {e}", exc_info=True)
 
 
+@app.callback()
+def main(
+    ctx: typer.Context,
+    config_path: str = typer.Option("config.yaml", "--config", help="Path to config YAML file.", exists=True),
+    rules_path: str = typer.Option("config/rules.yaml", "--rules", help="Path to rules YAML file.", exists=True),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging."),
+) -> None:
+    """
+    KISS Signal CLI.
+    """
+    setup_logging(verbose)
+    
+    # Store loaded configs in the context
+    try:
+        ctx.obj = {
+            "config": load_config(Path(config_path)),
+            "rules": load_rules(Path(rules_path)),
+            "verbose": verbose,
+        }
+    except (FileNotFoundError, ValueError) as e:
+        console.print(f"[red]Error loading configuration: {e}[/red]")
+        raise typer.Exit(1)
+
+
 @app.command(name="run")
 def run(
-    config_path: str = typer.Option(..., "--config", help="Path to config YAML file", exists=False),
-    rules_path: str = typer.Option(..., "--rules", help="Path to rules YAML file", exists=False),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    ctx: typer.Context,
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)")
 ) -> None:
     """Run the KISS Signal analysis pipeline."""
-    setup_logging(verbose)
     _show_banner()
 
-    freeze_date: Optional[date] = None
+    app_config = ctx.obj["config"]
+    rules_config = ctx.obj["rules"]
+    verbose = ctx.obj["verbose"]
+
+    freeze_date_obj: Optional[date] = None
     if freeze_data:
         try:
-            freeze_date = date.fromisoformat(freeze_data)
+            freeze_date_obj = date.fromisoformat(freeze_data)
         except ValueError:
             console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
             raise typer.Exit(1)
 
     try:
-        config_path_obj = Path(config_path)
-        rules_path_obj = Path(rules_path)
-        # Load configuration - check if files exist before loading
-        if not config_path_obj.exists():
-            raise FileNotFoundError(f"Configuration file not found: {config_path_obj}")
-        if not rules_path_obj.exists():
-            raise FileNotFoundError(f"Rules file not found: {rules_path_obj}")
-        app_config = load_config(config_path_obj)
-        rules_config = load_rules(rules_path_obj)
         console.print("[1/4] Configuration loaded.")
         # Step 2: Refresh market data if needed
-        if freeze_date:
+        if freeze_date_obj:
             if verbose:
-                logger.info(f"Freeze mode active: {freeze_date}")
+                logger.info(f"Freeze mode active: {freeze_date_obj}")
             console.print("[2/4] Skipping data refresh (freeze mode).")
         else:
             if verbose:
@@ -228,18 +244,19 @@ def run(
                 cache_dir=app_config.cache_dir,
                 refresh_days=app_config.cache_refresh_days,
                 years=app_config.historical_data_years,
-                freeze_date=freeze_date
+                freeze_date=freeze_date_obj
             )
         # Step 3: Analyze strategies for each ticker
         console.print("[3/4] Analyzing strategies for each ticker...")
         symbols = data.load_universe(app_config.universe_path)
-        all_results = _run_backtests(app_config, rules_config, symbols, freeze_date)        # Step 4: Display results summary
+        all_results = _run_backtests(app_config, rules_config, symbols, freeze_date_obj)
+        # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
         _display_results(all_results)
         # Step 5: Save results
         run_timestamp = datetime.now().isoformat()
         _save_results(app_config, all_results, run_timestamp)
-        _generate_and_save_report(app_config, run_timestamp, rules_config)
+        _generate_and_save_report(app_config, run_timestamp)
 
     except typer.Exit:
         raise
@@ -265,23 +282,6 @@ def run(
             # Fallback to standard print if console is broken
             import sys
             print(f"\nCritical error: Could not save log file: {e}", file=sys.stderr)
-
-
-@app.command()
-def main(
-    ctx: typer.Context,
-    version: bool = typer.Option(False, "--version", help="Show version and exit")
-) -> None:
-    """KISS Signal CLI - Keep-It-Simple Signal Generation for NSE stocks."""
-    if version:
-        console.print("KISS Signal CLI v1.4")
-        raise typer.Exit()
-    
-    # If no command provided, show help
-    if ctx.invoked_subcommand is None:
-        console.print("No command specified. Use 'run' to execute the signal analysis.")
-        console.print("Try 'python run.py --help' for help.")
-        raise typer.Exit()
 
 
 if __name__ == "__main__":

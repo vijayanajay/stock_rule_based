@@ -56,7 +56,7 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         mock_bt_instance.find_optimal_strategies.return_value = []
 
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
         assert "Analysis complete." in result.stdout
@@ -94,7 +94,7 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
         mock_bt_instance.find_optimal_strategies.return_value = []
 
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path), "--verbose"]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "--verbose", "run"]
         )
         assert result.exit_code == 0, result.stdout
 
@@ -122,7 +122,7 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
         rules_path.write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path), "--freeze-data", "2025-01-01"]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "2025-01-01"]
         )
         assert result.exit_code == 0, result.stdout
         assert "skipping data refresh (freeze mode)" in result.stdout.lower()
@@ -167,7 +167,7 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
         }]
 
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
@@ -194,7 +194,7 @@ def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
         rules_path.write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path), "--freeze-data", "invalid-date"]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "invalid-date"]
         )
         assert result.exit_code == 1
         assert "Invalid isoformat string" in result.stdout
@@ -206,7 +206,7 @@ def test_run_command_no_config() -> None:
         # Create a dummy rules file so only the config is missing
         rules_path = Path("rules.yaml")
         rules_path.write_text("rules: []")
-        result = runner.invoke(app, ["run", "--config", "nonexistent.yaml", "--rules", str(rules_path)])
+        result = runner.invoke(app, ["--config", "nonexistent.yaml", "--rules", str(rules_path), "run"])
         assert result.exit_code == 1
         assert "Configuration file not found" in result.stdout
 
@@ -232,7 +232,7 @@ def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
         rules_path = Path("nonexistent_rules.yaml")
         
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
@@ -271,7 +271,7 @@ def test_run_command_with_persistence(
         rules_path.write_text("rules: []")
 
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
@@ -320,7 +320,7 @@ def test_run_command_persistence_failure_handling(
         mock_save_batch.side_effect = sqlite3.OperationalError("disk I/O error")
 
         result = runner.invoke(
-            app, ["run", "--config", str(config_path), "--rules", str(rules_path)]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
         assert "Top Strategies by Edge Score" in result.stdout

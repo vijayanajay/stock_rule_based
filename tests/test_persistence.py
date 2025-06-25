@@ -24,7 +24,7 @@ def sample_strategies() -> List[Dict[str, Any]]:
     return [
         {
             "symbol": "RELIANCE",
-            "rule_stack": ["sma_10_20_crossover"],
+            "rule_stack": [{'name': 'sma_10_20_crossover', 'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}}],
             "edge_score": 0.75,
             "win_pct": 65.0,
             "sharpe": 1.2,
@@ -33,7 +33,7 @@ def sample_strategies() -> List[Dict[str, Any]]:
         },
         {
             "symbol": "INFY",
-            "rule_stack": ["rsi_oversold", "ema_crossover"],
+            "rule_stack": [{'name': 'rsi_oversold_30', 'type': 'rsi_oversold', 'params': {'period': 14, 'oversold_threshold': 30.0}}],
             "edge_score": 0.68,
             "win_pct": 58.0,
             "sharpe": 0.9,
@@ -107,11 +107,11 @@ class TestSaveStrategiesBatch:
             rows = cursor.fetchall()
             
             assert rows[0][0] == "INFY"
-            assert json.loads(rows[0][1]) == ["rsi_oversold", "ema_crossover"]
+            assert json.loads(rows[0][1]) == [{'name': 'rsi_oversold_30', 'type': 'rsi_oversold', 'params': {'period': 14, 'oversold_threshold': 30.0}}]
             assert rows[0][2] == 0.68
             
             assert rows[1][0] == "RELIANCE"
-            assert json.loads(rows[1][1]) == ["sma_10_20_crossover"]
+            assert json.loads(rows[1][1]) == [{'name': 'sma_10_20_crossover', 'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}}]
             assert rows[1][2] == 0.75
     
     def test_save_strategies_batch_empty_list(self, temp_db_path: Path) -> None:
@@ -239,7 +239,7 @@ class TestIntegration:
             
             # Verify first strategy (INFY)
             assert rows[0][0] == "INFY"
-            assert json.loads(rows[0][1]) == ["rsi_oversold", "ema_crossover"]
+            assert json.loads(rows[0][1]) == [{'name': 'rsi_oversold_30', 'type': 'rsi_oversold', 'params': {'period': 14, 'oversold_threshold': 30.0}}]
             assert rows[0][2] == 0.68
             assert rows[0][3] == 58.0
             assert rows[0][4] == 0.9
@@ -249,5 +249,5 @@ class TestIntegration:
             
             # Verify second strategy (RELIANCE)
             assert rows[1][0] == "RELIANCE"
-            assert json.loads(rows[1][1]) == ["sma_10_20_crossover"]
+            assert json.loads(rows[1][1]) == [{'name': 'sma_10_20_crossover', 'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}}]
             assert rows[1][2] == 0.75

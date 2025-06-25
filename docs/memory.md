@@ -20,6 +20,18 @@
 
 ---
 
+### CLI Structural Misconfiguration and Test Desynchronization (2025-06-26)
+**Issue**: Widespread test failures across `test_cli.py` and `test_integration.py`, all showing a `typer.Exit(2)` error code. This indicated a command-line usage error, not a bug in the application logic itself.
+**Root Cause**: A structural flaw in the CLI's design and a subsequent desynchronization with the test suite.
+1.  **Faulty CLI Structure**: The `typer` application was structured incorrectly. Global options (like `--config` and `--rules`) were defined directly on the `run` command instead of on a main `app.callback()` function. This led to argument parsing conflicts within the `typer` framework.
+2.  **Test/Component Desynchronization**: After an initial attempt to fix the CLI structure, the tests were not correctly updated. The tests continued to invoke the CLI using the old argument format (e.g., `runner.invoke(app, ["run", "--config", ...])`), which was now invalid. The correct invocation required global options to be passed *before* the command (e.g., `runner.invoke(app, ["--config", ..., "run"])`).
+**Fix**:
+1.  **Corrected CLI Structure**: The CLI in `src/kiss_signal/cli.py` was refactored to use an `app.callback()` function. This function now handles all global options (`--config`, `--rules`, `--verbose`), storing the loaded configuration in the `typer.Context` object. The `run` command was simplified to accept only its own specific options (like `--freeze-data`) and retrieve the global configuration from the context.
+2.  **Synchronized Test Suite**: All CLI tests in `tests/test_cli.py` and `tests/test_integration.py` were updated to match the new, correct invocation syntax. All global options are now passed to `runner.invoke` before the `run` command, resolving the usage errors.
+**Prevention**: When designing a CLI with global options and subcommands, use the framework's designated pattern for this (e.g., `typer.callback()`). This ensures a clear separation between global state and command-specific logic. Crucially, when the CLI's invocation signature changes, the entire test suite must be updated in lock-step to prevent tests from becoming obsolete and testing the wrong behavior.
+
+---
+
 ### Regression of Brittle I/O Tests in Persistence Layer (2025-06-27)
 **Issue**: Two tests in `test_persistence.py` were failing: one with a `PermissionError` during test cleanup, and another with `Failed: DID NOT RAISE <class 'OSError'>`.
 **Root Cause**: This is a regression of a previously identified structural problem. The test suite contained brittle I/O tests that were not robust against environmental differences and had been re-introduced into the codebase.
