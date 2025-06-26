@@ -321,3 +321,9 @@ The tests were not updated in lock-step and were still testing the obsolete, non
 **Prevention**: Treat test code as a first-class citizen with the same quality standards as application code. Incomplete or "scaffolding" tests should not be committed to the main branch. All tests must be complete, self-contained (hermetic), and passing before a feature is considered "done". This prevents the test suite from becoming a source of noise and ensures it accurately reflects the health and correctness of the application.
 
 ---
+
+### Inconsistent State Management in Reporting (2025-07-08)
+**Issue**: The daily report summary was inaccurate, over-counting open positions by including new signals generated in the same run.
+**Root Cause**: A structural flaw in the `reporter.py` module's data flow. The function first added new signals to the database as `OPEN` positions and *then* fetched all `OPEN` positions for reporting. This conflated the portfolio's state *before* the run with its state *after* the run, leading to new signals being incorrectly counted in the "Open Positions" summary.
+**Fix**: The logic in `generate_daily_report` was reordered. It now fetches and processes all pre-existing open positions *before* identifying and persisting new signals. This ensures a clean separation of state: the "Open Positions" section reflects the portfolio at the start of the run, and the "New Buys" section reflects the actions generated during the run.
+**Prevention**: When a component both reads and writes state within a single operation, ensure a clear logical separation between the "read state" and "write state" phases. The state used for reporting or decision-making should be captured *before* new state changes are applied to avoid self-referential inconsistencies.

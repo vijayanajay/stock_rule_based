@@ -200,10 +200,9 @@ def _calculate_open_position_metrics(
     run_date = config.freeze_date or date.today()
 
     for pos in open_positions:
+        entry_date = date.fromisoformat(pos["entry_date"])
+        days_held = (run_date - entry_date).days
         try:
-            entry_date = date.fromisoformat(pos["entry_date"])
-            days_held = (run_date - entry_date).days
-
             price_data = data.get_price_data(
                 symbol=pos["symbol"],
                 cache_dir=Path(config.cache_dir),
@@ -213,38 +212,44 @@ def _calculate_open_position_metrics(
                 freeze_date=config.freeze_date,
             )
             if price_data is None or price_data.empty:
-                continue
+                logger.warning(f"Could not get price data for open position {pos['symbol']}. Reporting with N/A.")
+                pos.update({
+                    "current_price": None, "return_pct": None,
+                    "nifty_return_pct": None, "days_held": days_held,
+                })
+            else:
+                current_price = price_data['close'].iloc[-1]
+                return_pct = (current_price - pos["entry_price"]) / pos["entry_price"] * 100
 
-            current_price = price_data['close'].iloc[-1]
-            return_pct = (current_price - pos["entry_price"]) / pos["entry_price"] * 100
+                nifty_data = data.get_price_data(
+                    symbol="^NSEI",
+                    cache_dir=Path(config.cache_dir),
+                    refresh_days=config.cache_refresh_days,
+                    start_date=entry_date,
+                    end_date=run_date,
+                    freeze_date=config.freeze_date,
+                )
+                
+                nifty_return_pct = 0.0
+                if nifty_data is not None and not nifty_data.empty:
+                    nifty_start_price = nifty_data['close'].iloc[0]
+                    nifty_end_price = nifty_data['close'].iloc[-1]
+                    if nifty_start_price > 0:
+                        nifty_return_pct = (nifty_end_price - nifty_start_price) / nifty_start_price * 100
 
-            nifty_data = data.get_price_data(
-                symbol="^NSEI",
-                cache_dir=Path(config.cache_dir),
-                refresh_days=config.cache_refresh_days,
-                start_date=entry_date,
-                end_date=run_date,
-                freeze_date=config.freeze_date,
-            )
-            
-            nifty_return_pct = 0.0
-            if nifty_data is not None and not nifty_data.empty:
-                nifty_start_price = nifty_data['close'].iloc[0]
-                nifty_end_price = nifty_data['close'].iloc[-1]
-                if nifty_start_price > 0:
-                    nifty_return_pct = (nifty_end_price - nifty_start_price) / nifty_start_price * 100
-
-            pos.update({
-                "current_price": current_price,
-                "return_pct": return_pct,
-                "nifty_return_pct": nifty_return_pct,
-                "days_held": days_held,
-            })
-            augmented_positions.append(pos)
+                pos.update({
+                    "current_price": current_price, "return_pct": return_pct,
+                    "nifty_return_pct": nifty_return_pct, "days_held": days_held,
+                })
 
         except Exception as e:
             logger.error(f"Error calculating metrics for position {pos['symbol']}: {e}")
-            continue
+            pos.update({
+                "current_price": None, "return_pct": None,
+                "nifty_return_pct": None,
+                "days_held": days_held,
+            })
+        augmented_positions.append(pos)
             
     return augmented_positions
 
@@ -261,28 +266,43 @@ def _manage_open_positions(
         entry_date = date.fromisoformat(pos["entry_date"])
         days_held = (run_date - entry_date).days
         if days_held >= config.hold_period:
-            price_data = data.get_price_data(
-                symbol=pos["symbol"], cache_dir=Path(config.cache_dir),
-                refresh_days=config.cache_refresh_days,
-                start_date=entry_date, end_date=run_date,
-                freeze_date=config.freeze_date
-            )
-            if price_data is not None and not price_data.empty:
-                pos['exit_price'] = price_data['close'].iloc[-1]
-                pos['exit_date'] = run_date.strftime('%Y-%m-%d')
-                pos['days_held'] = days_held
-                pos['final_return_pct'] = (pos['exit_price'] - pos['entry_price']) / pos['entry_price'] * 100
-                nifty_data = data.get_price_data(
-                    symbol="^NSEI", cache_dir=Path(config.cache_dir),
+            try:
+                price_data = data.get_price_data(
+                    symbol=pos["symbol"], cache_dir=Path(config.cache_dir),
+                    refresh_days=config.cache_refresh_days,
                     start_date=entry_date, end_date=run_date,
                     freeze_date=config.freeze_date
                 )
-                pos['final_nifty_return_pct'] = 0.0
-                if nifty_data is not None and not nifty_data.empty:
-                    nifty_start = nifty_data['close'].iloc[0]
-                    nifty_end = nifty_data['close'].iloc[-1]
-                    if nifty_start > 0:
-                        pos['final_nifty_return_pct'] = (nifty_end - nifty_start) / nifty_start * 100
+                if price_data is not None and not price_data.empty:
+                    pos['exit_price'] = price_data['close'].iloc[-1]
+                    pos['exit_date'] = run_date.strftime('%Y-%m-%d')
+                    pos['days_held'] = days_held
+                    pos['final_return_pct'] = (pos['exit_price'] - pos['entry_price']) / pos['entry_price'] * 100
+                    nifty_data = data.get_price_data(
+                        symbol="^NSEI", cache_dir=Path(config.cache_dir),
+                        start_date=entry_date, end_date=run_date,
+                        freeze_date=config.freeze_date
+                    )
+                    pos['final_nifty_return_pct'] = 0.0
+                    if nifty_data is not None and not nifty_data.empty:
+                        nifty_start = nifty_data['close'].iloc[0]
+                        nifty_end = nifty_data['close'].iloc[-1]
+                        if nifty_start > 0:
+                            pos['final_nifty_return_pct'] = (nifty_end - nifty_start) / nifty_start * 100
+                else:
+                    logger.warning(f"Could not get exit price for closing position {pos['symbol']}: No data.")
+                    pos['exit_price'] = None
+                    pos['exit_date'] = run_date.strftime('%Y-%m-%d')
+                    pos['days_held'] = days_held
+                    pos['final_return_pct'] = None
+                    pos['final_nifty_return_pct'] = None
+            except Exception as e:
+                logger.warning(f"Could not get exit price for closing position {pos['symbol']}: {e}")
+                pos['exit_price'] = None
+                pos['exit_date'] = run_date.strftime('%Y-%m-%d')
+                pos['days_held'] = days_held
+                pos['final_return_pct'] = None
+                pos['final_nifty_return_pct'] = None
             positions_to_close.append(pos)
         else:
             positions_to_hold.append(pos)
@@ -314,7 +334,19 @@ def generate_daily_report(
     Returns the path to the generated report file, or None if failed.
     """
     try:
-        # 1. Identify and save new buy signals
+        # 1. Fetch all existing open positions and determine their status FIRST
+        open_positions = persistence.get_open_positions(db_path)
+        positions_to_hold, positions_to_close = _manage_open_positions(open_positions, config)
+
+        # 2. Calculate metrics for reporting (on-the-fly for open positions to be held)
+        reportable_open_positions = _calculate_open_position_metrics(positions_to_hold, config)
+
+        # 3. Close positions that have met their exit criteria
+        if positions_to_close:
+            persistence.close_positions_batch(db_path, positions_to_close)
+            logger.info(f"Closed {len(positions_to_close)} positions.")
+
+        # 4. Identify and save new buy signals
         new_signals = _identify_new_signals(db_path, run_timestamp, config)
         if new_signals:
             strategies = _fetch_best_strategies(db_path, run_timestamp, 0.0)
@@ -324,19 +356,7 @@ def generate_daily_report(
             persistence.add_new_positions_from_signals(db_path, new_signals)
             logger.info(f"Added {len(new_signals)} new positions to the database.")
 
-        # 2. Fetch all open positions and determine their status
-        open_positions = persistence.get_open_positions(db_path)
-        positions_to_hold, positions_to_close = _manage_open_positions(open_positions, config)
-
-        # 3. Calculate metrics for reporting (on-the-fly for open positions)
-        reportable_open_positions = _calculate_open_position_metrics(positions_to_hold, config)
-
-        # 4. Close positions that have met their exit criteria
-        if positions_to_close:
-            persistence.close_positions_batch(db_path, positions_to_close)
-            logger.info(f"Closed {len(positions_to_close)} positions.")
-
-        # 5. Generate the report content
+        # 5. Generate the report content using the separated lists
         report_date_str = date.today().strftime("%Y-%m-%d")
         summary_line = (
             f"**Summary:** {len(new_signals)} New Buy Signals, "
@@ -359,10 +379,13 @@ def generate_daily_report(
             open_pos_table = "| Ticker | Entry Date | Entry Price | Current Price | Return % | NIFTY Period Return % | Day in Trade |\n"
             open_pos_table += "|:-------|:-----------|:------------|:--------------|:---------|:----------------------|:-------------|\n"
             for pos in reportable_open_positions:
+                current_price_str = f"{pos['current_price']:.2f}" if pos.get('current_price') is not None else "N/A"
+                return_pct_str = f"{pos['return_pct']:+.2f}%" if pos.get('return_pct') is not None else "N/A"
+                nifty_return_pct_str = f"{pos['nifty_return_pct']:+.2f}%" if pos.get('nifty_return_pct') is not None else "N/A"
                 open_pos_table += (
                     f"| {pos['symbol']} | {pos['entry_date']} | {pos['entry_price']:.2f} | "
-                    f"{pos['current_price']:.2f} | {pos['return_pct']:+.2f}% | "
-                    f"{pos['nifty_return_pct']:+.2f}% | {pos['days_held']} / {config.hold_period} |\n"
+                    f"{current_price_str} | {return_pct_str} | "
+                    f"{nifty_return_pct_str} | {pos['days_held']} / {config.hold_period} |\n"
                 )
 
         # Format POSITIONS TO SELL table
