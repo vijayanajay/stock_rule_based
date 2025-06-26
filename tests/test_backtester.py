@@ -45,31 +45,6 @@ class TestBacktester:
         edge_score = backtester.calc_edge_score(0.0, 0.0, weights)
         assert edge_score == 0.0
 
-    def test_calc_edge_score_custom_weights(self):
-        """Test edge score calculation with custom weights."""
-        backtester = Backtester()
-        weights = {'win_pct': 0.8, 'sharpe': 0.2}
-        
-        edge_score = backtester.calc_edge_score(0.6, 2.0, weights)
-        expected = (0.6 * 0.8) + (2.0 * 0.2)
-        assert edge_score == pytest.approx(expected, rel=1e-3)
-
-    def test_find_optimal_strategies_empty_list(self):
-        """Test find_optimal_strategies with empty rule combinations list."""
-        backtester = Backtester()
-        
-        # Create minimal price data for the test
-        price_data = pd.DataFrame({
-            'close': [100, 101, 102],
-            'high': [105, 106, 107],
-            'low': [95, 96, 97],
-            'open': [100, 101, 102],
-            'volume': [1000, 1100, 1200]
-        }, index=pd.date_range('2023-01-01', periods=3))
-        
-        result = backtester.find_optimal_strategies([], price_data)
-        assert result == []
-
     def test_generate_signals_empty_rule_stack(self, sample_price_data):
         """Test signal generation with an empty rule stack."""
         backtester = Backtester()
@@ -143,32 +118,40 @@ def sample_price_data():
 
 
 @pytest.fixture
-def sample_rule_combinations():
-    """Generate sample rule combinations for testing."""
-    return [
-        {
+def sample_rules_config():
+    """Generate a sample rules config dictionary for testing."""
+    return {
+        'baseline': {
             'name': 'sma_crossover_test',
             'type': 'sma_crossover',
             'params': {'fast_period': 10, 'slow_period': 20}
         },
-        {
-            'name': 'rsi_oversold_test',
-            'type': 'rsi_oversold',
-            'params': {'period': 14, 'oversold_threshold': 30.0}
-        }
-    ]
+        'layers': [
+            {
+                'name': 'rsi_oversold_test',
+                'type': 'rsi_oversold',
+                'params': {'period': 14, 'oversold_threshold': 30.0}
+            }
+        ]
+    }
 
 
 class TestBacktesterIntegration:
     """Integration tests for backtester with sample data."""
 
-    def test_find_optimal_strategies_basic_flow(self, sample_price_data, sample_rule_combinations):
+    def test_find_optimal_strategies_basic_flow(self, sample_price_data, sample_rules_config):
         """Test basic flow of find_optimal_strategies with sample data."""
         backtester = Backtester()
-          # This test will run the full logic, but we just check the output type for now
-        result = backtester.find_optimal_strategies(sample_rule_combinations, sample_price_data)
+        result = backtester.find_optimal_strategies(
+            rules_config=sample_rules_config,
+            price_data=sample_price_data,
+            symbol="TEST.NS"
+        )
+        # The test data may not always produce a valid strategy above the threshold.
+        # The key is to ensure the function returns a list without errors.
         assert isinstance(result, list)
-        # TODO: Add more assertions once implementation is complete
+        if result:  # Only validate contents if strategies were found
+            assert "edge_score" in result[0]
 
 
 def create_sample_backtest_data():

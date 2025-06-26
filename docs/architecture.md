@@ -82,9 +82,9 @@ graph TD
 | # | Pattern | Notes & Rationale |
 |---|---------|------------------|
 | 1 | **Modular Monolith** | One deployable unit is simpler for a personal hobby project. Internally segmented into small modules (`data_manager`, `backtester`, `rule_funcs`, `reporter`, `persistence`). No hard 1 000-LoC limit, but every addition must justify itself. |
-| 2 | **Orchestration & Facade** | CLI + YAML act as a thin façade over heavy libraries (`vectorbt`, `pandas`, `rich`). |
+| 2 | **Orchestration & Facade** | The `cli.py` module orchestrates calls to other modules (`data`, `backtester`, `persistence`, `reporter`) and acts as a thin façade over heavy libraries (`vectorbt`, `pandas`, `rich`). |
 | 3 | **Declarative Configuration** | `config.yaml` and `rules.yaml` describe *what* to do. Execution logic lives in code. |
-| 4 | **Data Persistence (Normalized)** | Two main tables: `price` and `rule_stack`. `trades` now references `rule_stack_id` and **does not duplicate** metrics (`win_pct`, `sharpe`, `edge_score`). |
+| 4 | **Data Persistence (Denormalized)** | Two main tables: `strategies` and `positions`. The `strategies` table stores the full rule definition as a JSON string, making each record self-contained and avoiding complex joins. |
 | 5 | **File-based Caching (Hash-validated)** | Historical data cached as CSV + SHA-256 checksum. `--refresh-cache` flag forces invalidation. |
 | 6 | **Deterministic Snapshot Option** | `--freeze-data YYYY-MM-DD` instructs the CLI to ignore any newer price updates, guaranteeing reproducible results. |
 
@@ -95,24 +95,24 @@ graph TD
 ```mermaid
 graph TD
     subgraph "Entrypoint"
-    CLI
+    CLI[cli.py]
     end
 
     subgraph "Core Logic"
-    ConfigModule[Config]
-    DataManager[Data Manager]
-    BacktesterModule[Backtester]
-    SignalGenerator[Signal Generator]
-    PersistenceModule[Persistence]
-    ReporterModule[Reporter]
+    ConfigModule[config.py]
+    DataModule[data.py]
+    BacktesterModule[backtester.py]
+    RulesModule[rules.py]
+    PersistenceModule[persistence.py]
+    ReporterModule[reporter.py]
     end
 
     subgraph "External Libraries"
     Pydantic
     PyYAML
     yfinance
-    vectorbt
     rich
+    vectorbt
     end
 
     subgraph "Data & Output"
@@ -120,18 +120,24 @@ graph TD
     MarkdownReport((Markdown Report))
     end
 
-    CLI --> ConfigModule
+    CLI --reads--> ConfigModule
     ConfigModule --uses--> Pydantic
     ConfigModule --uses--> PyYAML
-    ConfigModule --Validated Config--> DataManager
-    DataManager --uses--> yfinance
-    DataManager --Market Data--> BacktesterModule
+
+    CLI --uses--> DataModule
+    DataModule --uses--> yfinance
+
+    CLI --uses--> BacktesterModule
     BacktesterModule --uses--> vectorbt
-    BacktesterModule --Optimal Strategy--> PersistenceModule
+    BacktesterModule --uses--> RulesModule
+    BacktesterModule --Market Data from--> DataModule
+
+    CLI --uses--> PersistenceModule
+    BacktesterModule --Optimal Strategies--> PersistenceModule
     PersistenceModule --writes--> SQLiteDB
-    BacktesterModule --Optimal Strategy & Latest Data--> SignalGenerator
-    SignalGenerator --New Signals--> PersistenceModule
-    PersistenceModule --> ReporterModule
+
+    CLI --uses--> ReporterModule
+    ReporterModule --reads from--> PersistenceModule
     ReporterModule --uses--> rich
     ReporterModule --> MarkdownReport
 ```
@@ -212,48 +218,42 @@ class Config(BaseModel):
     edge_score_weights: EdgeScoreWeights
 ```
 
-### Database Schema (SQLite, Normalised)
+### Database Schema (SQLite, Denormalized)
 
 ```sql
--- Price table (unchanged)
-CREATE TABLE price (
-  ticker TEXT,
-  date   DATE,
-  open   REAL,
-  high   REAL,
-  low    REAL,
-  close  REAL,
-  volume REAL,
-  PRIMARY KEY (ticker, date)
+-- Stores optimal strategies found during a backtest run.
+CREATE TABLE strategies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL,
+    run_timestamp TEXT NOT NULL,
+    rule_stack TEXT NOT NULL, -- Full rule definition stored as JSON
+    edge_score REAL NOT NULL,
+    win_pct REAL NOT NULL,
+    sharpe REAL NOT NULL,
+    total_trades INTEGER NOT NULL,
+    avg_return REAL NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(symbol, rule_stack, run_timestamp)
 );
 
--- Rule stacks now keep history
-CREATE TABLE rule_stack (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticker     TEXT,
-  layers     TEXT,
-  win_pct    REAL,
-  sharpe     REAL,
-  edge_score REAL,
-  updated_at DATE
-);
-
--- Trades reference rule_stack_id; no duplicate metrics
-CREATE TABLE trades (
+-- Tracks the lifecycle of individual trade positions.
+CREATE TABLE positions (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  trade_date      DATE,
-  ticker          TEXT,
+  symbol          TEXT NOT NULL,
+  entry_date      TEXT NOT NULL,
   entry_price     REAL,
-  rule_stack_id   INTEGER,
-  status          TEXT,  -- NEW_BUY | OPEN | SELL
-  day_in_trade    INTEGER,
-  close_price     REAL,
-  exit_date       DATE,
-  FOREIGN KEY(rule_stack_id) REFERENCES rule_stack(id)
+  exit_date       TEXT,
+  exit_price      REAL,
+  status          TEXT NOT NULL CHECK(status IN ('OPEN', 'CLOSED')),
+  rule_stack_used TEXT NOT NULL, -- Full rule definition stored as JSON
+  final_return_pct REAL,
+  final_nifty_return_pct REAL,
+  days_held       INTEGER,
+  created_at      TEXT DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-*The report generator joins `trades` ↔ `rule_stack` to display `EdgeScore`, `win_pct`, etc.*
+*The `reporter` module reads from the `strategies` and `positions` tables to generate daily reports.*
 
 ---
 

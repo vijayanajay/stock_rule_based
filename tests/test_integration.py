@@ -101,16 +101,16 @@ INFY,Infosys Ltd,IT"""
             
             # Create rules.yaml with real rule configurations
             rules_content = {
-                'rules': [
-                    {
-                        'name': 'sma_10_20_crossover',
-                        'type': 'sma_crossover',
-                        'description': 'Buy when 10-day SMA crosses above 20-day SMA',
-                        'params': {
-                            'fast_period': 10,
-                            'slow_period': 20
-                        }
-                    },
+                'baseline': {
+                    'name': 'sma_10_20_crossover',
+                    'type': 'sma_crossover',
+                    'description': 'Buy when 10-day SMA crosses above 20-day SMA',
+                    'params': {
+                        'fast_period': 10,
+                        'slow_period': 20
+                    }
+                },
+                'layers': [
                     {
                         'name': 'rsi_oversold_30',
                         'type': 'rsi_oversold',
@@ -149,14 +149,18 @@ INFY,Infosys Ltd,IT"""
         assert config.min_trades_threshold == 5
         
         # Verify rules structure
-        assert len(rules) == 2
-        assert all('name' in rule for rule in rules)
-        assert all('type' in rule for rule in rules)
-        assert all('params' in rule for rule in rules)
+        assert 'baseline' in rules and isinstance(rules['baseline'], dict)
+        assert 'layers' in rules and isinstance(rules['layers'], list)
+        assert 'name' in rules['baseline']
+        assert 'type' in rules['baseline']
+        assert 'params' in rules['baseline']
+        assert len(rules['layers']) > 0
+        assert 'name' in rules['layers'][0]
         
         # Verify rule types match available functions
         from kiss_signal import rules as rules_module
-        for rule in rules:
+        all_rules = [rules['baseline']] + rules['layers']
+        for rule in all_rules:
             rule_type = rule['type']
             assert hasattr(rules_module, rule_type), f"Rule function {rule_type} not found"
     
@@ -204,8 +208,9 @@ INFY,Infosys Ltd,IT"""
         
         # This should not raise an exception
         strategies = backtester.find_optimal_strategies(
-            rule_combinations=rules_config,
+            rules_config=rules_config,
             price_data=price_data,
+            symbol=symbol,
             freeze_date=date(2024, 6, 1),
         )
         

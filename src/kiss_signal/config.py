@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from datetime import date
 import yaml
@@ -67,7 +67,7 @@ def load_config(config_path: Path) -> Config:
     return Config(**data)
 
 # impure
-def load_rules(rules_path: Path) -> List[Dict[str, Any]]:
+def load_rules(rules_path: Path) -> Dict[str, Any]:
     """Load trading rules from a YAML file."""
     if not rules_path.exists():
         raise FileNotFoundError(f"Rules file not found: {rules_path}")
@@ -75,9 +75,16 @@ def load_rules(rules_path: Path) -> List[Dict[str, Any]]:
         data = yaml.safe_load(rules_path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         raise ValueError(f"Invalid YAML in rules file: {e}") from e
-    if not isinstance(data, dict) or "rules" not in data:
-        raise ValueError("Rules file must be a dictionary with a 'rules' key.")
-    rules = data["rules"]
-    if not isinstance(rules, list):
-        raise ValueError("The 'rules' key must contain a list of rule configurations.")
-    return rules
+    if not isinstance(data, dict):
+        raise ValueError("Rules file must be a dictionary.")
+    if "baseline" not in data:
+        raise ValueError("Rules file must contain a 'baseline' key.")
+    if not isinstance(data["baseline"], dict):
+        raise ValueError("The 'baseline' key must contain a rule dictionary.")
+    if "layers" in data and not isinstance(data["layers"], list):
+        raise ValueError("The 'layers' key must contain a list of rule configurations.")
+    
+    if "layers" not in data:
+        data["layers"] = []
+        
+    return data

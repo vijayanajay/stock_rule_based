@@ -170,14 +170,37 @@ def _identify_new_signals(
                 continue
             latest_date = price_data.index[-1]
             
-            if _check_for_signal(price_data, rule_def):
+            # Check all rules in the stack (AND logic)
+            is_signal = True
+            if not rule_stack_defs:
+                is_signal = False
+            else:
+                for rule_def in rule_stack_defs:
+                    if not _check_for_signal(price_data, rule_def):
+                        is_signal = False
+                        break
+            try:
+                price_data = data.get_price_data(
+                    symbol=symbol,
+                    cache_dir=Path(config.cache_dir),
+                    refresh_days=config.cache_refresh_days,
+                    years=config.historical_data_years,
+                    freeze_date=config.freeze_date,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to load price data for {symbol}: {e}")
+                continue
+            latest_date = price_data.index[-1]
+            
+            if is_signal:
                 entry_price = price_data['close'].iloc[-1]
                 signal_date = latest_date.strftime('%Y-%m-%d')
+                rule_names = " + ".join([r.get('name', r.get('type', '')) for r in rule_stack_defs])
                 signals.append({
                     'ticker': symbol,
                     'date': signal_date,
                     'entry_price': entry_price,
-                    'rule_stack': rule_def.get('name', rule_def['type']),
+                    'rule_stack': rule_names,
                     'edge_score': strategy['edge_score']
                 })
                 

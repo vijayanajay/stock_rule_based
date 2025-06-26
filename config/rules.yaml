@@ -1,26 +1,26 @@
 # Trading Rules Configuration
 # 
-# This file defines the technical analysis rules used for signal generation.
-# Each rule specifies a type (indicator) and its parameters.
+# This file defines the technical analysis rules used for signal generation,
+# structured as a baseline rule and optional layers to test on top of it.
 
-rules:
-  - name: "sma_10_20_crossover"
-    type: "sma_crossover"
-    description: "Buy when 10-day SMA crosses above 20-day SMA"
-    params:
-      fast_period: 10
-      slow_period: 20
-    
-  - name: "rsi_oversold_30"
+baseline:
+  name: "sma_10_20_crossover"
+  type: "sma_crossover"
+  description: "Baseline: Buy when 10-day SMA crosses above 20-day SMA"
+  params:
+    fast_period: 10
+    slow_period: 20
+
+layers:
+  - name: "rsi_confirm"
     type: "rsi_oversold"
-    description: "Buy when RSI drops below 30 (oversold condition)"
+    description: "Layer: Confirm with RSI dropping below 30 (oversold)"
     params:
       period: 14
       oversold_threshold: 30.0
-    
-  - name: "ema_12_26_crossover"
+  - name: "ema_confirm"
     type: "ema_crossover"
-    description: "Buy when 12-day EMA crosses above 26-day EMA"
+    description: "Layer: Confirm with 12-day EMA crossing above 26-day EMA"
     params:
       fast_period: 12
       slow_period: 26

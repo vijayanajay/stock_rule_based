@@ -60,7 +60,7 @@ def _show_banner() -> None:
 
 def _run_backtests(
     app_config: Config,
-    rules_config: List[Dict[str, Any]],
+    rules_config: Dict[str, Any],
     symbols: List[str],
     freeze_date: Optional[date],
 ) -> List[Dict[str, Any]]:
@@ -88,8 +88,9 @@ def _run_backtests(
                     continue
 
                 strategies = bt.find_optimal_strategies(
-                    rule_combinations=rules_config,
+                    rules_config=rules_config,
                     price_data=price_data,
+                    symbol=symbol,
                     freeze_date=freeze_date,
                 )
                 

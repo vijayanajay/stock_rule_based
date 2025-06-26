@@ -1,6 +1,6 @@
 # Story 010: Architectural Debt Remediation and Core Infrastructure Cleanup
 
-## Status: 🔄 READY FOR DEVELOPMENT
+## Status: ✅ COMPLETE
 
 **Priority:** CRITICAL  
 **Estimated Story Points:** 13  
@@ -10,6 +10,16 @@
 
 ### Critical Architectural Review Context
 This story addresses **four critical architectural flaws** identified in the 2025-07-09 baseline architectural audit (`arch_review.md`). These flaws represent fundamental integrity issues that must be resolved to maintain the project's architectural health and prevent further technical debt accumulation.
+
+### Implementation Summary
+- **Dead Code Removed:** Deleted `src/kiss_signal/adapters/yfinance_adapter.py` and its tests, as it was a duplicate of logic in `data.py`.
+- **Backtester Feature Implemented:** The backtester now correctly implements the `baseline` + `layers` strategy discovery mechanism as specified in the PRD. It tests the baseline rule alone, then tests the baseline combined with each layer, and ranks the results.
+- **Architecture Documentation Corrected:** `docs/architecture.md` has been updated to reflect the actual codebase. References to non-existent modules (`DataManager`, `SignalGenerator`) have been removed, and the database schema has been corrected to show the `strategies` and `positions` tables with JSON storage for rule definitions.
+- **Dependencies Standardized:** The `requirements.txt` file has been deleted, establishing `pyproject.toml` as the single source of truth for all project dependencies.
+- **Use Cases Updated:** All relevant use cases (`uc_cli.md`, `uc_backtester.md`) have been updated to reflect the new `baseline` + `layers` logic, ensuring documentation-to-code traceability.
+- **Test Suite Aligned:** The test suite has been updated to pass with the new architectural changes, ensuring no regressions were introduced.
+
+**Final Status:** All four critical architectural flaws have been resolved. The codebase, documentation, and dependency management are now consistent and aligned.
 
 **Architectural Audit Verdict:** **SYSTEM INTEGRITY DEGRADED** - Critical drift between documentation, requirements, and implementation detected.
 

@@ -11,6 +11,16 @@ from kiss_signal.cli import app
 import pandas as pd
 
 
+VALID_RULES_YAML = """
+baseline:
+  name: "test_baseline"
+  type: "sma_crossover"
+  params:
+    fast_period: 5
+    slow_period: 10
+"""
+
+
 # Test imports first
 def test_cli_import() -> None:
     """Test that CLI app can be imported without issues."""
@@ -45,7 +55,7 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
-        rules_path.write_text("rules: []")
+        rules_path.write_text(VALID_RULES_YAML)
 
         mock_data.load_universe.return_value = ["RELIANCE"]
         mock_data.get_price_data.return_value = pd.DataFrame(
@@ -83,7 +93,7 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
-        rules_path.write_text("rules: []")
+        rules_path.write_text(VALID_RULES_YAML)
 
         mock_data.load_universe.return_value = ["RELIANCE"]
         mock_data.get_price_data.return_value = pd.DataFrame(
@@ -119,7 +129,7 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
-        rules_path.write_text("rules: []")
+        rules_path.write_text(VALID_RULES_YAML)
 
         result = runner.invoke(
             app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "2025-01-01"]
@@ -149,7 +159,7 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
-        rules_path.write_text("rules: []")
+        rules_path.write_text(VALID_RULES_YAML)
 
         mock_data.load_universe.return_value = ["RELIANCE"]
         mock_data.get_price_data.return_value = pd.DataFrame(
@@ -191,7 +201,7 @@ def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
-        rules_path.write_text("rules: []")
+        rules_path.write_text(VALID_RULES_YAML)
 
         result = runner.invoke(
             app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "invalid-date"]
@@ -268,7 +278,7 @@ def test_run_command_with_persistence(
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
-        rules_path.write_text("rules: []")
+        rules_path.write_text(VALID_RULES_YAML)
 
         result = runner.invoke(
             app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
@@ -314,7 +324,7 @@ def test_run_command_persistence_failure_handling(
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
-        rules_path.write_text("rules: []")
+        rules_path.write_text(VALID_RULES_YAML)
 
         # Mock persistence failure
         mock_save_batch.side_effect = sqlite3.OperationalError("disk I/O error")
