@@ -244,7 +244,7 @@ def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool
     
     Args:
         symbol: Symbol name (without .NS suffix)
-        data: DataFrame to save
+        data: DataFrame to save (should have 'date' column, not as index)
         cache_dir: Directory to save cached data files
         
     Returns:
@@ -253,8 +253,17 @@ def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool
     cache_file = cache_dir / f"{symbol}.NS.csv"
     
     try:
-        # Save with index=True to preserve the date index
-        data.to_csv(cache_file, index=False)
+        # Ensure data has 'date' as column, not index
+        if data.index.name == 'date' or isinstance(data.index, pd.DatetimeIndex):
+            # Reset index to make date a column
+            data_to_save = data.reset_index()
+            if data_to_save.columns[0] != 'date':
+                data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
+        else:
+            data_to_save = data.copy()
+        
+        # Save without index to avoid "Unnamed: 0" columns
+        data_to_save.to_csv(cache_file, index=False)
         return True
     except Exception as e:
         logger.error(f"Failed to save cache for {symbol}: {e}")
@@ -265,6 +274,12 @@ def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
     """Load symbol data from cache file."""
     cache_file = cache_dir / f"{symbol}.NS.csv"
     data = pd.read_csv(cache_file)
+    
+    # Clean up any unnamed index columns that might have been saved accidentally
+    unnamed_cols = [col for col in data.columns if col.startswith('Unnamed:')]
+    if unnamed_cols:
+        logger.debug(f"Removing unnamed columns from {symbol}: {unnamed_cols}")
+        data = data.drop(columns=unnamed_cols)
     
     # Set the date column as index and parse as datetime
     if 'date' in data.columns:

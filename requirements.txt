@@ -9,6 +9,7 @@ yfinance>=0.2.18
 
 # Data and backtesting
 vectorbt>=0.25.0
+python-telegram-bot==13.7
 pandas-ta>=0.3.14b
 
 # Reporting (pyfolio optional for PDF generation)

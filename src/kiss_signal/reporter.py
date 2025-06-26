@@ -8,7 +8,7 @@ positions to sell.
 
 from pathlib import Path
 from datetime import date
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 import json
 import sqlite3
@@ -197,18 +197,19 @@ def _calculate_open_position_metrics(
         return []
 
     augmented_positions = []
-    today = date.today()
+    run_date = config.freeze_date or date.today()
 
     for pos in open_positions:
         try:
             entry_date = date.fromisoformat(pos["entry_date"])
-            days_held = (today - entry_date).days
+            days_held = (run_date - entry_date).days
 
             price_data = data.get_price_data(
                 symbol=pos["symbol"],
                 cache_dir=Path(config.cache_dir),
                 refresh_days=config.cache_refresh_days,
-                years=1,
+                start_date=entry_date,
+                end_date=run_date,
                 freeze_date=config.freeze_date,
             )
             if price_data is None or price_data.empty:
@@ -222,7 +223,7 @@ def _calculate_open_position_metrics(
                 cache_dir=Path(config.cache_dir),
                 refresh_days=config.cache_refresh_days,
                 start_date=entry_date,
-                end_date=today,
+                end_date=run_date,
                 freeze_date=config.freeze_date,
             )
             
@@ -254,25 +255,26 @@ def _manage_open_positions(
     """Separates open positions into 'hold' and 'close' lists and calculates metrics."""
     positions_to_hold: List[Dict[str, Any]] = []
     positions_to_close: List[Dict[str, Any]] = []
-    today = date.today()
+    run_date = config.freeze_date or date.today()
 
     for pos in open_positions:
         entry_date = date.fromisoformat(pos["entry_date"])
-        days_held = (today - entry_date).days
+        days_held = (run_date - entry_date).days
         if days_held >= config.hold_period:
             price_data = data.get_price_data(
                 symbol=pos["symbol"], cache_dir=Path(config.cache_dir),
-                refresh_days=config.cache_refresh_days, years=1,
+                refresh_days=config.cache_refresh_days,
+                start_date=entry_date, end_date=run_date,
                 freeze_date=config.freeze_date
             )
             if price_data is not None and not price_data.empty:
                 pos['exit_price'] = price_data['close'].iloc[-1]
-                pos['exit_date'] = price_data.index[-1].strftime('%Y-%m-%d')
+                pos['exit_date'] = run_date.strftime('%Y-%m-%d')
                 pos['days_held'] = days_held
                 pos['final_return_pct'] = (pos['exit_price'] - pos['entry_price']) / pos['entry_price'] * 100
                 nifty_data = data.get_price_data(
                     symbol="^NSEI", cache_dir=Path(config.cache_dir),
-                    start_date=entry_date, end_date=today,
+                    start_date=entry_date, end_date=run_date,
                     freeze_date=config.freeze_date
                 )
                 pos['final_nifty_return_pct'] = 0.0
@@ -305,17 +307,11 @@ def generate_daily_report(
     db_path: Path,
     run_timestamp: str,
     config: Config,
-) -> None:
+) -> Optional[Path]:
     """
     Generates the main daily markdown report.
     
-    Args:
-        db_path: Path to SQLite database
-        run_timestamp: Timestamp of the backtesting run
-        config: Application configuration
-        
-    Returns:
-        Path to generated report file, or None on failure
+    Returns the path to the generated report file, or None if failed.
     """
     try:
         # 1. Identify and save new buy signals
@@ -401,7 +397,6 @@ def generate_daily_report(
         
         report_file = output_dir / f"signals_{report_date_str}.md"
         report_file.write_text(report_content, encoding='utf-8')
-        
         logger.info(f"Report generated: {report_file}")
         return report_file
     except Exception as e:

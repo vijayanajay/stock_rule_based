@@ -1,4 +1,4 @@
-[10:06:20] INFO     === KISS Signal CLI Run Started ===                                                                
+[15:49:05] INFO     === KISS Signal CLI Run Started ===                                                                
 ┌───────────────────────────────────────────────────── QuickEdge ─────────────────────────────────────────────────────┐
 │ KISS Signal CLI                                                                                                     │
 │ Keep-It-Simple Data Foundation                                                                                      │
@@ -6,26 +6,25 @@
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
            INFO     Loaded 7 symbols from universe                                                                     
-           INFO     Refreshing 7 of 7 symbols                                                                          
-[10:06:23] INFO     Successfully refreshed 7/7 symbols                                                                 
+           INFO     All symbols are fresh, no refresh needed                                                           
 [3/4] Analyzing strategies for each ticker...
            INFO     Loaded 7 symbols from universe                                                                     
            INFO     Backtester initialized: hold_period=20, min_trades=10                                              
            INFO     Backtesting 3 rule combinations                                                                    
-⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...[10:06:31] INFO     Found 2 valid strategies (>= 10 trades)                                                            
-⠙ Analyzing RELIANCE (1/7)...           INFO     Backtesting 3 rule combinations                                                                    
-⠙ Analyzing INFY (2/7)...           INFO     Found 1 valid strategies (>= 10 trades)                                                            
-⠙ Analyzing INFY (2/7)...           INFO     Backtesting 3 rule combinations                                                                    
-⠙ Analyzing TCS (3/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
-⠹ Analyzing TCS (3/7)...⠹ Analyzing HDFCBANK (4/7)...           INFO     Backtesting 3 rule combinations                                                                    
-⠹ Analyzing HDFCBANK (4/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠋ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...[15:49:13] INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠙ Analyzing RELIANCE (1/7)...⠙ Analyzing INFY (2/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠹ Analyzing INFY (2/7)...           INFO     Found 1 valid strategies (>= 10 trades)                                                            
+⠹ Analyzing INFY (2/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠹ Analyzing TCS (3/7)...⠸ Analyzing TCS (3/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠸ Analyzing TCS (3/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠸ Analyzing HDFCBANK (4/7)...[15:49:14] INFO     Found 2 valid strategies (>= 10 trades)                                                            
 ⠸ Analyzing HDFCBANK (4/7)...           INFO     Backtesting 3 rule combinations                                                                    
-⠸ Analyzing ICICIBANK (5/7)...⠸ Analyzing ICICIBANK (5/7)...           INFO     Found 1 valid strategies (>= 10 trades)                                                            
-⠸ Analyzing ICICIBANK (5/7)...           INFO     Backtesting 3 rule combinations                                                                    
-⠸ Analyzing SBIN (6/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
-⠼ Analyzing SBIN (6/7)...           INFO     Backtesting 3 rule combinations                                                                    
-⠼ Analyzing WIPRO (7/7)...⠼ Analyzing WIPRO (7/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
-⠴ Analyzing WIPRO (7/7)...⠴ Analyzing WIPRO (7/7)...
+⠼ Analyzing ICICIBANK (5/7)...⠼ Analyzing ICICIBANK (5/7)...           INFO     Found 1 valid strategies (>= 10 trades)                                                            
+⠼ Analyzing ICICIBANK (5/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠼ Analyzing SBIN (6/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠴ Analyzing SBIN (6/7)...           INFO     Backtesting 3 rule combinations                                                                    
+⠴ Analyzing WIPRO (7/7)...⠴ Analyzing WIPRO (7/7)...           INFO     Found 2 valid strategies (>= 10 trades)                                                            
+⠦ Analyzing WIPRO (7/7)...⠦ Analyzing WIPRO (7/7)...
 [4/4] Analysis complete. Results summary:
                        Top Strategies by Edge Score                       
 ┌───────────┬─────────────────────┬────────────┬───────┬────────┬────────┐
@@ -43,7 +42,7 @@
 │ RELIANCE  │ sma_10_20_crossover │      0.167 │  0.6% │   0.41 │     17 │
 └───────────┴─────────────────────┴────────────┴───────┴────────┴────────┘
 
-✨ Analysis complete. Found 12 valid strategies across 7 symbols.
+* Analysis complete. Found 12 valid strategies across 7 symbols.
 [5/5] Saving results...
            INFO     Creating database at data\kiss_signal.db                                                           
            INFO     Successfully created database at data\kiss_signal.db                                               
@@ -54,4 +53,4 @@
            INFO     Found 1 optimal strategies above threshold 0.5                                                     
            INFO     Fetched 0 open positions.                                                                          
            INFO     Report generated: reports\signals_2025-06-26.md                                                    
-✨ Report generated: reports\signals_2025-06-26.md
+* Report generated: reports\signals_2025-06-26.md

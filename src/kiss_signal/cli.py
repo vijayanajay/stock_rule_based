@@ -134,7 +134,7 @@ def _display_results(results: List[Dict[str, Any]]) -> None:
  
     console.print(table)
     console.print(
-        f"\n[green]✨ Analysis complete. Found {len(results)} valid strategies "
+        f"\n[green]* Analysis complete. Found {len(results)} valid strategies "
         f"across {len(set(s['symbol'] for s in results))} symbols.[/green]"
     )
 
@@ -176,11 +176,11 @@ def _generate_and_save_report(
             config=app_config,
         )
         if report_path:
-            console.print(f"✨ Report generated: {report_path}", style="green")
+            console.print(f"* Report generated: {report_path}", style="green")
         else:
-            console.print("⚠️  Report generation failed", style="yellow")
+            console.print("(WARN) Report generation failed", style="yellow")
     except Exception as e:
-        console.print(f"⚠️  Report error: {e}", style="yellow")
+        console.print(f"(WARN) Report error: {e}", style="yellow")
         logger.error(f"Report generation error: {e}", exc_info=True)
 
 
@@ -224,6 +224,8 @@ def run(
     if freeze_data:
         try:
             freeze_date_obj = date.fromisoformat(freeze_data)
+            # Override config's freeze_date with CLI flag if provided
+            app_config.freeze_date = freeze_date_obj
         except ValueError:
             console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
             raise typer.Exit(1)
@@ -231,9 +233,9 @@ def run(
     try:
         console.print("[1/4] Configuration loaded.")
         # Step 2: Refresh market data if needed
-        if freeze_date_obj:
+        if app_config.freeze_date:
             if verbose:
-                logger.info(f"Freeze mode active: {freeze_date_obj}")
+                logger.info(f"Freeze mode active: {app_config.freeze_date}")
             console.print("[2/4] Skipping data refresh (freeze mode).")
         else:
             if verbose:
@@ -244,17 +246,17 @@ def run(
                 cache_dir=app_config.cache_dir,
                 refresh_days=app_config.cache_refresh_days,
                 years=app_config.historical_data_years,
-                freeze_date=freeze_date_obj
+                freeze_date=app_config.freeze_date,
             )
         # Step 3: Analyze strategies for each ticker
         console.print("[3/4] Analyzing strategies for each ticker...")
         symbols = data.load_universe(app_config.universe_path)
-        all_results = _run_backtests(app_config, rules_config, symbols, freeze_date_obj)
+        all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date)
         # Step 4: Display results summary
         console.print("[4/4] Analysis complete. Results summary:")
-        _display_results(all_results)
         # Step 5: Save results
         run_timestamp = datetime.now().isoformat()
+        _display_results(all_results)
         _save_results(app_config, all_results, run_timestamp)
         _generate_and_save_report(app_config, run_timestamp)
 
