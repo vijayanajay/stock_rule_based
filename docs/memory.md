@@ -306,3 +306,23 @@
 **Prevention**: When integrating third-party libraries with specific data requirements (like VectorBT), ensure data contracts are explicit about those requirements. The interface between data loading and consumption modules must account for downstream library expectations. Always test with real-world irregular data patterns, not just test fixtures that may not expose these requirements.
 
 ---
+
+### Flawed Decorator/Context-Manager Interaction and Implementation Regression (2025-07-17)
+**Issue**: Widespread `AttributeError` failures in performance monitoring and `AssertionError` from the backtester finding no valid strategies.
+**Root Cause**: Two distinct structural issues.
+1.  **Flawed Design Pattern**: The `@profile_performance` decorator in `performance.py` was incorrectly implemented. It tried to consume a result from its `with...as` block, but the `monitor_execution` context manager only calculated that result in its `finally` clause, after the block had already exited. This led to the decorator receiving `None` and causing an `AttributeError`.
+2.  **Implementation Regression**: The `backtester.py` module's `_generate_time_based_exits` function had regressed from a clean, vectorized `vectorbt` implementation to a manual, inefficient, and potentially buggy loop. This likely caused incorrect trade simulation, leading to valid strategies being filtered out for having too few trades.
+**Fix**:
+1.  The `PerformanceMonitor` was refactored. All metric storage and threshold checking logic was moved into the `finally` block of the `monitor_execution` context manager, making it the single source of truth for performance tracking. The decorator was simplified to just wrap the context manager.
+2.  The `_generate_time_based_exits` function was reverted to the correct, efficient implementation: `return entry_signals.vbt.fshift(hold_period)`.
+**Prevention**: Ensure that when using context managers, the data flow is respected; values are yielded to be used *inside* the `with` block, and teardown logic runs in `finally`. Avoid regressing from clean, library-idiomatic implementations (like vectorized functions) to manual loops, as this re-introduces complexity and potential bugs. Always keep implementation aligned with documented best practices.
+
+---
+
+### Test/Component Desynchronization in Performance Monitoring (2025-07-18)
+**Issue**: A test in `test_performance.py` (`test_memory_monitoring`) was failing with an `AttributeError`.
+**Root Cause**: A structural desynchronization between the test and the component. The test was asserting on a non-existent attribute (`memory_peak_mb`) of the `PerformanceMetrics` data class. The component had been implemented (or refactored) to provide a `memory_usage` attribute, but the test was not updated to reflect this data contract. This is a recurring anti-pattern of tests not being maintained in lock-step with the code they are supposed to validate.
+**Fix**: The assertion in `test_performance.py` was corrected to use the `memory_usage` attribute, bringing the test back into alignment with the component's actual data contract.
+**Prevention**: When refactoring a component, especially when changing its public API or the schema of data it produces (like a Pydantic model or dataclass), it is critical to update all consuming tests in the same atomic commit. This ensures that tests remain a valid and reliable specification of the component's behavior.
+
+---

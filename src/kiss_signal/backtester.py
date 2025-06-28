@@ -171,22 +171,11 @@ class Backtester:
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
         """Generate exit signals based on holding period after entry signals."""
-        # Create exit signals: exit after hold_period days from each entry
-        exit_signals = pd.Series(False, index=entry_signals.index)
-        
-        # For each entry signal, set exit signal hold_period days later
-        entry_dates = entry_signals[entry_signals].index
-        for entry_date in entry_dates:
-            # Find the exit date (hold_period days after entry)
-            entry_idx = entry_signals.index.get_loc(entry_date)
-            exit_idx = entry_idx + hold_period
-            
-            # Ensure we don't go beyond the data bounds
-            if exit_idx < len(entry_signals):
-                exit_date = entry_signals.index[exit_idx]
-                exit_signals.loc[exit_date] = True
-        
-        return exit_signals
+        # Vectorbt's fshift is the efficient, vectorized way to do this.
+        # It shifts the True values from entry_signals forward by hold_period.
+        if not hasattr(entry_signals, 'vbt'):
+            return pd.Series(False, index=entry_signals.index)
+        return entry_signals.vbt.fshift(hold_period)
 
     def _generate_signals(self, rule_combo: Dict[str, Any], price_data: pd.DataFrame) -> pd.Series:
         """
