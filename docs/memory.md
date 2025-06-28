@@ -326,19 +326,3 @@
 **Prevention**: When refactoring a component, especially when changing its public API or the schema of data it produces (like a Pydantic model or dataclass), it is critical to update all consuming tests in the same atomic commit. This ensures that tests remain a valid and reliable specification of the component's behavior.
 
 ---
-
-### `rich` API Misuse in UI Component Configuration (2025-07-19)
-**Issue**: The application crashed on startup with an `AttributeError: module 'rich.progress' has no attribute 'PercentageColumn'`. This was caused by calling a non-existent class in the `rich` library when configuring the progress bar.
-**Root Cause**: A structural misconfiguration in `cli.py`. The code was written with an incorrect assumption about the `rich` library's API for displaying percentages in a progress bar. This is a form of dependency contract violation, where our code's expectation of the third-party library's interface was wrong.
-**Fix**: Replaced the incorrect `progress.PercentageColumn()` call with the correct, documented method: `progress.TextColumn("[progress.percentage]{task.percentage:>3.0f}%")`.
-**Prevention**: When using third-party libraries, especially for UI components, always refer to the official documentation for the correct API usage. Avoid assuming class or function names. A quick check of the library's documentation or examples can prevent such structural integration errors that break the entire application.
-
----
-
-### `rich` Live Display Conflict due to Nested Context Managers (2025-07-19)
-**Issue**: Multiple tests in `test_cli.py` and `test_integration.py` failed with `rich.errors.LiveError: Only one live display may be active at once`.
-**Root Cause**: A structural flaw in the UI logic of `cli.py`. The main `run` command initiated a `rich.progress.Progress` live display context. Within this context, it called the `_run_backtests` helper function, which in turn attempted to initiate its own `rich.status.Status` live display on the same console object. `rich` does not permit nested or concurrent live displays on a single console, leading to the `LiveError`.
-**Fix**: The outer `rich.progress.Progress` context manager in the `run` command was removed. This progress bar was showing high-level pipeline steps and was less informative than the per-symbol spinner in the `_run_backtests` function. By removing the outer live display, the inner `rich.status.Status` can operate without conflict, resolving the structural issue.
-**Prevention**: When designing console UIs with libraries like `rich`, be aware of components that take exclusive control of the display (like `Live`, `Progress`, `Status`). If a function needs to display its own progress, it should either be passed the parent progress object to update as a sub-task, or the calling function should not have its own active live display. Avoid nesting live display context managers.
-
----

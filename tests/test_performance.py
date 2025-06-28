@@ -51,7 +51,7 @@ class TestPerformanceMonitor:
         
         result = memory_test()
         assert result == 100000
-        assert monitor.metrics["memory_test"].memory_usage > 0
+        assert monitor.metrics["memory_test"].memory_peak_mb > 0
 
 
 class TestIntelligentCache:
@@ -178,8 +178,7 @@ class TestBacktesterPerformance:
         
         # Mock regime detection functions
         def mock_detect_market_regime(data, window=20):
-            data_array = ([0, 1, 2] * (len(data) // 3 + 1))[:len(data)]
-            return pd.Series(data_array, index=data.index)
+            return pd.Series([0, 1, 2] * (len(data) // 3 + 1), index=data.index)[:len(data)]
         
         def mock_is_favorable_market_regime(data, rule_name):
             return True

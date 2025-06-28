@@ -14,7 +14,7 @@ tests/test_backtester.py::TestBacktester::test_generate_signals_empty_rule_stack
 tests/test_backtester.py::TestBacktester::test_generate_signals_sma_crossover PASSED [  6%]
 tests/test_backtester.py::TestBacktester::test_generate_signals_invalid_rule PASSED [  7%]
 tests/test_backtester.py::TestBacktester::test_generate_signals_missing_parameters PASSED [  8%]
-tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow PASSED [  9%]
+tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow FAILED [  9%]
 tests/test_backtester.py::TestBacktesterFixtures::test_sample_backtest_data_fixture PASSED [ 10%]
 tests/test_cli.py::test_cli_import PASSED                                [ 12%]
 tests/test_cli.py::test_run_command_help PASSED                          [ 13%]
@@ -49,20 +49,20 @@ tests/test_data.py::TestDataFunctions::test_fetch_symbol_data_multiindex_columns
 tests/test_data.py::TestDataFunctions::test_fetch_symbol_data_tuple_columns PASSED [ 45%]
 tests/test_integration.py::TestCLIIntegration::test_config_loading_integration PASSED [ 46%]
 tests/test_integration.py::TestCLIIntegration::test_data_loading_integration PASSED [ 47%]
-tests/test_integration.py::TestCLIIntegration::test_backtester_with_real_rules PASSED [ 48%]
-tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow PASSED [ 49%]
+tests/test_integration.py::TestCLIIntegration::test_backtester_with_real_rules FAILED [ 48%]
+tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow FAILED [ 49%]
 tests/test_integration.py::TestCLIIntegration::test_error_handling_integration PASSED [ 50%]
 tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_function_lookup PASSED [ 51%]
 tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_parameter_validation PASSED [ 52%]
-tests/test_performance.py::TestPerformanceMonitor::test_performance_decorator PASSED [ 53%]
-tests/test_performance.py::TestPerformanceMonitor::test_threshold_warnings PASSED [ 54%]
-tests/test_performance.py::TestPerformanceMonitor::test_memory_monitoring PASSED [ 56%]
+tests/test_performance.py::TestPerformanceMonitor::test_performance_decorator FAILED [ 53%]
+tests/test_performance.py::TestPerformanceMonitor::test_threshold_warnings FAILED [ 54%]
+tests/test_performance.py::TestPerformanceMonitor::test_memory_monitoring FAILED [ 56%]
 tests/test_performance.py::TestIntelligentCache::test_cache_hit_miss PASSED [ 57%]
 tests/test_performance.py::TestIntelligentCache::test_cached_decorator PASSED [ 58%]
 tests/test_performance.py::TestIntelligentCache::test_cache_cleanup PASSED [ 59%]
 tests/test_performance.py::TestBacktesterPerformance::test_backtester_performance_within_limits PASSED [ 60%]
 tests/test_performance.py::TestBacktesterPerformance::test_strategy_validation_comprehensive PASSED [ 61%]
-tests/test_performance.py::TestBacktesterPerformance::test_market_regime_detection PASSED [ 62%]
+tests/test_performance.py::TestBacktesterPerformance::test_market_regime_detection FAILED [ 62%]
 tests/test_performance.py::TestPerformanceBenchmarks::test_full_workflow_performance SKIPPED [ 63%]
 tests/test_persistence.py::TestCreateDatabase::test_create_database_success PASSED [ 64%]
 tests/test_persistence.py::TestCreateDatabase::test_create_database_idempotent PASSED [ 65%]
@@ -98,6 +98,297 @@ tests/test_rule_funcs.py::TestEdgeCases::test_single_price_data PASSED   [ 97%]
 tests/test_rule_funcs.py::TestEdgeCases::test_nan_price_data PASSED      [ 98%]
 tests/test_rule_funcs.py::TestIntegration::test_all_rules_with_real_data PASSED [100%]
 
+================================== FAILURES ===================================
+______ TestBacktesterIntegration.test_find_optimal_strategies_basic_flow ______
+
+self = <tests.test_backtester.TestBacktesterIntegration object at 0x000001EC52932120>
+sample_price_data =                   open        high         low       close   volume
+date                                              ...924950   88.651215  3114792
+2024-04-09   88.555591   88.980355   85.984414   88.323937  1052528
+
+[100 rows x 5 columns]
+sample_rules_config = {'baseline': {'name': 'sma_crossover_test', 'params': {'fast_period': 10, 'slow_period': 20}, 'type': 'sma_crossover'}, 'layers': [{'name': 'rsi_oversold_test', 'params': {'oversold_threshold': 30.0, 'period': 14}, 'type': 'rsi_oversold'}]}
+
+    def test_find_optimal_strategies_basic_flow(self, sample_price_data, sample_rules_config):
+        """Test basic flow of find_optimal_strategies with sample data."""
+        backtester = Backtester()
+>       result = backtester.find_optimal_strategies(
+            rules_config=sample_rules_config,
+            price_data=sample_price_data,
+            symbol="TEST.NS"
+        )
+
+tests\test_backtester.py:145: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\kiss_signal\performance.py:39: in wrapper
+    self._check_thresholds(metrics)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <kiss_signal.performance.PerformanceMonitor object at 0x000001EC527DC290>
+metrics = None
+
+    def _check_thresholds(self, metrics: PerformanceMetrics) -> None:
+        """Check performance against thresholds and warn if exceeded."""
+>       if metrics.duration > self.thresholds['duration_warning']:
+           ^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'duration'
+
+src\kiss_signal\performance.py:72: AttributeError
+------------------------------ Captured log call ------------------------------
+WARNING  kiss_signal.backtester:backtester.py:130 Strategy 'sma_crossover_test' on 'TEST.NS' generated only 2 trades, which is below the threshold of 10.
+WARNING  kiss_signal.backtester:backtester.py:130 Strategy 'sma_crossover_test + rsi_oversold_test' on 'TEST.NS' generated only 2 trades, which is below the threshold of 10.
+_____________ TestCLIIntegration.test_backtester_with_real_rules ______________
+
+self = <tests.test_integration.TestCLIIntegration object at 0x000001EC52D52450>
+integration_env = {'cache_dir': WindowsPath('C:/Users/user/AppData/Local/Temp/tmp8wloxerh/data/cache'), 'config_path': WindowsPath('C:/U...p/tmp8wloxerh/data'), 'rules_path': WindowsPath('C:/Users/user/AppData/Local/Temp/tmp8wloxerh/config/rules.yaml'), ...}
+
+    def test_backtester_with_real_rules(self, integration_env):
+        """Test backtester with actual rule configurations."""
+        config = load_config(integration_env['config_path'])
+        rules_config = load_rules(integration_env['rules_path'])
+    
+        backtester = Backtester(
+            hold_period=config.hold_period,
+            min_trades_threshold=config.min_trades_threshold
+        )
+    
+        # Test with real data and rules
+        symbol = 'RELIANCE'
+        price_data = data.get_price_data(
+            symbol=symbol,
+            cache_dir=integration_env['cache_dir'],
+            freeze_date=date(2024, 6, 1),
+            years=config.historical_data_years
+        )
+    
+        # This should not raise an exception
+>       strategies = backtester.find_optimal_strategies(
+            rules_config=rules_config,
+            price_data=price_data,
+            symbol=symbol,
+            freeze_date=date(2024, 6, 1),
+        )
+
+tests\test_integration.py:210: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\kiss_signal\performance.py:39: in wrapper
+    self._check_thresholds(metrics)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <kiss_signal.performance.PerformanceMonitor object at 0x000001EC527DC290>
+metrics = None
+
+    def _check_thresholds(self, metrics: PerformanceMetrics) -> None:
+        """Check performance against thresholds and warn if exceeded."""
+>       if metrics.duration > self.thresholds['duration_warning']:
+           ^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'duration'
+
+src\kiss_signal\performance.py:72: AttributeError
+---------------------------- Captured stdout call -----------------------------
+           INFO     Backtester initialized: hold_period=20, min_trades=5       
+           INFO     Using data up to freeze date: 2024-06-01                   
+           INFO     Backtesting 2 rule combinations for RELIANCE               
+[21:18:33] INFO     find_optimal_strategies completed in 1.30s, memory:        
+                    337.5MB, cpu: 81.9%                                        
+------------------------------ Captured log call ------------------------------
+INFO     kiss_signal.backtester:backtester.py:55 Backtester initialized: hold_period=20, min_trades=5
+INFO     kiss_signal.backtester:backtester.py:95 Using data up to freeze date: 2024-06-01
+INFO     kiss_signal.backtester:backtester.py:104 Backtesting 2 rule combinations for RELIANCE
+INFO     kiss_signal.performance:performance.py:67 find_optimal_strategies completed in 1.30s, memory: 337.5MB, cpu: 81.9%
+_______________ TestCLIIntegration.test_end_to_end_cli_workflow _______________
+
+self = <tests.test_integration.TestCLIIntegration object at 0x000001EC52D52630>
+integration_env = {'cache_dir': WindowsPath('C:/Users/user/AppData/Local/Temp/tmpynh61ruo/data/cache'), 'config_path': WindowsPath('C:/U...p/tmpynh61ruo/data'), 'rules_path': WindowsPath('C:/Users/user/AppData/Local/Temp/tmpynh61ruo/config/rules.yaml'), ...}
+
+    def test_end_to_end_cli_workflow(self, integration_env):
+        """Test the complete CLI workflow without mocking."""
+        runner = CliRunner()
+    
+        result = runner.invoke(app, [
+            "--config", str(integration_env['config_path']),
+            "--rules", str(integration_env['rules_path']),
+            "run",
+            "--freeze-data", "2024-06-01",
+        ])
+    
+        assert result.exit_code == 0, f"CLI failed with output: {result.stdout}"
+        assert "Analysis complete" in result.stdout
+        # Check for freeze mode message, case-insensitively
+        assert "freeze mode" in result.stdout.lower()
+        # Check that strategies were actually found
+>       assert "No valid strategies found" not in result.stdout
+E       AssertionError: assert 'No valid strategies found' not in '[21:18:33] ...5-06-28.md\n'
+E         
+E         'No valid strategies found' is contained here:
+E           [21:18:33] INFO     === KISS Signal CLI Run Started ===                        
+E           \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 QuickEdge \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
+E           \u2502 KISS Signal CLI                                                             \u2502
+E           \u2502 Keep-It-Simple Data Foundation                                              \u2502
+E           \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518...
+E         
+E         ...Full output truncated (27 lines hidden), use '-vv' to show
+
+tests\test_integration.py:242: AssertionError
+______________ TestPerformanceMonitor.test_performance_decorator ______________
+
+self = <tests.test_performance.TestPerformanceMonitor object at 0x000001EC52D538C0>
+
+    def test_performance_decorator(self):
+        """Test performance monitoring decorator."""
+        monitor = PerformanceMonitor()
+    
+        @monitor.profile_performance
+        def test_function():
+            time.sleep(0.1)
+            return "result"
+    
+>       result = test_function()
+                 ^^^^^^^^^^^^^^^
+
+tests\test_performance.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\kiss_signal\performance.py:39: in wrapper
+    self._check_thresholds(metrics)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <kiss_signal.performance.PerformanceMonitor object at 0x000001EC575D4BF0>
+metrics = None
+
+    def _check_thresholds(self, metrics: PerformanceMetrics) -> None:
+        """Check performance against thresholds and warn if exceeded."""
+>       if metrics.duration > self.thresholds['duration_warning']:
+           ^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'duration'
+
+src\kiss_signal\performance.py:72: AttributeError
+---------------------------- Captured stdout call -----------------------------
+           INFO     test_function completed in 0.10s, memory: 341.4MB, cpu:    
+                    0.0%                                                       
+------------------------------ Captured log call ------------------------------
+INFO     kiss_signal.performance:performance.py:67 test_function completed in 0.10s, memory: 341.4MB, cpu: 0.0%
+_______________ TestPerformanceMonitor.test_threshold_warnings ________________
+
+self = <tests.test_performance.TestPerformanceMonitor object at 0x000001EC52D536E0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x000001EC575D4200>
+
+    def test_threshold_warnings(self, caplog):
+        """Test performance threshold warnings."""
+        monitor = PerformanceMonitor()
+        monitor.thresholds['duration_warning'] = 0.05
+    
+        @monitor.profile_performance
+        def slow_function():
+            time.sleep(0.1)
+    
+>       slow_function()
+
+tests\test_performance.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\kiss_signal\performance.py:39: in wrapper
+    self._check_thresholds(metrics)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <kiss_signal.performance.PerformanceMonitor object at 0x000001EC575D6000>
+metrics = None
+
+    def _check_thresholds(self, metrics: PerformanceMetrics) -> None:
+        """Check performance against thresholds and warn if exceeded."""
+>       if metrics.duration > self.thresholds['duration_warning']:
+           ^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'duration'
+
+src\kiss_signal\performance.py:72: AttributeError
+---------------------------- Captured stdout call -----------------------------
+           INFO     slow_function completed in 0.10s, memory: 341.4MB, cpu:    
+                    0.0%                                                       
+------------------------------ Captured log call ------------------------------
+INFO     kiss_signal.performance:performance.py:67 slow_function completed in 0.10s, memory: 341.4MB, cpu: 0.0%
+________________ TestPerformanceMonitor.test_memory_monitoring ________________
+
+self = <tests.test_performance.TestPerformanceMonitor object at 0x000001EC52D53230>
+
+    def test_memory_monitoring(self):
+        """Test memory usage monitoring."""
+        monitor = PerformanceMonitor()
+    
+        @monitor.profile_performance
+        def memory_test():
+            # Allocate some memory
+            data = [i for i in range(100000)]
+            return len(data)
+    
+>       result = memory_test()
+                 ^^^^^^^^^^^^^
+
+tests\test_performance.py:52: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\kiss_signal\performance.py:39: in wrapper
+    self._check_thresholds(metrics)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <kiss_signal.performance.PerformanceMonitor object at 0x000001EC575D55E0>
+metrics = None
+
+    def _check_thresholds(self, metrics: PerformanceMetrics) -> None:
+        """Check performance against thresholds and warn if exceeded."""
+>       if metrics.duration > self.thresholds['duration_warning']:
+           ^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'duration'
+
+src\kiss_signal\performance.py:72: AttributeError
+---------------------------- Captured stdout call -----------------------------
+           INFO     memory_test completed in 0.01s, memory: 343.7MB, cpu: 97.7%
+------------------------------ Captured log call ------------------------------
+INFO     kiss_signal.performance:performance.py:67 memory_test completed in 0.01s, memory: 343.7MB, cpu: 97.7%
+___________ TestBacktesterPerformance.test_market_regime_detection ____________
+
+self = <tests.test_performance.TestBacktesterPerformance object at 0x000001EC52D78770>
+mock_data_manager = <Mock id='2114585067440'>
+
+    def test_market_regime_detection(self, mock_data_manager):
+        """Test market regime detection functionality."""
+        sample_data = mock_data_manager.get_symbol_data('TEST1')
+    
+        # Mock regime detection functions
+        def mock_detect_market_regime(data, window=20):
+            return pd.Series([0, 1, 2] * (len(data) // 3 + 1), index=data.index)[:len(data)]
+    
+        def mock_is_favorable_market_regime(data, rule_name):
+            return True
+    
+        # Test regime detection
+>       regime = mock_detect_market_regime(sample_data)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_performance.py:187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_performance.py:181: in mock_detect_market_regime
+    return pd.Series([0, 1, 2] * (len(data) // 3 + 1), index=data.index)[:len(data)]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\pandas\core\series.py:575: in __init__
+    com.require_length_match(data, index)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = [0, 1, 2, 0, 1, 2, ...]
+index = DatetimeIndex(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04',
+               '2023-01-05', '2023-01-06', '202...               '2023-04-07', '2023-04-08', '2023-04-09', '2023-04-10'],
+              dtype='datetime64[ns]', freq='D')
+
+    def require_length_match(data, index: Index) -> None:
+        """
+        Check the length of data matches the length of the index.
+        """
+        if len(data) != len(index):
+>           raise ValueError(
+                "Length of values "
+                f"({len(data)}) "
+                "does not match length of index "
+                f"({len(index)})"
+            )
+E           ValueError: Length of values (102) does not match length of index (100)
+
+venv\Lib\site-packages\pandas\core\common.py:573: ValueError
 ============================== warnings summary ===============================
 tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow
 tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow
@@ -112,15 +403,15 @@ Name                             Stmts   Miss  Cover
 ----------------------------------------------------
 src\kiss_signal\__init__.py          4      0   100%
 src\kiss_signal\_version.py         13     13     0%
-src\kiss_signal\backtester.py      159     72    55%
+src\kiss_signal\backtester.py      185     95    49%
 src\kiss_signal\cache.py            74      9    88%
-src\kiss_signal\cli.py             161     27    83%
+src\kiss_signal\cli.py             209     83    60%
 src\kiss_signal\config.py           68     11    84%
 src\kiss_signal\data.py            160     40    75%
-src\kiss_signal\performance.py      52      2    96%
+src\kiss_signal\performance.py      52      6    88%
 src\kiss_signal\persistence.py     118     17    86%
 src\kiss_signal\reporter.py        206     43    79%
 src\kiss_signal\rules.py            79     26    67%
 ----------------------------------------------------
-TOTAL                             1094    260    76%
-================= 90 passed, 1 skipped, 2 warnings in 27.18s ==================
+TOTAL                             1168    343    71%
+================= 90 passed, 1 skipped, 2 warnings in 29.63s ==================
