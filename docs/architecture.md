@@ -155,10 +155,12 @@ kiss-signal-cli/
 ├── src/
 │   └── kiss_signal/
 │       ├── __init__.py
+│       ├── _version.py         # Version info (auto-generated)
 │       ├── backtester.py
 │       ├── cli.py
 │       ├── config.py
 │       ├── data.py
+│       ├── performance.py      # Performance monitoring utilities
 │       ├── persistence.py
 │       ├── rules.py            # Implementation of indicator/helper functions
 │       └── reporter.py

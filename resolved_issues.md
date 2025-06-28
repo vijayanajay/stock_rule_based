@@ -30,3 +30,12 @@ When an issue from `arch_review.md` is resolved, its entry is moved here.
 **Last Reopened Date:** 
 **Last Resolution Summary (Concise):** The `requirements.txt` file was deleted, standardizing on `pyproject.toml` as the single source of truth for all project dependencies.
 **Date Last Resolved:** 2025-07-16
+---
+**Issue ID:** DOC-VERACITY-20250709
+**Original Description (Concise):** `docs/architecture.md` was out of sync with the codebase, referencing non-existent modules and an incorrect project structure.
+**Initial Resolution Summary (Concise):** The "Project Structure" section in `docs/architecture.md` was updated to remove all references to obsolete files and add missing modules, bringing the document into full alignment with the codebase.
+**Date First Resolved:** 2025-07-17
+**Reopen Count:** 0
+**Last Reopened Date:** 
+**Last Resolution Summary (Concise):** The "Project Structure" section in `docs/architecture.md` was updated to remove all references to obsolete files and add missing modules, bringing the document into full alignment with the codebase.
+**Date Last Resolved:** 2025-07-17
