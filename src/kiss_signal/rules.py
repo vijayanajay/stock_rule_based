@@ -5,8 +5,9 @@ All functions are pure and operate on pandas DataFrames with OHLCV data.
 """
 
 import logging
-
 import pandas as pd
+
+from .cache import global_cache, cached
 
 __all__ = [
     "sma_crossover",
@@ -140,3 +141,57 @@ def ema_crossover(price_data: pd.DataFrame, fast_period: int = 10, slow_period: 
     
     logger.debug(f"EMA crossover signals: {signals.sum()} triggers")
     return signals.fillna(False)
+
+@cached(global_cache, ttl_hours=1)
+def detect_market_regime(data: pd.DataFrame, window: int = 20) -> pd.Series:
+    """Detect market regime based on volatility and trend strength."""
+    returns = data['close'].pct_change()
+    
+    # Volatility regime
+    volatility = returns.rolling(window).std()
+    vol_median = volatility.median()
+    high_vol = volatility > vol_median * 1.5
+    
+    # Trend strength
+    sma_short = data['close'].rolling(window // 2).mean()
+    sma_long = data['close'].rolling(window).mean()
+    trend_strength = abs(sma_short - sma_long) / sma_long
+    
+    # Define regimes: 0=low_vol_sideways, 1=low_vol_trending, 2=high_vol_any
+    regime = pd.Series(0, index=data.index)
+    regime[high_vol] = 2
+    regime[(~high_vol) & (trend_strength > trend_strength.median())] = 1
+    
+    return regime
+
+def is_favorable_market_regime(data: pd.DataFrame, rule_name: str) -> bool:
+    """Check if current market regime is favorable for the given rule."""
+    regime = detect_market_regime(data)
+    current_regime = regime.iloc[-1]
+    
+    # Rule-specific regime preferences
+    regime_preferences = {
+        'momentum_breakout': [1, 2],  # Prefers trending/volatile markets
+        'mean_reversion': [0],        # Prefers sideways markets
+        'volume_spike': [2],          # Prefers volatile markets
+        'trend_following': [1],       # Prefers trending markets
+    }
+    
+    preferred_regimes = regime_preferences.get(rule_name, [0, 1, 2])
+    return current_regime in preferred_regimes
+
+# Update existing rules to include regime check
+def enhanced_momentum_breakout(data: pd.DataFrame, **kwargs) -> pd.Series:
+    """Enhanced momentum breakout with regime awareness."""
+    if not is_favorable_market_regime(data, 'momentum_breakout'):
+        return pd.Series(False, index=data.index)
+    
+    return momentum_breakout(data, **kwargs)
+
+def momentum_breakout(data: pd.DataFrame, window: int = 20, threshold: float = 1.02) -> pd.Series:
+    """Basic momentum breakout rule."""
+    close = data['close']
+    rolling_max = close.rolling(window=window).max()
+    breakout = close > (rolling_max.shift(1) * threshold)
+    return breakout
+    return breakout

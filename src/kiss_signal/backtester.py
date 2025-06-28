@@ -12,24 +12,53 @@ import pandas as pd
 import vectorbt as vbt
 
 from . import rules
+from .performance import performance_monitor
+from .cache import global_cache, cached
 
 __all__ = ["Backtester"]
 
 logger = logging.getLogger(__name__)
 
+class StrategyValidationResult:
+    """Result of strategy validation checks."""
+    is_valid: bool
+    reason: str
+    confidence_score: float
+    metrics: Dict[str, float]
 
 class Backtester:
     """Handles strategy backtesting and edge score calculation."""
 
-    def __init__(self, hold_period: int = 20, min_trades_threshold: int = 10) -> None:
+    def __init__(
+        self,
+        hold_period: int = 20,
+        min_trades_threshold: int = 10,
+        # Enhanced validation parameters
+        min_win_rate: float = 0.55,
+        max_drawdown: float = 0.15,
+        min_trades: int = 10,
+        min_profit_factor: float = 1.2,
+        volatility_threshold: float = 0.25,
+    ) -> None:
         """Initialize the backtester."""
         self.hold_period = hold_period
         self.min_trades_threshold = min_trades_threshold
+        self.min_win_rate = min_win_rate
+        self.max_drawdown = max_drawdown
+        self.min_trades = min_trades
+        self.min_profit_factor = min_profit_factor
+        self.volatility_threshold = volatility_threshold
+        
+        # Performance tracking
+        self.validation_cache: Dict[str, StrategyValidationResult] = {}
+    
         logger.info(
             f"Backtester initialized: hold_period={hold_period}, "
             f"min_trades={min_trades_threshold}"
         )
     
+    @performance_monitor.profile_performance
+    @cached(global_cache, ttl_hours=6)
     def find_optimal_strategies(
         self, 
         rules_config: Dict[str, Any], 
@@ -188,3 +217,186 @@ class Backtester:
             logger.debug(f"Generated {entry_signals.sum()} entry signals for rule '{rule_type}'")
 
         return entry_signals
+
+    def _process_symbol_strategies(self, symbol: str) -> List[Dict]:
+        """Process all rule combinations for a single symbol."""
+        symbol_data = self.data_manager.get_symbol_data(symbol)
+        if symbol_data.empty:
+            return []
+        
+        strategies = []
+        rule_combinations = self._get_rule_combinations()
+        
+        # Batch calculate common indicators once
+        indicators = self._calculate_indicators_batch(symbol_data)
+        
+        for rule_stack in rule_combinations:
+            try:
+                # Use cached indicators
+                strategy_result = self._evaluate_strategy_with_cache(
+                    symbol, symbol_data, rule_stack, indicators
+                )
+                if strategy_result:
+                    strategies.append(strategy_result)
+                    
+            except Exception as e:
+                logger.warning(f"Strategy evaluation failed for {symbol} {rule_stack}: {e}")
+                continue
+        
+        return strategies
+
+    @cached(global_cache, ttl_hours=12)
+    def _calculate_indicators_batch(self, data: pd.DataFrame) -> Dict[str, pd.Series]:
+        """Calculate all required indicators once for reuse."""
+        indicators = {}
+        
+        # Common indicators used across rules
+        indicators['sma_20'] = vbt.MA.run(data['close'], window=20).ma
+        indicators['sma_50'] = vbt.MA.run(data['close'], window=50).ma
+        indicators['rsi'] = vbt.RSI.run(data['close'], window=14).rsi
+        indicators['volume_sma'] = vbt.MA.run(data['volume'], window=20).ma
+        
+        # Volatility indicators
+        indicators['atr'] = vbt.ATR.run(data['high'], data['low'], data['close']).atr
+        indicators['volatility'] = data['close'].pct_change().rolling(20).std()
+        
+        return indicators
+
+    def _validate_and_rank_strategies(self, strategies: List[Dict]) -> List[Dict]:
+        """Enhanced strategy validation and ranking."""
+        validated_strategies = []
+        
+        for strategy in strategies:
+            validation_result = self._validate_strategy_comprehensive(strategy)
+            
+            if validation_result.is_valid:
+                # Add confidence score and enhanced metrics
+                strategy['confidence_score'] = validation_result.confidence_score
+                strategy['validation_metrics'] = validation_result.metrics
+                validated_strategies.append(strategy)
+            else:
+                logger.debug(f"Strategy rejected: {validation_result.reason}")
+        
+        # Sort by composite score (edge_score * confidence_score)
+        validated_strategies.sort(
+            key=lambda s: s['edge_score'] * s['confidence_score'], 
+            reverse=True
+        )
+        
+        return validated_strategies
+
+    def _validate_strategy_comprehensive(self, strategy: Dict) -> StrategyValidationResult:
+        """Comprehensive strategy validation with multiple criteria."""
+        portfolio = strategy.get('portfolio')
+        if not portfolio:
+            return StrategyValidationResult(False, "No portfolio data", 0.0, {})
+        
+        try:
+            # Basic metrics
+            trades = portfolio.trades
+            stats = portfolio.stats()
+            
+            # Extract key metrics
+            total_trades = len(trades.records_readable)
+            if total_trades < self.min_trades:
+                return StrategyValidationResult(
+                    False, f"Insufficient trades: {total_trades} < {self.min_trades}", 0.0, {}
+                )
+            
+            win_rate = trades.win_rate() / 100.0
+            if win_rate < self.min_win_rate:
+                return StrategyValidationResult(
+                    False, f"Low win rate: {win_rate:.1%} < {self.min_win_rate:.1%}", 0.0, {}
+                )
+            
+            max_dd = portfolio.drawdown().max()
+            if max_dd > self.max_drawdown:
+                return StrategyValidationResult(
+                    False, f"Excessive drawdown: {max_dd:.1%} > {self.max_drawdown:.1%}", 0.0, {}
+                )
+            
+            # Profit factor check
+            gross_profit = trades.winning_trades.total_return.sum()
+            gross_loss = abs(trades.losing_trades.total_return.sum())
+            profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
+            
+            if profit_factor < self.min_profit_factor:
+                return StrategyValidationResult(
+                    False, f"Low profit factor: {profit_factor:.2f} < {self.min_profit_factor}", 0.0, {}
+                )
+            
+            # Calculate confidence score
+            confidence_score = self._calculate_confidence_score(
+                win_rate, max_dd, profit_factor, total_trades
+            )
+            
+            # Market regime consistency check
+            regime_consistency = self._check_market_regime_consistency(portfolio)
+            if regime_consistency < 0.7:
+                confidence_score *= 0.8  # Reduce confidence for inconsistent performance
+            
+            validation_metrics = {
+                'win_rate': win_rate,
+                'max_drawdown': max_dd,
+                'profit_factor': profit_factor,
+                'total_trades': total_trades,
+                'regime_consistency': regime_consistency,
+                'sharpe_ratio': stats.get('Sharpe Ratio', 0.0),
+            }
+            
+            return StrategyValidationResult(
+                True, "Strategy passed validation", confidence_score, validation_metrics
+            )
+            
+        except Exception as e:
+            logger.warning(f"Strategy validation error: {e}")
+            return StrategyValidationResult(False, f"Validation error: {e}", 0.0, {})
+    
+    def _calculate_confidence_score(
+        self, win_rate: float, max_dd: float, profit_factor: float, total_trades: int
+    ) -> float:
+        """Calculate strategy confidence score (0-1)."""
+        # Normalize metrics to 0-1 scale
+        win_rate_score = min(win_rate / 0.8, 1.0)  # Cap at 80% win rate
+        dd_score = max(0, 1 - (max_dd / 0.2))  # Penalize drawdown > 20%
+        pf_score = min(profit_factor / 3.0, 1.0)  # Cap at 3.0 profit factor
+        trades_score = min(total_trades / 50.0, 1.0)  # Cap at 50 trades
+        
+        # Weighted average
+        confidence = (
+            win_rate_score * 0.3 +
+            dd_score * 0.3 +
+            pf_score * 0.25 +
+            trades_score * 0.15
+        )
+        
+        return max(0.0, min(1.0, confidence))
+    
+    def _check_market_regime_consistency(self, portfolio) -> float:
+        """Check strategy performance consistency across market regimes."""
+        try:
+            # Simple regime detection based on volatility
+            returns = portfolio.total_return()
+            volatility = returns.rolling(20).std()
+            
+            # Define regimes: low/high volatility
+            vol_median = volatility.median()
+            low_vol_mask = volatility <= vol_median
+            high_vol_mask = volatility > vol_median
+            
+            # Calculate performance in each regime
+            low_vol_returns = returns[low_vol_mask].mean()
+            high_vol_returns = returns[high_vol_mask].mean()
+            
+            # Consistency score: how similar performance is across regimes
+            if low_vol_returns == 0 and high_vol_returns == 0:
+                return 0.5  # Neutral
+            
+            consistency = 1.0 - abs(low_vol_returns - high_vol_returns) / (
+                abs(low_vol_returns) + abs(high_vol_returns) + 1e-6
+            )
+            
+            return max(0.0, min(1.0, consistency))
+            
+        except Exception:
+            return 0.5  # Default neutral score
