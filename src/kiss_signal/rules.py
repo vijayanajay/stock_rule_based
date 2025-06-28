@@ -80,7 +80,11 @@ def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
 
 
 def rsi_oversold(price_data: pd.DataFrame, period: int = 14, oversold_threshold: float = 30.0) -> pd.Series:
-    """Generate buy signals when RSI crosses below oversold threshold.
+    """Generate confirmation signals based on RSI momentum.
+    
+    This acts as a confirmation filter for other signals, allowing trades when:
+    1. RSI shows bullish momentum (RSI > 40), OR
+    2. RSI is recovering from oversold (was < 30, now >= 30)
     
     Args:
         price_data: DataFrame with OHLCV data (must have 'close' column)
@@ -88,7 +92,7 @@ def rsi_oversold(price_data: pd.DataFrame, period: int = 14, oversold_threshold:
         oversold_threshold: RSI threshold for oversold condition
         
     Returns:
-        Boolean Series with True for buy signals
+        Boolean Series with True for confirmation signals
     """
     if len(price_data) < period + 1:
         logger.warning(f"Insufficient data for RSI: {len(price_data)} rows, need {period + 1}")
@@ -96,10 +100,15 @@ def rsi_oversold(price_data: pd.DataFrame, period: int = 14, oversold_threshold:
     
     rsi = calculate_rsi(price_data['close'], period)
     
-    # Signal when RSI crosses below threshold (recovery signal)
-    signals = (rsi < oversold_threshold) & (rsi.shift(1) >= oversold_threshold)
+    # Confirmation conditions:
+    # 1. RSI shows momentum (> 40) - allows most healthy moves
+    # 2. OR recovering from oversold (was < 30, now >= 30)
+    bullish_momentum = rsi > 40.0
+    recovering_from_oversold = (rsi >= oversold_threshold) & (rsi.shift(1) < oversold_threshold)
     
-    logger.debug(f"RSI oversold signals: {signals.sum()} triggers at threshold {oversold_threshold}")
+    signals = bullish_momentum | recovering_from_oversold
+    
+    logger.debug(f"RSI confirmation signals: {signals.sum()} triggers (momentum + recovery)")
     return signals.fillna(False)
 
 

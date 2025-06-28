@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from datetime import date
 import yaml
@@ -54,8 +54,9 @@ class Config(BaseModel):
         return v
 
 # impure
-def load_config(config_path: Path) -> Config:
+def load_config(config_path: Union[str, Path]) -> Config:
     """Load application configuration from a YAML file."""
+    config_path = Path(config_path)  # Convert string to Path if needed
     if not config_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
     try:
@@ -67,8 +68,9 @@ def load_config(config_path: Path) -> Config:
     return Config(**data)
 
 # impure
-def load_rules(rules_path: Path) -> Dict[str, Any]:
+def load_rules(rules_path: Union[str, Path]) -> Dict[str, Any]:
     """Load trading rules from a YAML file."""
+    rules_path = Path(rules_path)  # Convert string to Path if needed
     if not rules_path.exists():
         raise FileNotFoundError(f"Rules file not found: {rules_path}")
     try:

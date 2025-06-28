@@ -12,9 +12,9 @@ baseline:
     slow_period: 20
 
 layers:
-  - name: "rsi_confirm"
+  - name: "rsi_momentum"
     type: "rsi_oversold"
-    description: "Layer: Confirm with RSI dropping below 30 (oversold)"
+    description: "Layer: Confirm with RSI momentum (RSI > 40 or recovering from oversold)"
     params:
       period: 14
       oversold_threshold: 30.0
@@ -36,3 +36,4 @@ validation:
   ema_crossover:
     fast_period: {min: 2, max: 50}
     slow_period: {min: 5, max: 200}
+

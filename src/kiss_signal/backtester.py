@@ -65,17 +65,9 @@ class Backtester:
             price_data = price_data[price_data.index.date <= freeze_date]
             logger.info(f"Using data up to freeze date: {freeze_date}")
         
-        # Ensure DatetimeIndex has frequency for VectorBT compatibility
-        if price_data.index.freq is None:
-            # Try to infer frequency first, fallback to daily if needed
-            inferred_freq = pd.infer_freq(price_data.index)
-            if inferred_freq:
-                price_data.index.freq = inferred_freq
-                logger.debug(f"Set DatetimeIndex frequency to '{inferred_freq}' (inferred) for VectorBT compatibility")
-            else:
-                # Create a copy with inferred frequency for VectorBT
-                price_data = price_data.asfreq('D')
-                logger.debug("Set DatetimeIndex frequency to 'D' (daily) for VectorBT compatibility")
+        # VectorBT can work without explicit frequency, so let's skip frequency setting
+        # to avoid complex resampling issues
+        logger.debug("Skipping frequency setting for VectorBT compatibility")
         
         if edge_score_weights is None:
             edge_score_weights = {'win_pct': 0.6, 'sharpe': 0.4}
@@ -99,7 +91,8 @@ class Backtester:
                     fees=0.001,
                     slippage=0.0005,
                     init_cash=100000,
-                    size=np.inf
+                    size=np.inf,
+                    freq='D'  # Explicitly set frequency for VectorBT
                 )
                 total_trades = portfolio.trades.count()
                 
