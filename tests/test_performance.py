@@ -24,7 +24,7 @@ class TestPerformanceMonitor:
         assert "test_function" in monitor.metrics
         assert monitor.metrics["test_function"].duration >= 0.1
     
-    def test_threshold_warnings(self, caplog):
+    def test_duration_warning(self, caplog):
         """Test performance threshold warnings."""
         monitor = PerformanceMonitor()
         monitor.thresholds['duration_warning'] = 0.05
@@ -32,24 +32,10 @@ class TestPerformanceMonitor:
         @monitor.profile_performance
         def slow_function():
             time.sleep(0.1)
+            return True
         
         slow_function()
         assert "exceeded duration threshold" in caplog.text
-    
-    def test_memory_monitoring(self):
-        """Test memory usage monitoring."""
-        monitor = PerformanceMonitor()
-
-        @monitor.profile_performance
-        def memory_test():
-            # Allocate some memory
-            data = [i for i in range(100000)]
-            return len(data)
-
-        result = memory_test()
-        assert result == 100000
-        assert "memory_test" in monitor.metrics
-        assert monitor.metrics["memory_test"].memory_usage > 0
 
 
 @pytest.mark.slow

@@ -12,8 +12,8 @@
            INFO     Backtester initialized: hold_period=20, min_trades=5       
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for RELIANCE               
-[23:07:23] INFO     find_optimal_strategies completed in 1.07s, memory: 350.6MB
-[23:07:23] INFO     === KISS Signal CLI Run Started ===                        
+[23:13:50] INFO     find_optimal_strategies completed in 1.30s                 
+[23:13:50] INFO     === KISS Signal CLI Run Started ===                        
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -21,14 +21,14 @@
 [1/4] Configuration loaded.
 [2/4] Skipping data refresh (freeze mode).
 [3/4] Analyzing strategies for each ticker...
-           INFO     Loaded 2 symbols from universe                             
+[23:13:51] INFO     Loaded 2 symbols from universe                             
            INFO     Backtester initialized: hold_period=20, min_trades=5       
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for RELIANCE               
-           INFO     find_optimal_strategies completed in 0.07s, memory: 351.7MB
+           INFO     find_optimal_strategies completed in 0.18s                 
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for INFY                   
-           INFO     find_optimal_strategies completed in 0.07s, memory: 352.1MB
+           INFO     find_optimal_strategies completed in 0.12s                 
 [4/4] Analysis complete. Results summary:
                          Top Strategies by Edge Score                          
 ┌──────────┬───────────────────────────┬────────────┬───────┬────────┬────────┐
@@ -47,13 +47,13 @@
            INFO     Creating database at data\kiss_signal.db                   
            INFO     Successfully created database at data\kiss_signal.db       
            INFO     Saving 4 strategies to data\kiss_signal.db                 
-[23:07:24] INFO     Successfully saved 4 strategies                            
+           INFO     Successfully saved 4 strategies                            
            INFO     Saved 4 strategies to database at data\kiss_signal.db      
 [5/5] Generating report...
            INFO     Fetched 0 open positions.                                  
            WARNING  No strategies found for timestamp                          
-                    2025-06-28T23:07:23.933609 above threshold 0.5             
+                    2025-06-28T23:13:51.350658 above threshold 0.5             
            INFO     No strategies found above threshold, no signals to generate
            INFO     Report generated: reports\signals_2025-06-28.md            
 * Report generated: reports\signals_2025-06-28.md
-           INFO     full_backtest completed in 0.29s, memory: 352.2MB          
+           INFO     full_backtest completed in 0.50s                           

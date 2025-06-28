@@ -285,7 +285,6 @@ def run(
             if perf_summary:
                 console.print("\n[bold blue]Performance Summary:[/bold blue]")
                 console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
-                console.print(f"Average Memory: {perf_summary['avg_memory_mb']:.1f}MB")
                 console.print(f"Slowest Function: {perf_summary['slowest_function']}")
 
     except typer.Exit:

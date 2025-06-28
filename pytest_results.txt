@@ -4,7 +4,7 @@ cachedir: .pytest_cache
 rootdir: D:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
-collecting ... collected 85 items
+collecting ... collected 84 items
 
 tests/test_backtester.py::TestBacktester::test_init_default_parameters PASSED [  1%]
 tests/test_backtester.py::TestBacktester::test_init_custom_parameters PASSED [  2%]
@@ -16,70 +16,69 @@ tests/test_backtester.py::TestBacktester::test_generate_signals_invalid_rule PAS
 tests/test_backtester.py::TestBacktester::test_generate_signals_missing_parameters PASSED [  9%]
 tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow PASSED [ 10%]
 tests/test_backtester.py::TestBacktesterFixtures::test_sample_backtest_data_fixture PASSED [ 11%]
-tests/test_cli.py::test_cli_import PASSED                                [ 12%]
+tests/test_cli.py::test_cli_import PASSED                                [ 13%]
 tests/test_cli.py::test_run_command_help PASSED                          [ 14%]
 tests/test_cli.py::test_run_command_basic PASSED                         [ 15%]
 tests/test_cli.py::test_run_command_verbose PASSED                       [ 16%]
 tests/test_cli.py::test_run_command_freeze_date PASSED                   [ 17%]
-tests/test_cli.py::test_run_command_success PASSED                       [ 18%]
+tests/test_cli.py::test_run_command_success PASSED                       [ 19%]
 tests/test_cli.py::test_run_command_invalid_freeze_date PASSED           [ 20%]
 tests/test_cli.py::test_run_command_no_config PASSED                     [ 21%]
 tests/test_cli.py::test_run_command_missing_rules PASSED                 [ 22%]
 tests/test_cli.py::test_run_command_with_persistence PASSED              [ 23%]
-tests/test_cli.py::test_run_command_persistence_failure_handling PASSED  [ 24%]
-tests/test_config.py::test_config_model_valid PASSED                     [ 25%]
+tests/test_cli.py::test_run_command_persistence_failure_handling PASSED  [ 25%]
+tests/test_config.py::test_config_model_valid PASSED                     [ 26%]
 tests/test_config.py::test_config_model_invalid_weights PASSED           [ 27%]
 tests/test_config.py::test_load_config_missing_file PASSED               [ 28%]
 tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 29%]
 tests/test_data.py::TestDataFunctions::test_load_universe_missing_file PASSED [ 30%]
-tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 31%]
-tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 32%]
+tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 32%]
+tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 33%]
 tests/test_data.py::TestDataFunctions::test_needs_refresh_missing_file PASSED [ 34%]
 tests/test_data.py::TestDataFunctions::test_needs_refresh_fresh_file PASSED [ 35%]
 tests/test_data.py::TestDataFunctions::test_needs_refresh_stale_file PASSED [ 36%]
-tests/test_data.py::TestDataFunctions::test_validate_data_quality_good_data PASSED [ 37%]
-tests/test_data.py::TestDataFunctions::test_validate_data_quality_negative_prices PASSED [ 38%]
+tests/test_data.py::TestDataFunctions::test_validate_data_quality_good_data PASSED [ 38%]
+tests/test_data.py::TestDataFunctions::test_validate_data_quality_negative_prices PASSED [ 39%]
 tests/test_data.py::TestDataFunctions::test_save_and_load_symbol_cache PASSED [ 40%]
 tests/test_data.py::TestDataFunctions::test_get_price_data_with_date_filtering PASSED [ 41%]
 tests/test_data.py::TestDataFunctions::test_get_price_data_with_freeze_date PASSED [ 42%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_missing_cache PASSED [ 43%]
-tests/test_data.py::TestDataFunctions::test_refresh_market_data_freeze_mode PASSED [ 44%]
-tests/test_data.py::TestDataFunctions::test_refresh_market_data_success PASSED [ 45%]
+tests/test_data.py::TestDataFunctions::test_get_price_data_missing_cache PASSED [ 44%]
+tests/test_data.py::TestDataFunctions::test_refresh_market_data_freeze_mode PASSED [ 45%]
+tests/test_data.py::TestDataFunctions::test_refresh_market_data_success PASSED [ 46%]
 tests/test_data.py::TestDataFunctions::test_fetch_symbol_data_multiindex_columns PASSED [ 47%]
 tests/test_data.py::TestDataFunctions::test_fetch_symbol_data_tuple_columns PASSED [ 48%]
-tests/test_integration.py::TestCLIIntegration::test_config_loading_integration PASSED [ 49%]
-tests/test_integration.py::TestCLIIntegration::test_data_loading_integration PASSED [ 50%]
-tests/test_integration.py::TestCLIIntegration::test_backtester_with_real_rules PASSED [ 51%]
-tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow PASSED [ 52%]
+tests/test_integration.py::TestCLIIntegration::test_config_loading_integration PASSED [ 50%]
+tests/test_integration.py::TestCLIIntegration::test_data_loading_integration PASSED [ 51%]
+tests/test_integration.py::TestCLIIntegration::test_backtester_with_real_rules PASSED [ 52%]
+tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow PASSED [ 53%]
 tests/test_integration.py::TestCLIIntegration::test_error_handling_integration PASSED [ 54%]
 tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_function_lookup PASSED [ 55%]
-tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_parameter_validation PASSED [ 56%]
-tests/test_performance.py::TestPerformanceMonitor::test_performance_decorator PASSED [ 57%]
-tests/test_performance.py::TestPerformanceMonitor::test_threshold_warnings PASSED [ 58%]
-tests/test_performance.py::TestPerformanceMonitor::test_memory_monitoring PASSED [ 60%]
-tests/test_performance.py::TestPerformanceBenchmarks::test_full_workflow_performance SKIPPED [ 61%]
-tests/test_persistence.py::TestCreateDatabase::test_create_database_success PASSED [ 62%]
+tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_parameter_validation PASSED [ 57%]
+tests/test_performance.py::TestPerformanceMonitor::test_performance_decorator PASSED [ 58%]
+tests/test_performance.py::TestPerformanceMonitor::test_duration_warning PASSED [ 59%]
+tests/test_performance.py::TestPerformanceBenchmarks::test_full_workflow_performance SKIPPED [ 60%]
+tests/test_persistence.py::TestCreateDatabase::test_create_database_success PASSED [ 61%]
 tests/test_persistence.py::TestCreateDatabase::test_create_database_idempotent PASSED [ 63%]
 tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_success PASSED [ 64%]
 tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_empty_list PASSED [ 65%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_transaction_rollback PASSED [ 67%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_invalid_rule_stack PASSED [ 68%]
+tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_transaction_rollback PASSED [ 66%]
+tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_invalid_rule_stack PASSED [ 67%]
 tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_database_not_exists PASSED [ 69%]
 tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_multiple_batches PASSED [ 70%]
 tests/test_persistence.py::TestIntegration::test_create_and_save_workflow PASSED [ 71%]
 tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_success PASSED [ 72%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_threshold_filtering PASSED [ 74%]
+tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_threshold_filtering PASSED [ 73%]
 tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_no_results PASSED [ 75%]
 tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_database_error PASSED [ 76%]
 tests/test_reporter.py::TestCheckForSignal::test_check_signal_with_valid_rule PASSED [ 77%]
 tests/test_reporter.py::TestCheckForSignal::test_check_signal_no_signal PASSED [ 78%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_empty_data PASSED [ 80%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_unknown_rule PASSED [ 81%]
+tests/test_reporter.py::TestCheckForSignal::test_check_signal_empty_data PASSED [ 79%]
+tests/test_reporter.py::TestCheckForSignal::test_check_signal_unknown_rule PASSED [ 80%]
 tests/test_reporter.py::TestCheckForSignal::test_check_signal_rule_exception PASSED [ 82%]
 tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_success PASSED [ 83%]
 tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_no_strategies PASSED [ 84%]
 tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_with_positions PASSED [ 85%]
-tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 87%]
+tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 86%]
 tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 88%]
 tests/test_rule_funcs.py::TestSMACrossover::test_invalid_periods PASSED  [ 89%]
 tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_calculation PASSED  [ 90%]
@@ -100,13 +99,13 @@ Name                             Stmts   Miss  Cover
 src\kiss_signal\__init__.py          4      0   100%
 src\kiss_signal\_version.py         13     13     0%
 src\kiss_signal\backtester.py       80     12    85%
-src\kiss_signal\cli.py             161     27    83%
+src\kiss_signal\cli.py             160     27    83%
 src\kiss_signal\config.py           68     11    84%
 src\kiss_signal\data.py            160     40    75%
-src\kiss_signal\performance.py      47      2    96%
+src\kiss_signal\performance.py      40      1    98%
 src\kiss_signal\persistence.py     118     17    86%
 src\kiss_signal\reporter.py        206     43    79%
 src\kiss_signal\rules.py            50      3    94%
 ----------------------------------------------------
-TOTAL                              907    168    81%
-======================= 84 passed, 1 skipped in 27.12s ========================
+TOTAL                              899    167    81%
+======================= 83 passed, 1 skipped in 30.08s ========================
