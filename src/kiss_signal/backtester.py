@@ -58,14 +58,24 @@ class Backtester:
             return []
 
         # Create combinations to test: baseline alone, and baseline + each layer
-        combinations_to_test = [( [baseline_rule] )]
-        for layer in layers:
-            combinations_to_test.append( ( [baseline_rule, layer] ) )
+        combinations_to_test = [[baseline_rule]] + [[baseline_rule, layer] for layer in layers]
 
         if freeze_date:
             # Filter data up to freeze_date for deterministic testing
             price_data = price_data[price_data.index.date <= freeze_date]
             logger.info(f"Using data up to freeze date: {freeze_date}")
+        
+        # Ensure DatetimeIndex has frequency for VectorBT compatibility
+        if price_data.index.freq is None:
+            # Try to infer frequency first, fallback to daily if needed
+            inferred_freq = pd.infer_freq(price_data.index)
+            if inferred_freq:
+                price_data.index.freq = inferred_freq
+                logger.debug(f"Set DatetimeIndex frequency to '{inferred_freq}' (inferred) for VectorBT compatibility")
+            else:
+                # Create a copy with inferred frequency for VectorBT
+                price_data = price_data.asfreq('D')
+                logger.debug("Set DatetimeIndex frequency to 'D' (daily) for VectorBT compatibility")
         
         if edge_score_weights is None:
             edge_score_weights = {'win_pct': 0.6, 'sharpe': 0.4}
@@ -139,8 +149,22 @@ class Backtester:
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
         """Generate exit signals based on holding period after entry signals."""
-        # Use vectorbt's forward shift. It's clean and vectorized.
-        return entry_signals.vbt.fshift(hold_period)
+        # Create exit signals: exit after hold_period days from each entry
+        exit_signals = pd.Series(False, index=entry_signals.index)
+        
+        # For each entry signal, set exit signal hold_period days later
+        entry_dates = entry_signals[entry_signals].index
+        for entry_date in entry_dates:
+            # Find the exit date (hold_period days after entry)
+            entry_idx = entry_signals.index.get_loc(entry_date)
+            exit_idx = entry_idx + hold_period
+            
+            # Ensure we don't go beyond the data bounds
+            if exit_idx < len(entry_signals):
+                exit_date = entry_signals.index[exit_idx]
+                exit_signals.loc[exit_date] = True
+        
+        return exit_signals
 
     def _generate_signals(self, rule_combo: Dict[str, Any], price_data: pd.DataFrame) -> pd.Series:
         """

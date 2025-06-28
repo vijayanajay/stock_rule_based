@@ -1,5 +1,3 @@
-
-Log file saved to run_log.txt
            INFO     Loaded 3 symbols from universe                             
            ERROR    Universe file not found: nonexistent.csv                   
            WARNING  Negative prices detected for RELIANCE                      
@@ -14,10 +12,10 @@ Log file saved to run_log.txt
            INFO     Backtester initialized: hold_period=20, min_trades=5       
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for RELIANCE               
-[23:28:01] WARNING  Strategy 'sma_10_20_crossover + rsi_oversold_30' on        
+[17:46:22] WARNING  Strategy 'sma_10_20_crossover + rsi_oversold_30' on        
                     'RELIANCE' generated only 0 trades, which is below the     
                     threshold of 5.                                            
-[23:28:01] INFO     === KISS Signal CLI Run Started ===                        
+[17:46:22] INFO     === KISS Signal CLI Run Started ===                        
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -50,12 +48,12 @@ Log file saved to run_log.txt
            INFO     Creating database at data\kiss_signal.db                   
            INFO     Successfully created database at data\kiss_signal.db       
            INFO     Saving 2 strategies to data\kiss_signal.db                 
-[23:28:02] INFO     Successfully saved 2 strategies                            
+           INFO     Successfully saved 2 strategies                            
            INFO     Saved 2 strategies to database at data\kiss_signal.db      
 [5/5] Generating report...
            INFO     Fetched 0 open positions.                                  
            WARNING  No strategies found for timestamp                          
-                    2025-06-26T23:28:01.947258 above threshold 0.5             
+                    2025-06-28T17:46:22.682733 above threshold 0.5             
            INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-26.md            
-* Report generated: reports\signals_2025-06-26.md
+           INFO     Report generated: reports\signals_2025-06-28.md            
+* Report generated: reports\signals_2025-06-28.md

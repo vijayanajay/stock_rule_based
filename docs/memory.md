@@ -254,7 +254,7 @@
 
 ---
 
-### Test Suite Desynchronization and Brittle Test Logic (2025-07-10)
+### Test Suite and Brittle Test Logic (2025-07-10)
 **Issue**: Multiple test failures across `test_backtester.py` and `test_integration.py`. Errors included `TypeError` on method signatures, `AssertionError` on test outcomes that depended on random data, and `AssertionError` from tests making incorrect assumptions about data structures.
 **Root Cause**: A structural failure of test-component synchronization.
 1.  **API Signature Drift**: The `Backtester.find_optimal_strategies` method signature was changed to require a `symbol` argument, but a test was not updated, causing a `TypeError`. The test was also redundant with another, better-implemented test.
@@ -276,22 +276,33 @@
 
 ---
 
-## Antipatterns Reference
- 
- - Manual os.chdir() in CLI Tests: Use test runner isolation helpers (e.g., `runner.isolated_filesystem()`), not global CWD changes.
- - Magic Path Resolution in CLI: Require explicit config file paths; avoid searching multiple locations.
- - Path Type in Typer Option: Use `str` for CLI path options, convert to `Path` inside the command.
- - Patching Deferred Imports at Module Level: Patch where the dependency is actually imported/used.
- - Non-Hermetic Integration Tests: Mock all external dependencies, use isolated filesystems.
- - Inconsistent Test Fixtures and Mock Contracts: Ensure test data matches real schema and setup.
- - Duplicated Core Logic Across Modules: Centralize core logic, avoid duplicate implementations.
- - Brittle I/O Tests: Avoid tests that depend on specific filesystem permissions, non-portable paths, or resource-locking timing; prefer mocks or in-memory filesystems.
- - Inconsistent Data Contracts: Enforce clear, system-wide data contracts (e.g., column casing, schema) at all component boundaries.
- - Component/Test Desynchronization: Always update tests in lock-step with code changes; focus on public contracts, remove or update tests for obsolete internals.
- - Brittle Path Handling: Components should be self-sufficient for I/O (e.g., create parent dirs as needed), not rely on caller setup.
- - Brittle/Random Test Data: Use deterministic, purpose-built data for tests that depend on specific patterns; avoid random data for business logic tests.
- - Framework Pre-emption: Avoid framework-level validation that pre-empts application logic (e.g., Typer's Path/exists=True); handle validation in app code.
- - Non-Hermetic Fixtures: Test fixtures must create all their own dependencies and match real data contracts.
- - Argument Type/Signature Drift: Ensure CLI/test runner arguments are always the correct type (e.g., str, not Path); update all tests when CLI signatures change.
- - Brittle Reporter/Config Coupling: Persist full, immutable definitions for strategies; don't rely on current config state for historical data.
- - Redundant Defensive Code: Remove defensive code that compensates for inconsistent upstream data; enforce contracts instead.
+### Incomplete Refactoring and Code Duplication in Core Logic (2025-07-12)
+**Issue**: A core function (`reporter._identify_new_signals`) contained duplicated logic and remnants of a previous implementation. It fetched data multiple times and incorrectly processed composite strategies by only considering the first rule in a stack. This was a result of an incomplete refactoring effort.
+**Fix**: The function was refactored to have a single, clear control flow. Duplicated data-fetching calls were removed, and the logic was corrected to iterate through and apply all rules in a strategy stack, ensuring composite strategies are evaluated correctly.
+**Prevention**: When refactoring a critical function, ensure the old code path is completely removed and all call sites are updated. Code reviews must specifically check for duplicated logic blocks or commented-out "old code" that can lead to confusion and bugs. A single function should have a single, unambiguous purpose and implementation.
+
+---
+
+### Inconsistent Data Contract in Reporter Module (2025-07-13)
+**Issue**: A `KeyError: 'rule_stack'` in `test_reporter.py` and a silent failure in `reporter.generate_daily_report` were caused by an inconsistent data contract between internal functions.
+**Root Cause**: The `_identify_new_signals` function produced a list of dictionaries with a `'rule_names'` key, while its consumers (the test suite and the report formatting logic) expected a `'rule_stack'` key. This is a classic example of a producer-consumer data contract mismatch within the application, where a change in the data-producing component was not propagated to its consumers.
+**Fix**: The key in the dictionary produced by `_identify_new_signals` was renamed from `'rule_names'` to `'rule_stack'`, aligning it with the consumers' expectations and the documented report format in the PRD.
+**Prevention**: When creating or refactoring functions that produce data structures (like dictionaries or objects) for other parts of the system to consume, ensure the data contract (e.g., key names, data types) is consistent across both the producer and all consumers. Changes to the contract in one place must be propagated to all related components and their tests in the same atomic commit to prevent desynchronization.
+
+---
+
+### Brittle Finalization Logic due to Environment-Sensitive I/O (Regression) (2025-07-15)
+**Issue**: The application crashed with a low-level, uncatchable OS error (`Unable to initialize device PRN`) on some Windows environments during the final log-saving step. This is a regression of a previously fixed category of bug.
+**Root Cause**: A structural flaw in the application's finalization logic in `cli.py`. A `rich`-specific I/O call, `console.save_text()`, was used in the `finally` block. Similar to the previously fixed issue with `console.print()`, this method can be brittle in non-interactive or redirected console environments, triggering low-level OS errors that bypass standard Python exception handling. The core structural issue is performing complex, environment-sensitive I/O during critical application teardown.
+**Fix**: The brittle `console.save_text()` call was replaced with a more robust, two-step approach: `console.export_text()` to get the log content as a string, followed by a standard `Path.write_text()` to save it to disk. This decouples log saving from `rich`'s console rendering and makes the finalization logic more resilient.
+**Prevention**: Re-affirm the principle: avoid any complex or environment-sensitive I/O operations (especially from third-party libraries like `rich`) inside critical finalization blocks (`finally`). For tasks like saving logs, prefer to export the data to a simple format (like a string) and use standard, robust Python I/O functions to write to disk. This minimizes dependencies on the state of the console environment during shutdown.
+
+---
+
+### VectorBT DatetimeIndex Frequency Requirement (2025-06-27)
+**Issue**: The application failed during backtesting with `ERROR: Index frequency is None. Pass it as freq or define it globally under settings.array_wrapper` for every symbol. This resulted in no valid strategies being found despite having valid configuration and data.
+**Root Cause**: A structural data contract violation between the data loading system (`data.py`) and the backtesting system (`backtester.py`). The data loading pipeline created DatetimeIndex objects without frequency information (`freq=None`), but VectorBT's `Portfolio.from_signals()` requires the DataFrame index to have a frequency set. Stock market data is inherently irregular (excludes weekends/holidays), so pandas doesn't automatically infer frequency, causing VectorBT to fail.
+**Fix**: Added frequency inference logic in `backtester.py`'s `find_optimal_strategies` method before calling VectorBT. The fix first attempts to infer the frequency using `pd.infer_freq()`, and if successful, sets it on the index. If inference fails, it uses `asfreq('D')` to create a copy with daily frequency. This ensures VectorBT receives properly formatted data while respecting the actual frequency pattern of the data.
+**Prevention**: When integrating third-party libraries with specific data requirements (like VectorBT), ensure data contracts are explicit about those requirements. The interface between data loading and consumption modules must account for downstream library expectations. Always test with real-world irregular data patterns, not just test fixtures that may not expose these requirements.
+
+---

@@ -131,29 +131,14 @@ def _identify_new_signals(
         return []
         
     signals = []
-    
-    # 3. For each strategy, check for active signals
     for strategy in strategies:
         symbol = strategy['symbol']
         rule_stack_json = strategy['rule_stack']
         try:
-            # Parse rule stack from JSON
-            # It's a list of rule definition dictionaries.
             rule_stack_defs = json.loads(rule_stack_json)
-            
-            if not rule_stack_defs:
+            if not rule_stack_defs or not isinstance(rule_stack_defs, list):
+                logger.warning(f"Skipping invalid or empty rule stack for {symbol}: {rule_stack_json}")
                 continue
-                
-            # For now, handle single rule per strategy (as per current design)
-            # The full rule definition is now self-contained in the persisted record.
-            rule_def = rule_stack_defs[0]
-            
-            # Ensure rule_def is a dictionary
-            if isinstance(rule_def, str):
-                logger.warning(f"Expected rule definition dictionary but got string for {symbol}: {rule_def}")
-                continue
-                        
-            # 5. Get latest price data
             try:
                 price_data = data.get_price_data(
                     symbol=symbol,
@@ -165,49 +150,36 @@ def _identify_new_signals(
             except Exception as e:
                 logger.warning(f"Failed to load price data for {symbol}: {e}")
                 continue
-            # 6. Check for entry signal on latest date
             if price_data.empty:
                 continue
-            latest_date = price_data.index[-1]
-            
             # Check all rules in the stack (AND logic)
             is_signal = True
-            if not rule_stack_defs:
-                is_signal = False
-            else:
-                for rule_def in rule_stack_defs:
-                    if not _check_for_signal(price_data, rule_def):
-                        is_signal = False
-                        break
-            try:
-                price_data = data.get_price_data(
-                    symbol=symbol,
-                    cache_dir=Path(config.cache_dir),
-                    refresh_days=config.cache_refresh_days,
-                    years=config.historical_data_years,
-                    freeze_date=config.freeze_date,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to load price data for {symbol}: {e}")
-                continue
-            latest_date = price_data.index[-1]
-            
+            for rule_def in rule_stack_defs:
+                if not isinstance(rule_def, dict):
+                    logger.warning(f"Skipping invalid rule definition in stack for {symbol}: {rule_def}")
+                    is_signal = False
+                    break
+                if not _check_for_signal(price_data, rule_def):
+                    is_signal = False
+                    break
             if is_signal:
+                latest_date = price_data.index[-1]
                 entry_price = price_data['close'].iloc[-1]
                 signal_date = latest_date.strftime('%Y-%m-%d')
-                rule_names = " + ".join([r.get('name', r.get('type', '')) for r in rule_stack_defs])
+                rule_stack_str = " + ".join([r.get('name', r.get('type', '')) for r in rule_stack_defs])
                 signals.append({
                     'ticker': symbol,
                     'date': signal_date,
                     'entry_price': entry_price,
-                    'rule_stack': rule_names,
+                    'rule_stack': rule_stack_str,
                     'edge_score': strategy['edge_score']
                 })
-                
-                logger.info(f"New signal: {symbol} at {entry_price} using {rule_def.get('name', rule_def['type'])}")
-        
+                logger.info(f"New signal: {symbol} at {entry_price} using {rule_stack_str}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse rule stack for {symbol}: {e}")
+            continue
+        except Exception as e:
+            logger.error(f"Unexpected error processing strategy for {symbol}: {e}")
             continue
     return signals
 

@@ -4,6 +4,7 @@ import logging
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import sys
 
 import typer
 from rich.console import Console
@@ -278,12 +279,13 @@ def run(
     finally:
         # Always save the log, even if errors occurred
         try:
-            console.save_text("run_log.txt")
+            # Use console.export_text() and standard file I/O for robustness.
+            # console.save_text() can be brittle in some environments (e.g., CI/CD).
+            Path("run_log.txt").write_text(console.export_text(), encoding="utf-8")
             # This message will be on console but not in the saved file.
-            console.print("\n[green]Log file saved to [bold]run_log.txt[/bold][/green]")
+            print("\nLog file saved to run_log.txt", file=sys.stderr)
         except Exception as e:
             # Fallback to standard print if console is broken
-            import sys
             print(f"\nCritical error: Could not save log file: {e}", file=sys.stderr)
 
 
