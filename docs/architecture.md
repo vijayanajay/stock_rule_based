@@ -158,11 +158,10 @@ kiss-signal-cli/
 │       ├── backtester.py
 │       ├── cli.py
 │       ├── config.py
-│       ├── data_manager.py
+│       ├── data.py
 │       ├── persistence.py
-│       ├── rule_funcs.py       # Implementation of indicator/helper functions
-│       ├── reporter.py
-│       └── signal_generator.py
+│       ├── rules.py            # Implementation of indicator/helper functions
+│       └── reporter.py
 ├── tests/
 │   ├── test_backtester.py
 │   ├── test_report_golden.py   # Markdown golden-file comparison
