@@ -61,6 +61,18 @@ def _show_banner() -> None:
     )
 
 
+def _create_progress_context():
+    """Create progress context for long-running operations."""
+    return progress.Progress(
+        progress.SpinnerColumn(),
+        progress.TextColumn("[progress.description]{task.description}"),
+        progress.BarColumn(),
+        progress.TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        progress.TimeElapsedColumn(),
+        console=console,
+    )
+
+
 def _run_backtests(
     app_config: Config,
     rules_config: Dict[str, Any],
@@ -235,34 +247,46 @@ def run(
             raise typer.Exit(1)
 
     try:
-        console.print("[1/4] Configuration loaded.")
-        # Step 2: Refresh market data if needed
-        if app_config.freeze_date:
-            if verbose:
-                logger.info(f"Freeze mode active: {app_config.freeze_date}")
-            console.print("[2/4] Skipping data refresh (freeze mode).")
-        else:
-            if verbose:
-                logger.info("Refreshing market data")
-            console.print("[2/4] Refreshing market data...")
-            data.refresh_market_data(
-                universe_path=app_config.universe_path,
-                cache_dir=app_config.cache_dir,
-                refresh_days=app_config.cache_refresh_days,
-                years=app_config.historical_data_years,
-                freeze_date=app_config.freeze_date,
-            )
-        # Step 3: Analyze strategies for each ticker
-        console.print("[3/4] Analyzing strategies for each ticker...")
-        symbols = data.load_universe(app_config.universe_path)
-        all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date)
-        # Step 4: Display results summary
-        console.print("[4/4] Analysis complete. Results summary:")
-        # Step 5: Save results
-        run_timestamp = datetime.now().isoformat()
-        _display_results(all_results)
-        _save_results(app_config, all_results, run_timestamp)
-        _generate_and_save_report(app_config, run_timestamp)
+        with performance_monitor.monitor_execution("full_backtest"):
+            console.print("[1/4] Configuration loaded.")
+
+            # Step 2: Refresh market data if needed
+            if app_config.freeze_date:
+                if verbose:
+                    logger.info(f"Freeze mode active: {app_config.freeze_date}")
+                console.print("[2/4] Skipping data refresh (freeze mode).")
+            else:
+                if verbose:
+                    logger.info("Refreshing market data")
+                console.print("[2/4] Refreshing market data...")
+                data.refresh_market_data(
+                    universe_path=app_config.universe_path,
+                    cache_dir=app_config.cache_dir,
+                    refresh_days=app_config.cache_refresh_days,
+                    years=app_config.historical_data_years,
+                    freeze_date=app_config.freeze_date,
+                )
+
+            # Step 3: Analyze strategies for each ticker
+            console.print("[3/4] Analyzing strategies for each ticker...")
+            symbols = data.load_universe(app_config.universe_path)
+            all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date)
+
+            # Step 4: Display results summary and save
+            console.print("[4/4] Analysis complete. Results summary:")
+            run_timestamp = datetime.now().isoformat()
+            _display_results(all_results)
+            _save_results(app_config, all_results, run_timestamp)
+            _generate_and_save_report(app_config, run_timestamp)
+
+        # Show performance summary if verbose
+        if verbose:
+            perf_summary = performance_monitor.get_summary()
+            if perf_summary:
+                console.print("\n[bold blue]Performance Summary:[/bold blue]")
+                console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
+                console.print(f"Average Memory: {perf_summary['avg_memory_mb']:.1f}MB")
+                console.print(f"Slowest Function: {perf_summary['slowest_function']}")
 
     except typer.Exit:
         raise
@@ -275,109 +299,6 @@ def run(
         raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")
-        if verbose:
-            console.print_exception()
-        raise typer.Exit(1)
-    finally:
-        # Always save the log, even if errors occurred
-        try:
-            # Use console.export_text() and standard file I/O for robustness.
-            # console.save_text() can be brittle in some environments (e.g., CI/CD).
-            Path("run_log.txt").write_text(console.export_text(), encoding="utf-8")
-            # This message will be on console but not in the saved file.
-            print("\nLog file saved to run_log.txt", file=sys.stderr)
-        except Exception as e:
-            # Fallback to standard print if console is broken
-            print(f"\nCritical error: Could not save log file: {e}", file=sys.stderr)
-
-
-def run_backtest(
-    ctx: typer.Context,
-    freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output")
-) -> None:
-    """Run backtest with progress indicators and performance monitoring."""
-    _show_banner()
-
-    app_config = ctx.obj["config"]
-    rules_config = ctx.obj["rules"]
-    verbose = ctx.obj["verbose"]
-
-    freeze_date_obj: Optional[date] = None
-    if freeze_data:
-        try:
-            freeze_date_obj = date.fromisoformat(freeze_data)
-            # Override config's freeze_date with CLI flag if provided
-            app_config.freeze_date = freeze_date_obj
-        except ValueError:
-            console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
-            raise typer.Exit(1)
-
-    with performance_monitor.monitor_execution("full_backtest"):
-        # Setup progress tracking
-        with progress.Progress(
-            progress.SpinnerColumn(),
-            progress.TextColumn("[progress.description]{task.description}"),
-            progress.BarColumn(),
-            progress.PercentageColumn(),
-            progress.TimeElapsedColumn(),
-            console=console,
-        ) as prog:
-            
-            main_task = prog.add_task("Running backtest analysis...", total=100)
-            
-            def progress_callback(description: str, pct_complete: float):
-                prog.update(main_task, description=description, completed=pct_complete * 100)
-            
-            try:
-                console.print("[1/4] Configuration loaded.")
-                # Step 2: Refresh market data if needed
-                if app_config.freeze_date:
-                    if verbose:
-                        logger.info(f"Freeze mode active: {app_config.freeze_date}")
-                    console.print("[2/4] Skipping data refresh (freeze mode).")
-                else:
-                    if verbose:
-                        logger.info("Refreshing market data")
-                    console.print("[2/4] Refreshing market data...")
-                    data.refresh_market_data(
-                        universe_path=app_config.universe_path,
-                        cache_dir=app_config.cache_dir,
-                        refresh_days=app_config.cache_refresh_days,
-                        years=app_config.historical_data_years,
-                        freeze_date=app_config.freeze_date,
-                    )
-                # Step 3: Analyze strategies for each ticker
-                console.print("[3/4] Analyzing strategies for each ticker...")
-                symbols = data.load_universe(app_config.universe_path)
-                all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date)
-                # Step 4: Display results summary
-                console.print("[4/4] Analysis complete. Results summary:")
-                _display_results(all_results)
-                
-                prog.update(main_task, description="Complete!", completed=100)
-                
-            except Exception as e:
-                prog.update(main_task, description=f"Error: {e}", completed=100)
-                raise
-    
-    # Show performance summary if verbose
-    if verbose:
-        perf_summary = performance_monitor.get_summary()
-        if perf_summary:
-            console.print("\n[bold blue]Performance Summary:[/bold blue]")
-            console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
-            console.print(f"Average Memory: {perf_summary['avg_memory_mb']:.1f}MB")
-            console.print(f"Slowest Function: {perf_summary['slowest_function']}")
-
-    try:
-        # Step 5: Save results
-        run_timestamp = datetime.now().isoformat()
-        _save_results(app_config, all_results, run_timestamp)
-        _generate_and_save_report(app_config, run_timestamp)
-
-    except Exception as e:
-        console.print(f"[red]Error during final steps: {e}[/red]", file=sys.stderr)
         if verbose:
             console.print_exception()
         raise typer.Exit(1)

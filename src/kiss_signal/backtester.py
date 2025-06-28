@@ -207,50 +207,6 @@ class Backtester:
 
         return entry_signals
 
-    def _process_symbol_strategies(self, symbol: str) -> List[Dict]:
-        """Process all rule combinations for a single symbol."""
-        symbol_data = self.data_manager.get_symbol_data(symbol)
-        if symbol_data.empty:
-            return []
-        
-        strategies = []
-        rule_combinations = self._get_rule_combinations()
-        
-        # Batch calculate common indicators once
-        indicators = self._calculate_indicators_batch(symbol_data)
-        
-        for rule_stack in rule_combinations:
-            try:
-                # Use cached indicators
-                strategy_result = self._evaluate_strategy_with_cache(
-                    symbol, symbol_data, rule_stack, indicators
-                )
-                if strategy_result:
-                    strategies.append(strategy_result)
-                    
-            except Exception as e:
-                logger.warning(f"Strategy evaluation failed for {symbol} {rule_stack}: {e}")
-                continue
-        
-        return strategies
-
-    @cached(global_cache, ttl_hours=12)
-    def _calculate_indicators_batch(self, data: pd.DataFrame) -> Dict[str, pd.Series]:
-        """Calculate all required indicators once for reuse."""
-        indicators = {}
-        
-        # Common indicators used across rules
-        indicators['sma_20'] = vbt.MA.run(data['close'], window=20).ma
-        indicators['sma_50'] = vbt.MA.run(data['close'], window=50).ma
-        indicators['rsi'] = vbt.RSI.run(data['close'], window=14).rsi
-        indicators['volume_sma'] = vbt.MA.run(data['volume'], window=20).ma
-        
-        # Volatility indicators
-        indicators['atr'] = vbt.ATR.run(data['high'], data['low'], data['close']).atr
-        indicators['volatility'] = data['close'].pct_change().rolling(20).std()
-        
-        return indicators
-
     def _validate_and_rank_strategies(self, strategies: List[Dict]) -> List[Dict]:
         """Enhanced strategy validation and ranking."""
         validated_strategies = []

@@ -12,9 +12,9 @@
            INFO     Backtester initialized: hold_period=20, min_trades=5       
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for RELIANCE               
-[21:35:24] INFO     find_optimal_strategies completed in 1.07s, memory:        
-                    350.2MB, cpu: 98.6%                                        
-[21:35:25] INFO     === KISS Signal CLI Run Started ===                        
+[22:06:15] INFO     find_optimal_strategies completed in 1.08s, memory:        
+                    349.9MB, cpu: 98.6%                                        
+[22:06:15] INFO     === KISS Signal CLI Run Started ===                        
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -27,11 +27,11 @@
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for RELIANCE               
            INFO     find_optimal_strategies completed in 0.09s, memory:        
-                    351.3MB, cpu: 100.8%                                       
+                    351.4MB, cpu: 99.7%                                        
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for INFY                   
            INFO     find_optimal_strategies completed in 0.09s, memory:        
-                    351.7MB, cpu: 99.7%                                        
+                    351.8MB, cpu: 100.2%                                       
 [4/4] Analysis complete. Results summary:
                          Top Strategies by Edge Score                          
 ┌──────────┬───────────────────────────┬────────────┬───────┬────────┬────────┐
@@ -55,7 +55,9 @@
 [5/5] Generating report...
            INFO     Fetched 0 open positions.                                  
            WARNING  No strategies found for timestamp                          
-                    2025-06-28T21:35:25.346988 above threshold 0.5             
+                    2025-06-28T22:06:15.275751 above threshold 0.5             
            INFO     No strategies found above threshold, no signals to generate
            INFO     Report generated: reports\signals_2025-06-28.md            
 * Report generated: reports\signals_2025-06-28.md
+           INFO     full_backtest completed in 0.32s, memory: 351.8MB, cpu:    
+                    61.9%                                                      
