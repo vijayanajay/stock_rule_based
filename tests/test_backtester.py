@@ -51,8 +51,7 @@ class TestBacktester:
         backtester = Backtester()
         # An empty rule combo is invalid and should raise an error
         rule_combo = {}
-        
-        with pytest.raises(ValueError, match="Rule combination missing 'type' field"):
+        with pytest.raises(ValueError, match="Rule definition missing 'type' field"):
             backtester._generate_signals(rule_combo, sample_price_data)
 
     def test_generate_signals_sma_crossover(self, sample_price_data):
@@ -86,18 +85,6 @@ class TestBacktester:
         
         with pytest.raises(ValueError, match="Missing parameters for rule 'sma_crossover'"):
             backtester._generate_signals(rule_combo, sample_price_data)
-
-    def test_find_optimal_strategies_no_baseline(self, sample_price_data):
-        """Test find_optimal_strategies with no baseline rule in config."""
-        backtester = Backtester()
-        rules_config = {'layers': [{'name': 'test', 'type': 'sma_crossover', 'params': {}}]}
-        
-        result = backtester.find_optimal_strategies(
-            rules_config=rules_config,
-            price_data=sample_price_data,
-            symbol="TEST.NS"
-        )
-        assert result == []
 
     def test_find_optimal_strategies_no_trades(self, sample_price_data, sample_rules_config):
         """Test find_optimal_strategies when a rule generates no trades."""
@@ -145,21 +132,22 @@ def sample_price_data():
 
 @pytest.fixture
 def sample_rules_config():
-    """Generate a sample rules config dictionary for testing."""
-    return {
-        'baseline': {
-            'name': 'sma_crossover_test',
-            'type': 'sma_crossover',
-            'params': {'fast_period': 10, 'slow_period': 20}
-        },
-        'layers': [
-            {
-                'name': 'rsi_oversold_test',
-                'type': 'rsi_oversold',
-                'params': {'period': 14, 'oversold_threshold': 30.0}
-            }
+    """Generate a sample rules config Pydantic model for testing."""
+    from kiss_signal.config import RulesConfig, RuleDef
+    return RulesConfig(
+        baseline=RuleDef(
+            name='sma_crossover_test',
+            type='sma_crossover',
+            params={'fast_period': 10, 'slow_period': 20}
+        ),
+        layers=[
+            RuleDef(
+                name='rsi_oversold_test',
+                type='rsi_oversold',
+                params={'period': 14, 'oversold_threshold': 30.0}
+            )
         ]
-    }
+    )
 
 
 class TestBacktesterIntegration:

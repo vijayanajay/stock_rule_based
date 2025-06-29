@@ -11,6 +11,7 @@ import pandas as pd
 import vectorbt as vbt
 
 from . import rules
+from .config import RulesConfig
 from .performance import performance_monitor
 
 __all__ = ["Backtester"]
@@ -39,7 +40,7 @@ class Backtester:
     def find_optimal_strategies(
         self, 
         price_data: pd.DataFrame,
-        rules_config: Dict[str, Any],
+        rules_config: RulesConfig,
         symbol: str = "",  # Added symbol for logging
         freeze_date: Any = None,  # Accept date or None
         edge_score_weights: Optional[Dict[str, float]] = None
@@ -47,7 +48,7 @@ class Backtester:
         """Find optimal rule combinations through backtesting.
         
         Args:
-            rules_config: Dictionary with 'baseline' and 'layers' rule configs.
+            rules_config: RulesConfig Pydantic model with 'baseline' and 'layers' rule configs.
             price_data: OHLCV price data for backtesting
             symbol: The stock symbol being tested, for logging purposes.
             freeze_date: Optional cutoff date for data (for deterministic testing)
@@ -56,8 +57,8 @@ class Backtester:
         Returns:
             List of strategies with edge scores and performance metrics, ranked by edge score
         """
-        baseline_rule = rules_config.get("baseline")
-        layers = rules_config.get("layers", [])
+        baseline_rule = rules_config.baseline
+        layers = rules_config.layers
 
         if not baseline_rule:
             logger.warning("No baseline rule found in configuration for %s.", symbol)
@@ -69,11 +70,17 @@ class Backtester:
         if freeze_date is not None:
             price_data = price_data[price_data.index.date <= freeze_date]
             logger.info(f"Using data up to freeze date: {freeze_date}")
-        
-        # VectorBT can work without explicit frequency, so let's skip frequency setting
-        # to avoid complex resampling issues
-        logger.debug("Skipping frequency setting for VectorBT compatibility")
-        
+
+        # Infer frequency for vectorbt compatibility
+        if price_data.index.freq is None:
+            inferred_freq = pd.infer_freq(price_data.index)
+            if inferred_freq:
+                price_data = price_data.asfreq(inferred_freq)
+                logger.debug(f"Inferred frequency '{inferred_freq}' for {symbol}")
+            else:
+                price_data = price_data.asfreq('D')
+                logger.warning(f"Could not infer frequency for {symbol}. Forcing daily frequency ('D').")
+
         if edge_score_weights is None:
             edge_score_weights = {'win_pct': 0.6, 'sharpe': 0.4}
         
@@ -97,11 +104,10 @@ class Backtester:
                     slippage=0.0005,
                     init_cash=self.initial_capital,
                     size=np.inf,
-                    freq='D'  # Explicitly set frequency for VectorBT
                 )
                 total_trades = portfolio.trades.count()
                 
-                rule_names = " + ".join([r.get('name', r.get('type', '')) for r in combo])
+                rule_names = " + ".join([r.name for r in combo])
                 if total_trades < self.min_trades_threshold:
                     logger.warning(f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, which is below the threshold of {self.min_trades_threshold}.")
                     continue
@@ -149,21 +155,29 @@ class Backtester:
         """Generate exit signals based on holding period after entry signals."""
         return entry_signals.vbt.fshift(hold_period)
 
-    def _generate_signals(self, rule_combo: Dict[str, Any], price_data: pd.DataFrame) -> pd.Series:
+    def _generate_signals(self, rule_def: Any, price_data: pd.DataFrame) -> pd.Series:
         """
-        Generates entry signals for a given rule combination.
+        Generates entry signals for a given rule definition.
         Raises:
-            ValueError: If rule combination is invalid or rule not found
+            ValueError: If rule definition is invalid or rule not found
         """
-        rule_type = rule_combo.get('type')
+        # Handle both RuleDef objects and dictionaries for backward compatibility
+        if hasattr(rule_def, 'type'):
+            # RuleDef object
+            rule_type = rule_def.type
+            rule_params = rule_def.params
+        else:
+            # Dictionary format (legacy)
+            rule_type = rule_def.get('type')
+            rule_params = rule_def.get('params', {})
+        
         if not rule_type:
-            raise ValueError(f"Rule combination missing 'type' field: {rule_combo}")
+            raise ValueError(f"Rule definition missing 'type' field: {rule_def}")
 
         rule_func = getattr(rules, rule_type, None)
         if rule_func is None:
             raise ValueError(f"Rule function '{rule_type}' not found in rules module")
 
-        rule_params = rule_combo.get('params', {})
         if not rule_params:
             raise ValueError(f"Missing parameters for rule '{rule_type}'")
 

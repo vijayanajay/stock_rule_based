@@ -136,9 +136,9 @@ def _display_results(results: List[Dict[str, Any]]) -> None:
     top_strategies = sorted(results, key=lambda x: x["edge_score"], reverse=True)[:10]
  
     for strategy in top_strategies:
-        # The rule_stack now contains full rule definition dicts.
+        # The rule_stack now contains RuleDef Pydantic models.
         # We extract the name for display purposes.
-        rule_stack_str = " + ".join([r.get('name', r.get('type', '')) for r in strategy["rule_stack"]])
+        rule_stack_str = " + ".join([getattr(r, 'name', r.type) for r in strategy["rule_stack"]])
         table.add_row(
             strategy["symbol"],
             rule_stack_str,

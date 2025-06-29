@@ -8,6 +8,7 @@ from unittest.mock import patch
 import sqlite3
 
 from kiss_signal.cli import app
+from kiss_signal.config import RuleDef
 
 
 VALID_RULES_YAML = """
@@ -31,8 +32,8 @@ def test_run_command_with_persistence(
     """Test that run command integrates with persistence layer."""
     with runner.isolated_filesystem() as fs:
         mock_run_backtests.return_value = [{
-            'symbol': 'RELIANCE', 
-            'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
+            'symbol': 'RELIANCE',
+            'rule_stack': [RuleDef(type='sma_crossover', name='sma_10_20_crossover', params={'short_window': 10, 'long_window': 20})],
             'edge_score': 0.75,
             'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
         }]
@@ -76,8 +77,8 @@ def test_run_command_persistence_failure_handling(
 ):
     """Test that CLI handles persistence failures gracefully."""
     mock_run_backtests.return_value = [{
-        'symbol': 'RELIANCE', 
-        'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
+        'symbol': 'RELIANCE',
+        'rule_stack': [RuleDef(type='sma_crossover', name='sma_10_20_crossover', params={'short_window': 10, 'long_window': 20})],
         'edge_score': 0.75,
         'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
     }]
@@ -186,12 +187,12 @@ def test_run_command_backtest_generic_exception_verbose(
         rules_path.parent.mkdir()
         rules_path.write_text(VALID_RULES_YAML)
 
-        # Corrected order: global options like --verbose come before the command
+        # Corrected order: global options like --verbose must come before the command
         result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
 
-        assert result.exit_code == 1, f"Expected exit code 1, got {result.exit_code}. Output:\n{result.stdout}\nStderr:\n{result.stderr}"
+        assert result.exit_code == 1
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
-        assert "Traceback (most recent call last)" in result.stdout # Match Rich's traceback format
+        assert "Traceback (most recent call last)" in result.stdout  # Match Rich's traceback format
 
 
 @patch("rich.console.Console.export_text", side_effect=Exception("Cannot export"))

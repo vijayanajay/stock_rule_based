@@ -7,6 +7,7 @@ import yaml
 from unittest.mock import patch
 
 from kiss_signal.cli import app
+from kiss_signal.config import RuleDef
 import pandas as pd
 
 
@@ -116,7 +117,7 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
         mock_bt_instance.find_optimal_strategies.return_value = []
 
         result = runner.invoke(
-            app, ["--config", str(config_path), "--rules", str(rules_path), "--verbose", "run"]
+            app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
 
@@ -180,8 +181,8 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
         )
         mock_bt_instance = mock_backtester.return_value
         mock_bt_instance.find_optimal_strategies.return_value = [{
-            'symbol': 'RELIANCE', 
-            'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
+            'symbol': 'RELIANCE',
+            'rule_stack': [RuleDef(type='sma_crossover', name='sma_10_20_crossover', params={'short_window': 10, 'long_window': 20})],
             'edge_score': 0.5,
             'win_pct': 0.5, 
             'sharpe': 0.5, 

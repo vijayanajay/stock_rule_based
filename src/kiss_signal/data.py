@@ -308,6 +308,9 @@ def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
         # Fallback to treating first column as date index
         data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
     
+    # Enforce lowercase column names to ensure a consistent data contract
+    data.columns = [str(col).lower() for col in data.columns]
+    
     return data
 
 

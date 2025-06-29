@@ -7,6 +7,7 @@ import pytest
 import pandas as pd
 from datetime import date
 
+from kiss_signal.config import RulesConfig
 from kiss_signal.backtester import Backtester
 
 
@@ -62,7 +63,7 @@ class TestBacktesterRuleIntegration:
 
     def test_backtester_with_real_rules(self, sample_price_data):
         """Test backtester with actual rule configurations."""
-        # Create a minimal rules config
+        # Create a minimal rules config as a dict
         rules_config = {
             'baseline': {
                 'name': 'sma_10_20_crossover',
@@ -77,12 +78,13 @@ class TestBacktesterRuleIntegration:
                 }
             ]
         }
-        
+        # Convert dict to Pydantic model as expected by the function
+        rules_config_obj = RulesConfig(**rules_config)
         backtester = Backtester(hold_period=20, min_trades_threshold=5)
         
         # This should not raise an exception
         strategies = backtester.find_optimal_strategies(
-            rules_config=rules_config,
+            rules_config=rules_config_obj,
             price_data=sample_price_data,
             symbol='TEST',
             freeze_date=date(2023, 3, 31),

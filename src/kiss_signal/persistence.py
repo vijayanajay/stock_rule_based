@@ -227,7 +227,14 @@ def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_t
         
         for strategy in strategies:
             # Serialize rule_stack list to JSON string
-            rule_stack_json = json.dumps(strategy["rule_stack"])
+            # Convert RuleDef Pydantic models to dictionaries if needed
+            rule_stack = strategy["rule_stack"]
+            if rule_stack and hasattr(rule_stack[0], 'model_dump'):
+                # Pydantic models - convert to dict
+                rule_stack_json = json.dumps([rule.model_dump() for rule in rule_stack])
+            else:
+                # Already dictionaries
+                rule_stack_json = json.dumps(rule_stack)
             
             cursor.execute(insert_sql, (
                 run_timestamp,

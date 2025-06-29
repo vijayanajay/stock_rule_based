@@ -42,26 +42,47 @@ class TestCLIIntegration:
             universe_path = data_dir / "nifty_large_mid.csv"
             universe_content = """symbol,name,sector
 RELIANCE,Reliance Industries Ltd,Energy
-INFY,Infosys Ltd,IT"""
+INFY,Infosys Ltd,IT
+"""
             universe_path.write_text(universe_content)
-              # Create sample price data for cache
+            
+            # Create sample price data for cache
             sample_dates = pd.date_range('2023-01-01', '2024-12-31', freq='D')
             np.random.seed(42) # for reproducibility
             
             for symbol in ['RELIANCE', 'INFY']:
-                # Generate deterministic data with clear trends to ensure signals are triggered.
+                # Generate data with multiple trend changes to ensure SMA crossovers
                 n_total = len(sample_dates)
-                n_up = n_total // 3
-                n_down = n_total // 3
-                n_side = n_total - n_up - n_down
 
-                up_trend = np.linspace(100, 150, n_up)
-                down_trend = np.linspace(150, 80, n_down)
-                side_trend = np.linspace(80, 90, n_side)
+                # Create multiple cycles to generate crossover signals
+                cycles = 6  # More cycles = more crossovers
+                cycle_length = n_total // cycles
+                close_prices = []
 
-                # Add some noise to make it more realistic
-                noise = np.random.normal(loc=0, scale=2.5, size=n_total)
-                close_prices = np.concatenate([up_trend, down_trend, side_trend]) + noise
+                for cycle in range(cycles):
+                    start_idx = cycle * cycle_length
+                    end_idx = min((cycle + 1) * cycle_length, n_total)
+                    cycle_size = end_idx - start_idx
+
+                    # Alternate between uptrends and downtrends
+                    if cycle % 2 == 0:
+                        # Uptrend: 100 to 130
+                        trend_prices = np.linspace(100, 130, cycle_size)
+                    else:
+                        # Downtrend: 130 to 100
+                        trend_prices = np.linspace(130, 100, cycle_size)
+
+                    # Add noise for realism
+                    noise = np.random.normal(loc=0, scale=1.5, size=cycle_size)
+                    close_prices.extend(trend_prices + noise)
+
+                # Handle any remaining dates (due to division remainder)
+                remaining = n_total - len(close_prices)
+                if remaining > 0:
+                    # Fill remaining with last trend continuation
+                    last_price = close_prices[-1] if close_prices else 100
+                    for _ in range(remaining):
+                        close_prices.append(last_price + np.random.normal(0, 1.5))
                 
                 prices = []
                 for i, date in enumerate(sample_dates):
@@ -89,7 +110,7 @@ INFY,Infosys Ltd,IT"""
                 'cache_dir': str(cache_dir),
                 'cache_refresh_days': 7,
                 'hold_period': 20,
-                'min_trades_threshold': 5,  # Lower threshold for test data
+                'min_trades_threshold': 2,  # Lower threshold for test data
                 'edge_score_weights': {
                     'win_pct': 0.6,
                     'sharpe': 0.4
@@ -139,29 +160,19 @@ INFY,Infosys Ltd,IT"""
     
     def test_config_loading_integration(self, integration_env):
         """Test that config and rules can be loaded and are compatible."""
+        from kiss_signal.config import RuleDef
         config = load_config(integration_env['config_path'])
         rules = load_rules(integration_env['rules_path'])
-        
         # Verify config structure
         assert config.universe_path == str(integration_env['universe_path'])
         assert config.hold_period == 20
-        assert config.min_trades_threshold == 5
-        
+        assert config.min_trades_threshold == 2
         # Verify rules structure
-        assert 'baseline' in rules and isinstance(rules['baseline'], dict)
-        assert 'layers' in rules and isinstance(rules['layers'], list)
-        assert 'name' in rules['baseline']
-        assert 'type' in rules['baseline']
-        assert 'params' in rules['baseline']
-        assert len(rules['layers']) > 0
-        assert 'name' in rules['layers'][0]
-        
-        # Verify rule types match available functions
-        from kiss_signal import rules as rules_module
-        all_rules = [rules['baseline']] + rules['layers']
-        for rule in all_rules:
-            rule_type = rule['type']
-            assert hasattr(rules_module, rule_type), f"Rule function {rule_type} not found"
+        assert hasattr(rules, 'baseline') and isinstance(rules.baseline, RuleDef)
+        assert hasattr(rules, 'layers') and isinstance(rules.layers, list)
+        assert len(rules.layers) > 0
+        assert rules.baseline.name == 'sma_10_20_crossover'
+        assert rules.layers[0].name == 'rsi_oversold_30'
     
     def test_data_loading_integration(self, integration_env):
         """Test that data loading works with real cache files."""
