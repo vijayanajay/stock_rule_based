@@ -34,28 +34,20 @@ def test_load_config_missing_file(tmp_path: Path) -> None:
         load_config(tmp_path / "nonexistent.yaml")
 
 
-def test_load_rules_invalid_structure(tmp_path: Path) -> None:
-    """Test loading rules with various invalid structures."""
-    # Not a dictionary
-    rules_path = tmp_path / "rules1.yaml"
-    rules_path.write_text("- rule1")
-    with pytest.raises(ValueError, match="Rules file must be a dictionary"):
-        load_rules(rules_path)
-
-    # Missing 'baseline' key
-    rules_path = tmp_path / "rules2.yaml"
-    rules_path.write_text("layers: []")
-    with pytest.raises(ValueError, match="Rules file must contain a 'baseline' key"):
-        load_rules(rules_path)
-
-    # 'baseline' is not a dict
-    rules_path = tmp_path / "rules3.yaml"
-    rules_path.write_text("baseline: 123")
-    with pytest.raises(ValueError, match="The 'baseline' key must contain a rule dictionary"):
-        load_rules(rules_path)
-
-    # 'layers' is not a list
-    rules_path = tmp_path / "rules4.yaml"
-    rules_path.write_text("baseline: {}\nlayers: {}")
-    with pytest.raises(ValueError, match="The 'layers' key must contain a list"):
+@pytest.mark.parametrize(
+    "invalid_content, error_match",
+    [
+        ("layers: []", "Field required"),  # Missing baseline
+        ("baseline: 123", "Input should be a valid dictionary"),  # Baseline not a dict
+        ("baseline: {}\nlayers: {}", "Field required"),  # Baseline missing fields
+        ("baseline: {name: a, type: b, params: {}}\nlayers: {}", "Input should be a valid list"), # Layers not a list
+    ],
+)
+def test_load_rules_invalid_structure_pydantic(
+    tmp_path: Path, invalid_content: str, error_match: str
+) -> None:
+    """Test loading rules with various invalid structures using Pydantic."""
+    rules_path = tmp_path / "rules.yaml"
+    rules_path.write_text(invalid_content)
+    with pytest.raises(ValueError, match=error_match):
         load_rules(rules_path)

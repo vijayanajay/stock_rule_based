@@ -2,15 +2,17 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from datetime import date
 import yaml
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator, field_validator
 
 __all__ = [
     "Config",
     "EdgeScoreWeights",
+    "RuleDef",
+    "RulesConfig",
     "load_config",
     "load_rules",
 ]
@@ -53,6 +55,19 @@ class Config(BaseModel):
             raise ValueError(f"Universe path is not a file: {v}")
         return v
 
+class RuleDef(BaseModel):
+    """Defines a single rule with its type and parameters."""
+    name: str
+    type: str
+    params: Dict[str, Any]
+    description: Optional[str] = None
+
+class RulesConfig(BaseModel):
+    """Defines the structure of the rules.yaml file."""
+    baseline: RuleDef
+    layers: List[RuleDef] = []
+    validation: Optional[Dict[str, Any]] = None # Allow validation block
+
 # impure
 def load_config(config_path: Union[str, Path]) -> Config:
     """Load application configuration from a YAML file."""
@@ -68,25 +83,18 @@ def load_config(config_path: Union[str, Path]) -> Config:
     return Config(**data)
 
 # impure
-def load_rules(rules_path: Union[str, Path]) -> Dict[str, Any]:
-    """Load trading rules from a YAML file."""
-    rules_path = Path(rules_path)  # Convert string to Path if needed
+def load_rules(rules_path: Union[str, Path]) -> RulesConfig:
+    """Load and validate trading rules from a YAML file using Pydantic."""
+    rules_path = Path(rules_path)
     if not rules_path.exists():
         raise FileNotFoundError(f"Rules file not found: {rules_path}")
     try:
         data = yaml.safe_load(rules_path.read_text(encoding="utf-8"))
+        if data is None:
+            raise ValueError("Rules file is empty or contains only comments")
+        return RulesConfig(**data)
     except yaml.YAMLError as e:
         raise ValueError(f"Invalid YAML in rules file: {e}") from e
-    if not isinstance(data, dict):
-        raise ValueError("Rules file must be a dictionary.")
-    if "baseline" not in data:
-        raise ValueError("Rules file must contain a 'baseline' key.")
-    if not isinstance(data["baseline"], dict):
-        raise ValueError("The 'baseline' key must contain a rule dictionary.")
-    if "layers" in data and not isinstance(data["layers"], list):
-        raise ValueError("The 'layers' key must contain a list of rule configurations.")
-    
-    if "layers" not in data:
-        data["layers"] = []
-        
-    return data
+    except ValidationError as e:
+        # Re-raise Pydantic's error for clear, specific feedback
+        raise ValueError(f"Invalid rules structure: {e}") from e
