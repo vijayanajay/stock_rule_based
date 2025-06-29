@@ -101,14 +101,14 @@ Name                             Stmts   Miss  Cover
 ----------------------------------------------------
 src\kiss_signal\__init__.py          4      0   100%
 src\kiss_signal\_version.py         13     13     0%
-src\kiss_signal\backtester.py      110     36    67%
+src\kiss_signal\backtester.py       81     12    85%
 src\kiss_signal\cli.py             160     27    83%
 src\kiss_signal\config.py           68     11    84%
 src\kiss_signal\data.py            160     41    74%
-src\kiss_signal\performance.py      40      0   100%
+src\kiss_signal\performance.py      41      0   100%
 src\kiss_signal\persistence.py     118     17    86%
-src\kiss_signal\reporter.py        254     76    70%
+src\kiss_signal\reporter.py        206     43    79%
 src\kiss_signal\rules.py            50      3    94%
 ----------------------------------------------------
-TOTAL                              977    224    77%
-============================= 87 passed in 30.53s =============================
+TOTAL                              901    167    81%
+============================= 87 passed in 27.69s =============================

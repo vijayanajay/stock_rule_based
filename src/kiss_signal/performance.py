@@ -1,5 +1,7 @@
 """Performance monitoring and profiling utilities for KISS Signal CLI."""
 
+__all__ = ["performance_monitor"]
+
 import time
 import logging
 import functools

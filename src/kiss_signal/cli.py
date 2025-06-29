@@ -203,8 +203,8 @@ def _generate_and_save_report(
 @app.callback()
 def main(
     ctx: typer.Context,
-    config_path: str = typer.Option("config.yaml", "--config", help="Path to config YAML file.", exists=True),
-    rules_path: str = typer.Option("config/rules.yaml", "--rules", help="Path to rules YAML file.", exists=True),
+    config_path: str = typer.Option("config.yaml", "--config", help="Path to config YAML file."),
+    rules_path: str = typer.Option("config/rules.yaml", "--rules", help="Path to rules YAML file."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging."),
 ) -> None:
     """

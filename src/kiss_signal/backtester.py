@@ -38,17 +38,16 @@ class Backtester:
     @performance_monitor.profile_performance
     def find_optimal_strategies(
         self, 
-        rules_config: Dict[str, Any], 
-        price_data: pd.DataFrame, 
+        price_data: pd.DataFrame,
+        rules_config: Dict[str, Any],
         symbol: str = "",  # Added symbol for logging
         freeze_date: Any = None,  # Accept date or None
-        edge_score_weights: Dict[str, float] = None,
-        **kwargs: Any
+        edge_score_weights: Dict[str, float] = None
     ) -> Any:
         """Find optimal rule combinations through backtesting.
         
         Args:
-            rules_config: Dictionary with 'baseline' and 'layers' rule configs
+            rules_config: Dictionary with 'baseline' and 'layers' rule configs.
             price_data: OHLCV price data for backtesting
             symbol: The stock symbol being tested, for logging purposes.
             freeze_date: Optional cutoff date for data (for deterministic testing)
@@ -57,8 +56,8 @@ class Backtester:
         Returns:
             List of strategies with edge scores and performance metrics, ranked by edge score
         """
-        baseline_rule = rules_config.get('baseline')
-        layers = rules_config.get('layers', [])
+        baseline_rule = rules_config.get("baseline")
+        layers = rules_config.get("layers", [])
 
         if not baseline_rule:
             logger.warning("No baseline rule found in configuration for %s.", symbol)
@@ -179,76 +178,3 @@ class Backtester:
             logger.debug(f"Generated {entry_signals.sum()} entry signals for rule '{rule_type}'")
 
         return entry_signals
-
-    def calculate_portfolio_metrics(self, returns: pd.Series) -> Dict[str, float]:
-        """Calculate comprehensive portfolio metrics.
-        
-        Refactored for H-9 compliance (was 48 lines, now split).
-        """
-        if returns.empty:
-            return self._empty_metrics()
-        
-        basic_metrics = self._calculate_basic_metrics(returns)
-        risk_metrics = self._calculate_risk_metrics(returns)
-        advanced_metrics = self._calculate_advanced_metrics(returns)
-        
-        return {**basic_metrics, **risk_metrics, **advanced_metrics}
-    
-    def _calculate_basic_metrics(self, returns: pd.Series) -> Dict[str, float]:
-        """Calculate basic performance metrics."""
-        total_return = (1 + returns).prod() - 1
-        annualized_return = (1 + total_return) ** (252 / len(returns)) - 1
-        volatility = returns.std() * np.sqrt(252)
-        
-        return {
-            'total_return': total_return,
-            'annualized_return': annualized_return,
-            'volatility': volatility
-        }
-    
-    def _calculate_risk_metrics(self, returns: pd.Series) -> Dict[str, float]:
-        """Calculate risk-related metrics."""
-        cumulative = (1 + returns).cumprod()
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
-        max_drawdown = drawdown.min()
-        
-        # Sharpe ratio (assuming 0% risk-free rate)
-        sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) if returns.std() > 0 else 0
-        
-        return {
-            'max_drawdown': max_drawdown,
-            'sharpe_ratio': sharpe_ratio
-        }
-    
-    def _calculate_advanced_metrics(self, returns: pd.Series) -> Dict[str, float]:
-        """Calculate advanced performance metrics."""
-        positive_returns = returns[returns > 0]
-        negative_returns = returns[returns < 0]
-        
-        win_rate = len(positive_returns) / len(returns) if len(returns) > 0 else 0
-        avg_win = positive_returns.mean() if len(positive_returns) > 0 else 0
-        avg_loss = negative_returns.mean() if len(negative_returns) > 0 else 0
-        
-        profit_factor = abs(avg_win / avg_loss) if avg_loss != 0 else 0
-        
-        return {
-            'win_rate': win_rate,
-            'avg_win': avg_win,
-            'avg_loss': avg_loss,
-            'profit_factor': profit_factor
-        }
-    
-    def _empty_metrics(self) -> Dict[str, float]:
-        """Return empty metrics for invalid inputs."""
-        return {
-            'total_return': 0.0,
-            'annualized_return': 0.0,
-            'volatility': 0.0,
-            'max_drawdown': 0.0,
-            'sharpe_ratio': 0.0,
-            'win_rate': 0.0,
-            'avg_win': 0.0,
-            'avg_loss': 0.0,
-            'profit_factor': 0.0
-        }

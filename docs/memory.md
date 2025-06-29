@@ -235,14 +235,10 @@
 ---
 
 ### Test/Component Desynchronization after Refactoring (2025-07-09)
-**Issue**: Widespread test failures (`TypeError`, `ValueError`) across `test_backtester.py`, `test_cli.py`, and `test_integration.py`. The errors were not in the application logic but in the test setups.
-**Root Cause**: A structural desynchronization between components and their tests after refactoring.
-1.  **API Signature Drift**: The `backtester.find_optimal_strategies` method signature was changed to require a `symbol` argument, but the tests were not updated to provide it, causing `TypeError`.
-2.  **Configuration Contract Drift**: The `config.load_rules` function was updated to enforce a stricter contract on `rules.yaml` (requiring a `baseline` key). However, numerous test fixtures continued to create mock rule files with an obsolete, invalid structure, causing `ValueError` during configuration loading.
-**Fix**:
-1.  **Synchronized Tests**: All test calls to `find_optimal_strategies` were updated to include the mandatory `symbol` argument.
-2.  **Updated Test Fixtures**: All mock `rules.yaml` files created in tests were updated to conform to the new, stricter contract by including a valid `baseline` rule. This resolved the configuration loading errors.
-**Prevention**: When a component's public contract changes (e.g., a method signature, a required configuration key), all tests that interact with that component must be updated in the same atomic commit. Test fixtures that create mock data or configuration files must be treated as part of the component's contract and kept in sync. This prevents the test suite from becoming brittle and testing obsolete behavior.
+**Issue**: Widespread test failures (`TypeError`) across `test_backtester.py` and `test_integration.py`, and a subsequent `AssertionError` in the end-to-end CLI test.
+**Root Cause**: A structural desynchronization between a component's public API and its consumers. The `backtester.find_optimal_strategies` method was implemented to accept a `rule_stack` (a `list` of rules), but all its callers (the CLI and multiple tests) were passing a `rules_config` (a `dict` containing `baseline` and `layers`). This API mismatch, where the component expected a pre-processed list but callers passed the raw config dictionary, caused a `TypeError` that broke the application's main workflow. The method's own docstring was also out of sync with its signature, adding to the confusion.
+**Fix**: The `backtester.find_optimal_strategies` method was refactored. Its signature was changed to accept the `rules_config` dictionary directly, aligning the component's public API with its actual usage across the application. The internal logic was updated to parse the `baseline` and `layers` from this dictionary. This change makes the `Backtester` component responsible for understanding its own configuration format, creating a more robust and maintainable contract. This single change resolved all related test failures.
+**Prevention**: A component's public API is its contract. It must be kept in sync with its consumers (other modules, tests) and its own documentation. When a component requires configuration, it should ideally accept the configuration in its raw, loaded format (e.g., a dictionary from YAML) and be responsible for its own internal parsing. This avoids pushing data transformation logic to every caller and reduces the risk of desynchronization when the configuration structure evolves.
 
 ---
 
