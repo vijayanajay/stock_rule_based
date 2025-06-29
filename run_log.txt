@@ -1,382 +1,296 @@
-[23:58:21] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Refreshing market data...
-           INFO     Loaded 1 symbols from universe                             
-           INFO     Refreshing 1 of 1 symbols                                  
-[23:58:22] INFO     Successfully refreshed 1/1 symbols                         
-[3/4] Analyzing strategies for each ticker...
-           INFO     Loaded 1 symbols from universe                             
-[4/4] Analysis complete. Results summary:
-                      Top Strategies by Edge Score                       
-┌──────────┬─────────────────────┬────────────┬───────┬────────┬────────┐
-│ Symbol   │ Rule Stack          │ Edge Score │ Win % │ Sharpe │ Trades │
-├──────────┼─────────────────────┼────────────┼───────┼────────┼────────┤
-│ RELIANCE │ sma_10_20_crossover │      0.750 │ 65.0% │   1.20 │     15 │
-└──────────┴─────────────────────┴────────────┴───────┴────────┴────────┘
-
-* Analysis complete. Found 1 valid strategies across 1 symbols.
-[5/5] Saving results...
-           INFO     Saved 1 strategies to database at data\kiss_signal.db      
-[5/5] Generating report...
-           ERROR    Failed to fetch open positions: no such table: positions   
-           ERROR    Database error fetching strategies: no such table:         
-                    strategies                                                 
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 1.34s                           
-[23:58:22] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Refreshing market data...
-           INFO     Loaded 1 symbols from universe                             
-           INFO     Refreshing 1 of 1 symbols                                  
-           INFO     Successfully refreshed 1/1 symbols                         
-[3/4] Analyzing strategies for each ticker...
-           INFO     Loaded 1 symbols from universe                             
-[4/4] Analysis complete. Results summary:
-                      Top Strategies by Edge Score                       
-┌──────────┬─────────────────────┬────────────┬───────┬────────┬────────┐
-│ Symbol   │ Rule Stack          │ Edge Score │ Win % │ Sharpe │ Trades │
-├──────────┼─────────────────────┼────────────┼───────┼────────┼────────┤
-│ RELIANCE │ sma_10_20_crossover │      0.750 │ 65.0% │   1.20 │     15 │
-└──────────┴─────────────────────┴────────────┴───────┴────────┴────────┘
-
-* Analysis complete. Found 1 valid strategies across 1 symbols.
-[5/5] Saving results...
-           INFO     Creating database at data\kiss_signal.db                   
-           INFO     Successfully created database at data\kiss_signal.db       
-⚠️  Database error: disk I/O error
-           ERROR    Persistence error: disk I/O error                          
-                    Traceback (most recent call last):                         
-                      File "D:\Code\stock_rule_based\src\kiss_signal\cli.py",  
-                    line 169, in _save_results                                 
-                        success = persistence.save_strategies_batch(db_path,   
-                    results, run_timestamp)                                    
-                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                    ^^^^^^^^^^^^^^^^^^^^^                                      
-                      File                                                     
-                    "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\
-                    unittest\mock.py", line 1139, in __call__                  
-                        return self._mock_call(*args, **kwargs)                
-                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                
-                      File                                                     
-                    "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\
-                    unittest\mock.py", line 1143, in _mock_call                
-                        return self._execute_mock_call(*args, **kwargs)        
-                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^        
-                      File                                                     
-                    "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\
-                    unittest\mock.py", line 1198, in _execute_mock_call        
-                        raise effect                                           
-                    sqlite3.OperationalError: disk I/O error                   
-[5/5] Generating report...
-           INFO     Fetched 0 open positions.                                  
-           WARNING  No strategies found for timestamp                          
-                    2025-06-29T23:58:22.739994 above threshold 0.5             
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 0.11s                           
-[23:58:22] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Refreshing market data...
-[3/4] Analyzing strategies for each ticker...
-           INFO     full_backtest completed in 0.00s                           
-Error: Backtest failed!
-[23:58:22] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Refreshing market data...
-           INFO     Refreshing 1 of 1 symbols                                  
-           INFO     Successfully refreshed 1/1 symbols                         
-[3/4] Analyzing strategies for each ticker...
-           INFO     full_backtest completed in 0.06s                           
-Error: Universe file not found
-[23:58:22] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-           INFO     Refreshing market data                                     
-[2/4] Refreshing market data...
-[3/4] Analyzing strategies for each ticker...
-           INFO     full_backtest completed in 0.00s                           
-An unexpected error occurred: Generic backtest error
-┌───────────────────── Traceback (most recent call last) ─────────────────────┐
-│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:276 in run                  │
-│                                                                             │
-│   273 │   │   │   # Step 3: Analyze strategies for each ticker              │
-│   274 │   │   │   console.print("[3/4] Analyzing strategies for each ticker │
-│   275 │   │   │   symbols = data.load_universe(app_config.universe_path)    │
-│ > 276 │   │   │   all_results = _run_backtests(app_config, rules_config, sy │
-│   277 │   │   │                                                             │
-│   278 │   │   │   # Step 4: Display results summary and save                │
-│   279 │   │   │   console.print("[4/4] Analysis complete. Results summary:" │
-│                                                                             │
-│ C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py: │
-│ 1139 in __call__                                                            │
-│                                                                             │
-│   1136 │   │   # in the signature                                           │
-│   1137 │   │   self._mock_check_sig(*args, **kwargs)                        │
-│   1138 │   │   self._increment_mock_call(*args, **kwargs)                   │
-│ > 1139 │   │   return self._mock_call(*args, **kwargs)                      │
-│   1140 │                                                                    │
-│   1141 │                                                                    │
-│   1142 │   def _mock_call(self, /, *args, **kwargs):                        │
-│                                                                             │
-│ C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py: │
-│ 1143 in _mock_call                                                          │
-│                                                                             │
-│   1140 │                                                                    │
-│   1141 │                                                                    │
-│   1142 │   def _mock_call(self, /, *args, **kwargs):                        │
-│ > 1143 │   │   return self._execute_mock_call(*args, **kwargs)              │
-│   1144 │                                                                    │
-│   1145 │   def _increment_mock_call(self, /, *args, **kwargs):              │
-│   1146 │   │   self.called = True                                           │
-│                                                                             │
-│ C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py: │
-│ 1198 in _execute_mock_call                                                  │
-│                                                                             │
-│   1195 │   │   effect = self.side_effect                                    │
-│   1196 │   │   if effect is not None:                                       │
-│   1197 │   │   │   if _is_exception(effect):                                │
-│ > 1198 │   │   │   │   raise effect                                         │
-│   1199 │   │   │   elif not _callable(effect):                              │
-│   1200 │   │   │   │   result = next(effect)                                │
-│   1201 │   │   │   │   if _is_exception(result):                            │
-└─────────────────────────────────────────────────────────────────────────────┘
-Exception: Generic backtest error
-[23:58:23] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Refreshing market data...
-           INFO     Loaded 1 symbols from universe                             
-           INFO     Refreshing 1 of 1 symbols                                  
-           INFO     Successfully refreshed 1/1 symbols                         
-[3/4] Analyzing strategies for each ticker...
-           INFO     Loaded 1 symbols from universe                             
-[4/4] Analysis complete. Results summary:
-No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-           ERROR    Failed to fetch open positions: no such table: positions   
-           ERROR    Database error fetching strategies: no such table:         
-                    strategies                                                 
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 0.07s                           
-[23:58:23] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Refreshing market data...
-[3/4] Analyzing strategies for each ticker...
-[4/4] Analysis complete. Results summary:
-No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-           ERROR    Failed to fetch open positions: no such table: positions   
-           ERROR    Database error fetching strategies: no such table:         
-                    strategies                                                 
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 0.02s                           
-[23:58:23] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-           INFO     Refreshing market data                                     
-[2/4] Refreshing market data...
-[3/4] Analyzing strategies for each ticker...
-[4/4] Analysis complete. Results summary:
-No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-           ERROR    Failed to fetch open positions: no such table: positions   
-           ERROR    Database error fetching strategies: no such table:         
-                    strategies                                                 
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 0.01s                           
-
-Performance Summary:
-Total Duration: 0.08s
-Slowest Function: find_optimal_strategies
-[23:58:23] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+[00:40:49] INFO     === KISS Signal CLI Run Started ===                                                                
+┌───────────────────────────────────────────────────── QuickEdge ─────────────────────────────────────────────────────┐
+│ KISS Signal CLI                                                                                                     │
+│ Keep-It-Simple Data Foundation                                                                                      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 [1/4] Configuration loaded.
 [2/4] Skipping data refresh (freeze mode).
 [3/4] Analyzing strategies for each ticker...
+           INFO     Loaded 7 symbols from universe                                                                     
+           INFO     Backtester initialized: hold_period=20, min_trades=10                                              
+           INFO     Using data up to freeze date: 2025-01-01                                                           
+⠋ Analyzing RELIANCE (1/7)...           WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                             
+⠋ Analyzing RELIANCE (1/7)...           DEBUG    Forward-filled NaN values after frequency adjustment for RELIANCE                                  
+⠋ Analyzing RELIANCE (1/7)...           INFO     Backtesting 3 rule combinations for RELIANCE                                                       
+⠋ Analyzing RELIANCE (1/7)...           DEBUG    SMA crossover signals: 25 triggers                                                                 
+⠋ Analyzing RELIANCE (1/7)...           INFO     Rule 'sma_crossover' generated 25 signals on 920 data points                                       
+⠋ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...[00:40:52] DEBUG    Entry signals for RELIANCE: 25 total                                                               
+⠋ Analyzing RELIANCE (1/7)...           DEBUG    Exit signals for RELIANCE: 25.0 total                                                              
+⠋ Analyzing RELIANCE (1/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-20 00:00:00'), Timestamp('2022-09-15 00:00:00'),          
+                    Timestamp('2022-10-11 00:00:00')]                                                                  
+⠋ Analyzing RELIANCE (1/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-21 00:00:00'), Timestamp('2024-09-23 00:00:00'),           
+                    Timestamp('2024-11-29 00:00:00')]                                                                  
+⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠏ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...[00:40:57] DEBUG    Portfolio trades count for RELIANCE: 19                                                            
+⠴ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...⠦ Analyzing RELIANCE (1/7)...⠧ Analyzing RELIANCE (1/7)...⠇ Analyzing RELIANCE (1/7)...⠋ Analyzing RELIANCE (1/7)...⠙ Analyzing RELIANCE (1/7)...⠹ Analyzing RELIANCE (1/7)...⠸ Analyzing RELIANCE (1/7)...⠼ Analyzing RELIANCE (1/7)...[00:40:58] DEBUG    SMA crossover signals: 25 triggers                                                                 
+⠴ Analyzing RELIANCE (1/7)...           INFO     Rule 'sma_crossover' generated 25 signals on 920 data points                                       
+⠴ Analyzing RELIANCE (1/7)...           DEBUG    RSI confirmation signals: 688 triggers (momentum + recovery)                                       
+⠴ Analyzing RELIANCE (1/7)...           INFO     Rule 'rsi_oversold' generated 688 signals on 920 data points                                       
+⠴ Analyzing RELIANCE (1/7)...⠴ Analyzing RELIANCE (1/7)...           DEBUG    Entry signals for RELIANCE: 23 total                                                               
+⠴ Analyzing RELIANCE (1/7)...           DEBUG    Exit signals for RELIANCE: 23.0 total                                                              
+⠴ Analyzing RELIANCE (1/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-20 00:00:00'), Timestamp('2022-09-15 00:00:00'),          
+                    Timestamp('2022-10-20 00:00:00')]                                                                  
+⠴ Analyzing RELIANCE (1/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-21 00:00:00'), Timestamp('2024-09-23 00:00:00'),           
+                    Timestamp('2024-11-29 00:00:00')]                                                                  
+⠦ Analyzing RELIANCE (1/7)...           DEBUG    Portfolio trades count for RELIANCE: 19                                                            
+⠦ Analyzing RELIANCE (1/7)...           DEBUG    SMA crossover signals: 25 triggers                                                                 
+⠦ Analyzing RELIANCE (1/7)...           INFO     Rule 'sma_crossover' generated 25 signals on 920 data points                                       
+⠦ Analyzing RELIANCE (1/7)...           DEBUG    EMA crossover signals: 16 triggers                                                                 
+⠦ Analyzing RELIANCE (1/7)...           INFO     Rule 'ema_crossover' generated 16 signals on 920 data points                                       
+⠦ Analyzing RELIANCE (1/7)...           DEBUG    Entry signals for RELIANCE: 0 total                                                                
+⠦ Analyzing RELIANCE (1/7)...           DEBUG    Exit signals for RELIANCE: 0.0 total                                                               
+⠦ Analyzing RELIANCE (1/7)...           DEBUG    Portfolio trades count for RELIANCE: 0                                                             
+⠦ Analyzing RELIANCE (1/7)...           WARNING  Strategy 'sma_10_20_crossover + ema_confirm' on 'RELIANCE' generated only 0 trades, which is below 
+                    the threshold of 10.                                                                               
+⠦ Analyzing RELIANCE (1/7)...           INFO     find_optimal_strategies completed in 9.34s                                                         
+⠦ Analyzing RELIANCE (1/7)...⠦ Analyzing INFY (2/7)...           INFO     Using data up to freeze date: 2025-01-01                                                           
+⠦ Analyzing INFY (2/7)...           WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                                 
+⠦ Analyzing INFY (2/7)...           DEBUG    Forward-filled NaN values after frequency adjustment for INFY                                      
+⠦ Analyzing INFY (2/7)...           INFO     Backtesting 3 rule combinations for INFY                                                           
+⠦ Analyzing INFY (2/7)...           DEBUG    SMA crossover signals: 23 triggers                                                                 
+⠦ Analyzing INFY (2/7)...           INFO     Rule 'sma_crossover' generated 23 signals on 920 data points                                       
+⠦ Analyzing INFY (2/7)...           DEBUG    Entry signals for INFY: 23 total                                                                   
+⠦ Analyzing INFY (2/7)...           DEBUG    Exit signals for INFY: 23.0 total                                                                  
+⠧ Analyzing INFY (2/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-24 00:00:00'), Timestamp('2022-09-13 00:00:00'),          
+                    Timestamp('2022-10-03 00:00:00')]                                                                  
+⠧ Analyzing INFY (2/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-09-19 00:00:00'), Timestamp('2024-10-06 00:00:00'),           
+                    Timestamp('2024-11-13 00:00:00')]                                                                  
+⠧ Analyzing INFY (2/7)...           DEBUG    Portfolio trades count for INFY: 17                                                                
+⠧ Analyzing INFY (2/7)...           DEBUG    SMA crossover signals: 23 triggers                                                                 
+⠧ Analyzing INFY (2/7)...           INFO     Rule 'sma_crossover' generated 23 signals on 920 data points                                       
+⠧ Analyzing INFY (2/7)...           DEBUG    RSI confirmation signals: 709 triggers (momentum + recovery)                                       
+⠧ Analyzing INFY (2/7)...           INFO     Rule 'rsi_oversold' generated 709 signals on 920 data points                                       
+⠧ Analyzing INFY (2/7)...           DEBUG    Entry signals for INFY: 19 total                                                                   
+⠧ Analyzing INFY (2/7)...           DEBUG    Exit signals for INFY: 19.0 total                                                                  
+⠧ Analyzing INFY (2/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-24 00:00:00'), Timestamp('2022-09-13 00:00:00'),          
+                    Timestamp('2022-10-03 00:00:00')]                                                                  
+⠧ Analyzing INFY (2/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-09-19 00:00:00'), Timestamp('2024-10-06 00:00:00'),           
+                    Timestamp('2024-11-13 00:00:00')]                                                                  
+⠧ Analyzing INFY (2/7)...           DEBUG    Portfolio trades count for INFY: 16                                                                
+⠧ Analyzing INFY (2/7)...           DEBUG    SMA crossover signals: 23 triggers                                                                 
+⠧ Analyzing INFY (2/7)...⠧ Analyzing INFY (2/7)...           INFO     Rule 'sma_crossover' generated 23 signals on 920 data points                                       
+⠧ Analyzing INFY (2/7)...           DEBUG    EMA crossover signals: 16 triggers                                                                 
+⠧ Analyzing INFY (2/7)...           INFO     Rule 'ema_crossover' generated 16 signals on 920 data points                                       
+⠧ Analyzing INFY (2/7)...           DEBUG    Entry signals for INFY: 1 total                                                                    
+⠧ Analyzing INFY (2/7)...           DEBUG    Exit signals for INFY: 1.0 total                                                                   
+⠧ Analyzing INFY (2/7)...           DEBUG    First 3 entry dates: [Timestamp('2023-01-18 00:00:00')]                                            
+⠇ Analyzing INFY (2/7)...           DEBUG    Last 3 entry dates: [Timestamp('2023-01-18 00:00:00')]                                             
+⠇ Analyzing INFY (2/7)...           DEBUG    Portfolio trades count for INFY: 1                                                                 
+⠇ Analyzing INFY (2/7)...           WARNING  Strategy 'sma_10_20_crossover + ema_confirm' on 'INFY' generated only 1 trades, which is below the 
+                    threshold of 10.                                                                                   
+⠇ Analyzing INFY (2/7)...           INFO     find_optimal_strategies completed in 0.11s                                                         
+⠇ Analyzing INFY (2/7)...           INFO     Using data up to freeze date: 2025-01-01                                                           
+⠇ Analyzing TCS (3/7)...           WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                                  
+⠇ Analyzing TCS (3/7)...           DEBUG    Forward-filled NaN values after frequency adjustment for TCS                                       
+⠇ Analyzing TCS (3/7)...           INFO     Backtesting 3 rule combinations for TCS                                                            
+⠇ Analyzing TCS (3/7)...           DEBUG    SMA crossover signals: 23 triggers                                                                 
+⠇ Analyzing TCS (3/7)...           INFO     Rule 'sma_crossover' generated 23 signals on 920 data points                                       
+⠇ Analyzing TCS (3/7)...           DEBUG    Entry signals for TCS: 23 total                                                                    
+⠇ Analyzing TCS (3/7)...           DEBUG    Exit signals for TCS: 23.0 total                                                                   
+⠇ Analyzing TCS (3/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-26 00:00:00'), Timestamp('2022-09-13 00:00:00'),          
+                    Timestamp('2022-10-05 00:00:00')]                                                                  
+⠇ Analyzing TCS (3/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-18 00:00:00'), Timestamp('2024-11-10 00:00:00'),           
+                    Timestamp('2024-11-26 00:00:00')]                                                                  
+⠇ Analyzing TCS (3/7)...           DEBUG    Portfolio trades count for TCS: 21                                                                 
+⠇ Analyzing TCS (3/7)...           DEBUG    SMA crossover signals: 23 triggers                                                                 
+⠇ Analyzing TCS (3/7)...           INFO     Rule 'sma_crossover' generated 23 signals on 920 data points                                       
+⠇ Analyzing TCS (3/7)...           DEBUG    RSI confirmation signals: 716 triggers (momentum + recovery)                                       
+⠇ Analyzing TCS (3/7)...           INFO     Rule 'rsi_oversold' generated 716 signals on 920 data points                                       
+⠇ Analyzing TCS (3/7)...           DEBUG    Entry signals for TCS: 23 total                                                                    
+⠇ Analyzing TCS (3/7)...           DEBUG    Exit signals for TCS: 23.0 total                                                                   
+⠇ Analyzing TCS (3/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-26 00:00:00'), Timestamp('2022-09-13 00:00:00'),          
+                    Timestamp('2022-10-05 00:00:00')]                                                                  
+⠏ Analyzing TCS (3/7)...⠏ Analyzing TCS (3/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-18 00:00:00'), Timestamp('2024-11-10 00:00:00'),           
+                    Timestamp('2024-11-26 00:00:00')]                                                                  
+⠏ Analyzing TCS (3/7)...           DEBUG    Portfolio trades count for TCS: 21                                                                 
+⠏ Analyzing TCS (3/7)...           DEBUG    SMA crossover signals: 23 triggers                                                                 
+⠏ Analyzing TCS (3/7)...           INFO     Rule 'sma_crossover' generated 23 signals on 920 data points                                       
+⠏ Analyzing TCS (3/7)...           DEBUG    EMA crossover signals: 16 triggers                                                                 
+⠏ Analyzing TCS (3/7)...           INFO     Rule 'ema_crossover' generated 16 signals on 920 data points                                       
+⠏ Analyzing TCS (3/7)...           DEBUG    Entry signals for TCS: 2 total                                                                     
+⠏ Analyzing TCS (3/7)...           DEBUG    Exit signals for TCS: 2.0 total                                                                    
+⠏ Analyzing TCS (3/7)...           DEBUG    First 3 entry dates: [Timestamp('2023-04-30 00:00:00'), Timestamp('2023-09-06 00:00:00')]          
+⠏ Analyzing TCS (3/7)...           DEBUG    Last 3 entry dates: [Timestamp('2023-04-30 00:00:00'), Timestamp('2023-09-06 00:00:00')]           
+⠏ Analyzing TCS (3/7)...           DEBUG    Portfolio trades count for TCS: 2                                                                  
+⠏ Analyzing TCS (3/7)...           WARNING  Strategy 'sma_10_20_crossover + ema_confirm' on 'TCS' generated only 2 trades, which is below the  
+                    threshold of 10.                                                                                   
+⠏ Analyzing TCS (3/7)...           INFO     find_optimal_strategies completed in 0.12s                                                         
+⠏ Analyzing TCS (3/7)...           INFO     Using data up to freeze date: 2025-01-01                                                           
+⠏ Analyzing HDFCBANK (4/7)...           WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                             
+⠏ Analyzing HDFCBANK (4/7)...           DEBUG    Forward-filled NaN values after frequency adjustment for HDFCBANK                                  
+⠏ Analyzing HDFCBANK (4/7)...           INFO     Backtesting 3 rule combinations for HDFCBANK                                                       
+⠏ Analyzing HDFCBANK (4/7)...           DEBUG    SMA crossover signals: 30 triggers                                                                 
+⠏ Analyzing HDFCBANK (4/7)...           INFO     Rule 'sma_crossover' generated 30 signals on 920 data points                                       
+⠏ Analyzing HDFCBANK (4/7)...           DEBUG    Entry signals for HDFCBANK: 30 total                                                               
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    Exit signals for HDFCBANK: 30.0 total                                                              
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-27 00:00:00'), Timestamp('2022-09-07 00:00:00'),          
+                    Timestamp('2022-10-11 00:00:00')]                                                                  
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-29 00:00:00'), Timestamp('2024-10-20 00:00:00'),           
+                    Timestamp('2024-11-25 00:00:00')]                                                                  
+⠋ Analyzing HDFCBANK (4/7)...⠋ Analyzing HDFCBANK (4/7)...           DEBUG    Portfolio trades count for HDFCBANK: 22                                                            
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    SMA crossover signals: 30 triggers                                                                 
+⠋ Analyzing HDFCBANK (4/7)...           INFO     Rule 'sma_crossover' generated 30 signals on 920 data points                                       
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    RSI confirmation signals: 752 triggers (momentum + recovery)                                       
+⠋ Analyzing HDFCBANK (4/7)...           INFO     Rule 'rsi_oversold' generated 752 signals on 920 data points                                       
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    Entry signals for HDFCBANK: 28 total                                                               
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    Exit signals for HDFCBANK: 28.0 total                                                              
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-27 00:00:00'), Timestamp('2022-09-07 00:00:00'),          
+                    Timestamp('2022-10-20 00:00:00')]                                                                  
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-29 00:00:00'), Timestamp('2024-10-20 00:00:00'),           
+                    Timestamp('2024-11-25 00:00:00')]                                                                  
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    Portfolio trades count for HDFCBANK: 22                                                            
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    SMA crossover signals: 30 triggers                                                                 
+⠋ Analyzing HDFCBANK (4/7)...           INFO     Rule 'sma_crossover' generated 30 signals on 920 data points                                       
+⠋ Analyzing HDFCBANK (4/7)...           DEBUG    EMA crossover signals: 21 triggers                                                                 
+⠙ Analyzing HDFCBANK (4/7)...           INFO     Rule 'ema_crossover' generated 21 signals on 920 data points                                       
+⠙ Analyzing HDFCBANK (4/7)...           DEBUG    Entry signals for HDFCBANK: 2 total                                                                
+⠙ Analyzing HDFCBANK (4/7)...           DEBUG    Exit signals for HDFCBANK: 2.0 total                                                               
+⠙ Analyzing HDFCBANK (4/7)...           DEBUG    First 3 entry dates: [Timestamp('2023-06-22 00:00:00'), Timestamp('2024-05-24 00:00:00')]          
+⠙ Analyzing HDFCBANK (4/7)...           DEBUG    Last 3 entry dates: [Timestamp('2023-06-22 00:00:00'), Timestamp('2024-05-24 00:00:00')]           
+⠙ Analyzing HDFCBANK (4/7)...⠙ Analyzing HDFCBANK (4/7)...           DEBUG    Portfolio trades count for HDFCBANK: 2                                                             
+⠙ Analyzing HDFCBANK (4/7)...           WARNING  Strategy 'sma_10_20_crossover + ema_confirm' on 'HDFCBANK' generated only 2 trades, which is below 
+                    the threshold of 10.                                                                               
+⠙ Analyzing HDFCBANK (4/7)...           INFO     find_optimal_strategies completed in 0.14s                                                         
+⠙ Analyzing HDFCBANK (4/7)...           INFO     Using data up to freeze date: 2025-01-01                                                           
+⠙ Analyzing ICICIBANK (5/7)...           WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                            
+⠙ Analyzing ICICIBANK (5/7)...           DEBUG    Forward-filled NaN values after frequency adjustment for ICICIBANK                                 
+⠙ Analyzing ICICIBANK (5/7)...           INFO     Backtesting 3 rule combinations for ICICIBANK                                                      
+⠙ Analyzing ICICIBANK (5/7)...           DEBUG    SMA crossover signals: 22 triggers                                                                 
+⠙ Analyzing ICICIBANK (5/7)...           INFO     Rule 'sma_crossover' generated 22 signals on 920 data points                                       
+⠙ Analyzing ICICIBANK (5/7)...           DEBUG    Entry signals for ICICIBANK: 22 total                                                              
+⠙ Analyzing ICICIBANK (5/7)...           DEBUG    Exit signals for ICICIBANK: 22.0 total                                                             
+⠙ Analyzing ICICIBANK (5/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-09-02 00:00:00'), Timestamp('2022-10-11 00:00:00'),          
+                    Timestamp('2022-11-16 00:00:00')]                                                                  
+⠙ Analyzing ICICIBANK (5/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-20 00:00:00'), Timestamp('2024-10-21 00:00:00'),           
+                    Timestamp('2024-11-26 00:00:00')]                                                                  
+⠙ Analyzing ICICIBANK (5/7)...           DEBUG    Portfolio trades count for ICICIBANK: 20                                                           
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    SMA crossover signals: 22 triggers                                                                 
+⠹ Analyzing ICICIBANK (5/7)...           INFO     Rule 'sma_crossover' generated 22 signals on 920 data points                                       
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    RSI confirmation signals: 792 triggers (momentum + recovery)                                       
+⠹ Analyzing ICICIBANK (5/7)...           INFO     Rule 'rsi_oversold' generated 792 signals on 920 data points                                       
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Entry signals for ICICIBANK: 22 total                                                              
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Exit signals for ICICIBANK: 22.0 total                                                             
+⠹ Analyzing ICICIBANK (5/7)...[00:40:59] DEBUG    First 3 entry dates: [Timestamp('2022-09-02 00:00:00'), Timestamp('2022-10-11 00:00:00'),          
+                    Timestamp('2022-11-16 00:00:00')]                                                                  
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-08-20 00:00:00'), Timestamp('2024-10-21 00:00:00'),           
+                    Timestamp('2024-11-26 00:00:00')]                                                                  
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Portfolio trades count for ICICIBANK: 20                                                           
+⠹ Analyzing ICICIBANK (5/7)...⠹ Analyzing ICICIBANK (5/7)...           DEBUG    SMA crossover signals: 22 triggers                                                                 
+⠹ Analyzing ICICIBANK (5/7)...           INFO     Rule 'sma_crossover' generated 22 signals on 920 data points                                       
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    EMA crossover signals: 16 triggers                                                                 
+⠹ Analyzing ICICIBANK (5/7)...           INFO     Rule 'ema_crossover' generated 16 signals on 920 data points                                       
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Entry signals for ICICIBANK: 2 total                                                               
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Exit signals for ICICIBANK: 2.0 total                                                              
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    First 3 entry dates: [Timestamp('2023-12-01 00:00:00'), Timestamp('2024-06-20 00:00:00')]          
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Last 3 entry dates: [Timestamp('2023-12-01 00:00:00'), Timestamp('2024-06-20 00:00:00')]           
+⠹ Analyzing ICICIBANK (5/7)...           DEBUG    Portfolio trades count for ICICIBANK: 2                                                            
+⠸ Analyzing ICICIBANK (5/7)...           WARNING  Strategy 'sma_10_20_crossover + ema_confirm' on 'ICICIBANK' generated only 2 trades, which is below
+                    the threshold of 10.                                                                               
+⠸ Analyzing ICICIBANK (5/7)...           INFO     find_optimal_strategies completed in 0.11s                                                         
+⠸ Analyzing ICICIBANK (5/7)...           INFO     Using data up to freeze date: 2025-01-01                                                           
+⠸ Analyzing SBIN (6/7)...           WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                                 
+⠸ Analyzing SBIN (6/7)...           DEBUG    Forward-filled NaN values after frequency adjustment for SBIN                                      
+⠸ Analyzing SBIN (6/7)...           INFO     Backtesting 3 rule combinations for SBIN                                                           
+⠸ Analyzing SBIN (6/7)...           DEBUG    SMA crossover signals: 24 triggers                                                                 
+⠸ Analyzing SBIN (6/7)...           INFO     Rule 'sma_crossover' generated 24 signals on 920 data points                                       
+⠸ Analyzing SBIN (6/7)...           DEBUG    Entry signals for SBIN: 24 total                                                                   
+⠸ Analyzing SBIN (6/7)...           DEBUG    Exit signals for SBIN: 24.0 total                                                                  
+⠸ Analyzing SBIN (6/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-09-02 00:00:00'), Timestamp('2022-10-17 00:00:00'),          
+                    Timestamp('2022-11-27 00:00:00')]                                                                  
+⠸ Analyzing SBIN (6/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-10-17 00:00:00'), Timestamp('2024-11-03 00:00:00'),           
+                    Timestamp('2024-11-29 00:00:00')]                                                                  
+⠸ Analyzing SBIN (6/7)...           DEBUG    Portfolio trades count for SBIN: 21                                                                
+⠸ Analyzing SBIN (6/7)...           DEBUG    SMA crossover signals: 24 triggers                                                                 
+⠸ Analyzing SBIN (6/7)...           INFO     Rule 'sma_crossover' generated 24 signals on 920 data points                                       
+⠸ Analyzing SBIN (6/7)...           DEBUG    RSI confirmation signals: 769 triggers (momentum + recovery)                                       
+⠸ Analyzing SBIN (6/7)...⠸ Analyzing SBIN (6/7)...           INFO     Rule 'rsi_oversold' generated 769 signals on 920 data points                                       
+⠸ Analyzing SBIN (6/7)...           DEBUG    Entry signals for SBIN: 23 total                                                                   
+⠸ Analyzing SBIN (6/7)...           DEBUG    Exit signals for SBIN: 23.0 total                                                                  
+⠸ Analyzing SBIN (6/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-09-02 00:00:00'), Timestamp('2022-10-17 00:00:00'),          
+                    Timestamp('2022-11-27 00:00:00')]                                                                  
+⠸ Analyzing SBIN (6/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-10-17 00:00:00'), Timestamp('2024-11-03 00:00:00'),           
+                    Timestamp('2024-11-29 00:00:00')]                                                                  
+⠼ Analyzing SBIN (6/7)...           DEBUG    Portfolio trades count for SBIN: 21                                                                
+⠼ Analyzing SBIN (6/7)...           DEBUG    SMA crossover signals: 24 triggers                                                                 
+⠼ Analyzing SBIN (6/7)...           INFO     Rule 'sma_crossover' generated 24 signals on 920 data points                                       
+⠼ Analyzing SBIN (6/7)...           DEBUG    EMA crossover signals: 15 triggers                                                                 
+⠼ Analyzing SBIN (6/7)...           INFO     Rule 'ema_crossover' generated 15 signals on 920 data points                                       
+⠼ Analyzing SBIN (6/7)...           DEBUG    Entry signals for SBIN: 2 total                                                                    
+⠼ Analyzing SBIN (6/7)...           DEBUG    Exit signals for SBIN: 2.0 total                                                                   
+⠼ Analyzing SBIN (6/7)...           DEBUG    First 3 entry dates: [Timestamp('2023-09-09 00:00:00'), Timestamp('2023-12-04 00:00:00')]          
+⠼ Analyzing SBIN (6/7)...           DEBUG    Last 3 entry dates: [Timestamp('2023-09-09 00:00:00'), Timestamp('2023-12-04 00:00:00')]           
+⠼ Analyzing SBIN (6/7)...           DEBUG    Portfolio trades count for SBIN: 2                                                                 
+⠼ Analyzing SBIN (6/7)...           WARNING  Strategy 'sma_10_20_crossover + ema_confirm' on 'SBIN' generated only 2 trades, which is below the 
+                    threshold of 10.                                                                                   
+⠼ Analyzing SBIN (6/7)...           INFO     find_optimal_strategies completed in 0.12s                                                         
+⠼ Analyzing SBIN (6/7)...           INFO     Using data up to freeze date: 2025-01-01                                                           
+⠼ Analyzing WIPRO (7/7)...           WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                                
+⠼ Analyzing WIPRO (7/7)...           DEBUG    Forward-filled NaN values after frequency adjustment for WIPRO                                     
+⠼ Analyzing WIPRO (7/7)...           INFO     Backtesting 3 rule combinations for WIPRO                                                          
+⠼ Analyzing WIPRO (7/7)...           DEBUG    SMA crossover signals: 27 triggers                                                                 
+⠼ Analyzing WIPRO (7/7)...           INFO     Rule 'sma_crossover' generated 27 signals on 920 data points                                       
+⠼ Analyzing WIPRO (7/7)...           DEBUG    Entry signals for WIPRO: 27 total                                                                  
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Exit signals for WIPRO: 27.0 total                                                                 
+⠴ Analyzing WIPRO (7/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-27 00:00:00'), Timestamp('2022-09-13 00:00:00'),          
+                    Timestamp('2022-10-06 00:00:00')]                                                                  
+⠴ Analyzing WIPRO (7/7)...⠴ Analyzing WIPRO (7/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-09-16 00:00:00'), Timestamp('2024-10-20 00:00:00'),           
+                    Timestamp('2024-11-26 00:00:00')]                                                                  
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Portfolio trades count for WIPRO: 19                                                               
+⠴ Analyzing WIPRO (7/7)...           DEBUG    SMA crossover signals: 27 triggers                                                                 
+⠴ Analyzing WIPRO (7/7)...           INFO     Rule 'sma_crossover' generated 27 signals on 920 data points                                       
+⠴ Analyzing WIPRO (7/7)...           DEBUG    RSI confirmation signals: 696 triggers (momentum + recovery)                                       
+⠴ Analyzing WIPRO (7/7)...           INFO     Rule 'rsi_oversold' generated 696 signals on 920 data points                                       
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Entry signals for WIPRO: 25 total                                                                  
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Exit signals for WIPRO: 25.0 total                                                                 
+⠴ Analyzing WIPRO (7/7)...           DEBUG    First 3 entry dates: [Timestamp('2022-07-27 00:00:00'), Timestamp('2022-09-13 00:00:00'),          
+                    Timestamp('2022-10-06 00:00:00')]                                                                  
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Last 3 entry dates: [Timestamp('2024-09-16 00:00:00'), Timestamp('2024-10-20 00:00:00'),           
+                    Timestamp('2024-11-26 00:00:00')]                                                                  
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Portfolio trades count for WIPRO: 19                                                               
+⠴ Analyzing WIPRO (7/7)...           DEBUG    SMA crossover signals: 27 triggers                                                                 
+⠴ Analyzing WIPRO (7/7)...           INFO     Rule 'sma_crossover' generated 27 signals on 920 data points                                       
+⠴ Analyzing WIPRO (7/7)...           DEBUG    EMA crossover signals: 14 triggers                                                                 
+⠴ Analyzing WIPRO (7/7)...           INFO     Rule 'ema_crossover' generated 14 signals on 920 data points                                       
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Entry signals for WIPRO: 0 total                                                                   
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Exit signals for WIPRO: 0.0 total                                                                  
+⠴ Analyzing WIPRO (7/7)...           DEBUG    Portfolio trades count for WIPRO: 0                                                                
+⠴ Analyzing WIPRO (7/7)...           WARNING  Strategy 'sma_10_20_crossover + ema_confirm' on 'WIPRO' generated only 0 trades, which is below the
+                    threshold of 10.                                                                                   
+⠦ Analyzing WIPRO (7/7)...           INFO     find_optimal_strategies completed in 0.11s                                                         
+⠦ Analyzing WIPRO (7/7)...⠦ Analyzing WIPRO (7/7)...
 [4/4] Analysis complete. Results summary:
-No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-           ERROR    Failed to fetch open positions: no such table: positions   
-           ERROR    Database error fetching strategies: no such table:         
-                    strategies                                                 
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 0.01s                           
-[23:58:23] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Refreshing market data...
-[3/4] Analyzing strategies for each ticker...
-[4/4] Analysis complete. Results summary:
-                      Top Strategies by Edge Score                       
-┌──────────┬─────────────────────┬────────────┬───────┬────────┬────────┐
-│ Symbol   │ Rule Stack          │ Edge Score │ Win % │ Sharpe │ Trades │
-├──────────┼─────────────────────┼────────────┼───────┼────────┼────────┤
-│ RELIANCE │ sma_10_20_crossover │      0.500 │ 50.0% │   0.50 │     12 │
-└──────────┴─────────────────────┴────────────┴───────┴────────┴────────┘
+                              Top Strategies by Edge Score                               
+┌───────────┬────────────────────────────────────┬────────────┬───────┬────────┬────────┐
+│ Symbol    │ Rule Stack                         │ Edge Score │ Win % │ Sharpe │ Trades │
+├───────────┼────────────────────────────────────┼────────────┼───────┼────────┼────────┤
+│ ICICIBANK │ sma_10_20_crossover                │      0.443 │  0.7% │   1.10 │     20 │
+│ ICICIBANK │ sma_10_20_crossover + rsi_momentum │      0.443 │  0.7% │   1.10 │     20 │
+│ SBIN      │ sma_10_20_crossover                │      0.421 │  0.6% │   1.04 │     21 │
+│ SBIN      │ sma_10_20_crossover + rsi_momentum │      0.294 │  0.6% │   0.73 │     21 │
+│ WIPRO     │ sma_10_20_crossover + rsi_momentum │      0.186 │  0.5% │   0.46 │     19 │
+│ WIPRO     │ sma_10_20_crossover                │      0.170 │  0.5% │   0.42 │     19 │
+│ INFY      │ sma_10_20_crossover                │      0.170 │  0.8% │   0.41 │     17 │
+│ HDFCBANK  │ sma_10_20_crossover                │      0.130 │  0.5% │   0.32 │     22 │
+│ TCS       │ sma_10_20_crossover                │      0.118 │  0.5% │   0.29 │     21 │
+│ TCS       │ sma_10_20_crossover + rsi_momentum │      0.118 │  0.5% │   0.29 │     21 │
+└───────────┴────────────────────────────────────┴────────────┴───────┴────────┴────────┘
 
-* Analysis complete. Found 1 valid strategies across 1 symbols.
+* Analysis complete. Found 14 valid strategies across 7 symbols.
 [5/5] Saving results...
-[23:58:24] INFO     Creating database at data\kiss_signal.db                   
-           INFO     Successfully created database at data\kiss_signal.db       
-           INFO     Saving 1 strategies to data\kiss_signal.db                 
-           ERROR    Invalid strategy data: 'avg_return'                        
-⚠️  Failed to save results to database.
-           WARNING  Persistence failed but continuing execution.               
+           INFO     Creating database at data\kiss_signal.db                                                           
+           DEBUG    Enabled WAL mode for concurrent access                                                             
+           DEBUG    Created strategies table                                                                           
+           DEBUG    Created positions table                                                                            
+           DEBUG    Created index on strategies table                                                                  
+           DEBUG    Created index on positions table                                                                   
+           INFO     Successfully created database at data\kiss_signal.db                                               
+           INFO     Saving 14 strategies to data\kiss_signal.db                                                        
+           DEBUG    Started transaction for batch save                                                                 
+           INFO     Successfully saved 14 strategies                                                                   
+           INFO     Saved 14 strategies to database at data\kiss_signal.db                                             
 [5/5] Generating report...
-           INFO     Fetched 0 open positions.                                  
-           WARNING  No strategies found for timestamp                          
-                    2025-06-29T23:58:24.006418 above threshold 0.5             
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 0.06s                           
-[23:58:24] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[23:58:24] INFO     === KISS Signal CLI Run Started ===                        
-Error loading configuration: Configuration file not found: nonexistent.yaml
-[23:58:24] INFO     === KISS Signal CLI Run Started ===                        
-Error loading configuration: Rules file not found: nonexistent_rules.yaml
-           INFO     Downloading fresh data for RELIANCE                        
-           WARNING  Limited data for RELIANCE: only 3 rows                     
-           INFO     Freeze mode active, skipping cache refresh                 
-           INFO     Refreshing 1 of 1 symbols                                  
-           INFO     Successfully refreshed 1/1 symbols                         
-           INFO     Refreshing 1 of 1 symbols                                  
-           ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType' object has
-                    no attribute 'empty'                                       
-[23:58:25] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType' object has
-                    no attribute 'empty'                                       
-[23:58:27] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType' object has
-                    no attribute 'empty'                                       
-           WARNING  Failed to fetch or validate data for RELIANCE              
-           INFO     Successfully refreshed 0/1 symbols                         
-           INFO     Refreshing 1 of 1 symbols                                  
-           WARNING  Negative prices detected for RELIANCE                      
-           WARNING  Failed to fetch or validate data for RELIANCE              
-           INFO     Successfully refreshed 0/1 symbols                         
-           INFO     Downloading fresh data for TEST                            
-           WARNING  No data returned for TEST.NS                               
-           ERROR    Missing required columns for TEST.NS: Index(['index',      
-                    'open'], dtype='object')                                   
-           ERROR    Failed to fetch data for TEST.NS: API Error                
-[23:58:30] WARNING  Failed to fetch or validate data for TEST                  
-           WARNING  Failed to fetch or validate data for TEST                  
-           WARNING  Failed to save cache for TEST                              
-           INFO     Refreshing 2 of 2 symbols                                  
-           INFO     Successfully refreshed 2/2 symbols                         
-           INFO     Loaded 2 symbols from universe                             
-           ERROR    Universe file not found: nonexistent.csv                   
-           WARNING  Negative prices detected for RELIANCE                      
-           WARNING  High zero-volume days for RELIANCE                         
-           WARNING  Empty data for TEST                                        
-           WARNING  Large data gap detected for TEST: 9.0 days                 
-           ERROR    Failed to save cache for TEST: Disk full                   
-           WARNING  Limited data for RELIANCE: only 5 rows                     
-           WARNING  Limited data for RELIANCE: only 5 rows                     
-           WARNING  Limited data for RELIANCE: only 3 rows                     
-           WARNING  Limited data for TEST: only 10 rows                        
-           WARNING  OSError checking cache status for TEST, assuming refresh   
-                    needed.                                                    
-           INFO     Backtester initialized: hold_period=20, min_trades=5       
-           INFO     Using data up to freeze date: 2023-03-31                   
-           INFO     Backtesting 2 rule combinations for TEST                   
-           WARNING  Strategy 'sma_10_20_crossover' on 'TEST' generated only 0  
-                    trades, which is below the threshold of 5.                 
-           WARNING  Strategy 'sma_10_20_crossover + rsi_oversold_30' on 'TEST' 
-                    generated only 0 trades, which is below the threshold of 5.
-           INFO     find_optimal_strategies completed in 0.04s                 
-           INFO     Loaded 2 symbols from universe                             
-[23:58:30] INFO     === KISS Signal CLI Run Started ===                        
-┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
-│ KISS Signal CLI                                                             │
-│ Keep-It-Simple Data Foundation                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-[1/4] Configuration loaded.
-[2/4] Skipping data refresh (freeze mode).
-[3/4] Analyzing strategies for each ticker...
-           INFO     Loaded 2 symbols from universe                             
-           INFO     Backtester initialized: hold_period=20, min_trades=2       
-           INFO     Using data up to freeze date: 2024-06-01                   
-           INFO     Backtesting 2 rule combinations for RELIANCE               
-[23:58:31] INFO     find_optimal_strategies completed in 1.06s                 
-           INFO     Using data up to freeze date: 2024-06-01                   
-           INFO     Backtesting 2 rule combinations for INFY                   
-           INFO     find_optimal_strategies completed in 0.07s                 
-[4/4] Analysis complete. Results summary:
-                         Top Strategies by Edge Score                          
-┌──────────┬───────────────────────────┬────────────┬───────┬────────┬────────┐
-│ Symbol   │ Rule Stack                │ Edge Score │ Win % │ Sharpe │ Trades │
-├──────────┼───────────────────────────┼────────────┼───────┼────────┼────────┤
-│ INFY     │ sma_10_20_crossover       │      0.105 │  1.0% │   0.25 │      2 │
-│ INFY     │ sma_10_20_crossover +     │      0.105 │  1.0% │   0.25 │      2 │
-│          │ rsi_oversold_30           │            │       │        │        │
-│ RELIANCE │ sma_10_20_crossover       │      0.090 │  1.0% │   0.21 │      2 │
-│ RELIANCE │ sma_10_20_crossover +     │      0.090 │  1.0% │   0.21 │      2 │
-│          │ rsi_oversold_30           │            │       │        │        │
-└──────────┴───────────────────────────┴────────────┴───────┴────────┴────────┘
-
-* Analysis complete. Found 4 valid strategies across 2 symbols.
-[5/5] Saving results...
-           INFO     Creating database at data\kiss_signal.db                   
-           INFO     Successfully created database at data\kiss_signal.db       
-           INFO     Saving 4 strategies to data\kiss_signal.db                 
-           INFO     Successfully saved 4 strategies                            
-           INFO     Saved 4 strategies to database at data\kiss_signal.db      
-[5/5] Generating report...
-           INFO     Fetched 0 open positions.                                  
-           WARNING  No strategies found for timestamp                          
-                    2025-06-29T23:58:31.689131 above threshold 0.5             
-           INFO     No strategies found above threshold, no signals to generate
-           INFO     Report generated: reports\signals_2025-06-29.md            
-* Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 1.31s                           
+           INFO     Fetched 0 open positions.                                                                          
+           WARNING  No strategies found for timestamp 2025-06-30T00:40:59.307626 above threshold 0.5                   
+           INFO     No strategies found above threshold, no signals to generate                                        
+           INFO     Report generated: reports\signals_2025-06-30.md                                                    
+* Report generated: reports\signals_2025-06-30.md
+           INFO     full_backtest completed in 10.28s                                                                  

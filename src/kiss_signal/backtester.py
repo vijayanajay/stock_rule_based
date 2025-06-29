@@ -80,6 +80,11 @@ class Backtester:
             else:
                 price_data = price_data.asfreq('D')
                 logger.warning(f"Could not infer frequency for {symbol}. Forcing daily frequency ('D').")
+            
+            # Handle NaN values created by asfreq - forward fill to preserve trading data
+            if price_data.isnull().any().any():
+                price_data = price_data.ffill()
+                logger.debug(f"Forward-filled NaN values after frequency adjustment for {symbol}")
 
         if edge_score_weights is None:
             edge_score_weights = {'win_pct': 0.6, 'sharpe': 0.4}
@@ -90,12 +95,25 @@ class Backtester:
         for i, combo in enumerate(combinations_to_test):
             try:
                 # Generate combined signal for the rule combination
-                entry_signals = pd.Series(True, index=price_data.index)
+                entry_signals = None
                 for rule_def in combo:
-                    entry_signals &= self._generate_signals(rule_def, price_data)
+                    rule_signals = self._generate_signals(rule_def, price_data)
+                    if entry_signals is None:
+                        entry_signals = rule_signals.copy()
+                    else:
+                        entry_signals &= rule_signals
                 
                 # Generate time-based exit signals: exit after hold_period days
                 exit_signals = self._generate_time_based_exits(entry_signals, self.hold_period)
+                
+                # Debug logging
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Entry signals for {symbol}: {entry_signals.sum()} total")
+                    logger.debug(f"Exit signals for {symbol}: {exit_signals.sum()} total")
+                    if entry_signals.sum() > 0:
+                        logger.debug(f"First 3 entry dates: {entry_signals[entry_signals].index[:3].tolist()}")
+                        logger.debug(f"Last 3 entry dates: {entry_signals[entry_signals].index[-3:].tolist()}")
+                
                 portfolio = vbt.Portfolio.from_signals(
                     close=price_data['close'],
                     entries=entry_signals,
@@ -106,6 +124,12 @@ class Backtester:
                     size=np.inf,
                 )
                 total_trades = portfolio.trades.count()
+                
+                # More debug logging
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Portfolio trades count for {symbol}: {total_trades}")
+                    if total_trades == 0 and entry_signals.sum() > 0:
+                        logger.debug(f"WARNING: {entry_signals.sum()} entry signals but 0 trades generated!")
                 
                 rule_names = " + ".join([r.name for r in combo])
                 if total_trades < self.min_trades_threshold:
@@ -188,7 +212,8 @@ class Backtester:
             logger.error(f"Error executing rule '{rule_type}' with params {rule_params}: {e}")
             raise ValueError(f"Rule '{rule_type}' failed execution") from e
 
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"Generated {entry_signals.sum()} entry signals for rule '{rule_type}'")
+        # Always log signal count for debugging
+        signal_count = entry_signals.sum()
+        logger.info(f"Rule '{rule_type}' generated {signal_count} signals on {len(price_data)} data points")
 
         return entry_signals

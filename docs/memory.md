@@ -141,6 +141,15 @@
 - **Fix**: Read existing state before modifications, clear data flow separation
 - **Prevention**: Single responsibility for state transitions
 
+## Signal Combination Logic Flaw (Structural Issue)
+
+### Root Cause: Invalid signal initialization in backtester
+- **Issue**: Starting with `pd.Series(True, index=price_data.index)` and ANDing with rule signals
+- **Problem**: Rule signals are sparse (few True values), ANDing with all-True series produces zero signals
+- **Symptom**: All strategies generate 0 trades regardless of data quality or rule configurations
+- **Fix**: Start with first rule's signals, then AND subsequent rules: `entry_signals = rule_signals.copy()` 
+- **Lesson**: Signal combination requires understanding signal density - don't start with universal True state
+
 ## Data Contract Mismatches (Pydantic vs Dict) (2025-07-21)
 - **Issue**: Modules had inconsistent expectations for data structures. The `backtester` produces results containing Pydantic `RuleDef` objects, but consumers like the `persistence` layer serialize them to dictionaries (for JSON). Test mocks were also returning raw dictionaries instead of Pydantic objects. This led to `AttributeError` when functions expected an object but received a dictionary (e.g., `dict.key` vs `dict['key']`).
 - **Fix**: Enforced the data contract at module boundaries.
@@ -148,3 +157,20 @@
     2.  Updated tests that directly called functions to instantiate the correct Pydantic models as inputs, rather than passing raw dictionaries.
     3.  Made consumer functions (like the CLI's display helper) more robust by using `getattr(obj, 'attr', default)` to handle both object and dictionary-like structures where appropriate, although fixing the source (the tests) was the primary solution.
 - **Lesson**: When passing data objects between modules, especially across serialization boundaries (like persistence or test mocks), ensure the data types are consistent. Test mocks must return data with the same type and structure as the real implementation to be effective. Enforce Pydantic model contracts in function signatures and test inputs.
+
+## 🚨 CRITICAL: asfreq() NaN Value Bug (2025-06-30)
+**STRICT RULE: NEVER IGNORE THIS PATTERN**
+
+- **Issue**: `pandas.asfreq('D')` creates NaN values for weekends/holidays, breaking all SMA/EMA calculations
+- **Symptom**: All rolling calculations return NaN → 0 signals generated → 0 trades → strategy failure
+- **Root Cause**: `asfreq()` fills missing calendar days with NaN; rolling windows can't handle NaN data
+- **Critical Fix Pattern**: ALWAYS forward-fill after `asfreq()`:
+  ```python
+  # Handle NaN values created by asfreq - forward fill to preserve trading data
+  if price_data.isnull().any().any():
+      price_data = price_data.ffill()
+      logger.debug(f"Forward-filled NaN values after frequency adjustment for {symbol}")
+  ```
+- **Evidence**: Application went from 0 signals to 20+ signals per symbol after fix
+- **Prevention**: ANY time `asfreq()` is used, immediately check for and handle NaN values
+- **Memory Aid**: asfreq = "as frequency" = calendar gaps = NaN poison = ALWAYS ffill()

@@ -213,7 +213,7 @@ def main(
     if ctx.resilient_parsing:
         return
 
-    setup_logging(verbose)
+    setup_logging(True)  # Temporarily force debug logging
     
     # Store loaded configs in the context
     try:
