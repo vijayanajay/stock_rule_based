@@ -44,7 +44,7 @@ class PerformanceMonitor:
     def profile_performance(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """Decorator for monitoring function performance."""
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             with self.monitor_execution(func.__name__):
                 return func(*args, **kwargs)
         return wrapper

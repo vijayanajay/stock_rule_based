@@ -61,7 +61,7 @@ def _show_banner() -> None:
     )
 
 
-def _create_progress_context():
+def _create_progress_context() -> progress.Progress:
     """Create progress context for long-running operations."""
     return progress.Progress(
         progress.SpinnerColumn(),

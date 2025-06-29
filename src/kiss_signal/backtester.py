@@ -4,7 +4,7 @@ This module handles backtesting of rule combinations and edge score calculation.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class Backtester:
         rules_config: Dict[str, Any],
         symbol: str = "",  # Added symbol for logging
         freeze_date: Any = None,  # Accept date or None
-        edge_score_weights: Dict[str, float] = None
+        edge_score_weights: Optional[Dict[str, float]] = None
     ) -> Any:
         """Find optimal rule combinations through backtesting.
         
