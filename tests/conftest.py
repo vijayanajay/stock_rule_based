@@ -71,3 +71,34 @@ def rules_file(temp_dir, sample_rules):
     with open(rules_path, 'w') as f:
         yaml.dump(sample_rules, f)
     return rules_path
+
+
+@pytest.fixture
+def reporter_config_obj_fixture(tmp_path: Path) -> "Config":
+    """
+    Sample Config object specifically for reporter tests that need a Config instance.
+    Uses tmp_path for unique paths per test.
+    """
+    from src.kiss_signal.config import Config # Local import to avoid circular dependency if Config uses fixtures
+
+    # Create a minimal universe file for this config
+    universe_file = tmp_path / "reporter_test_universe.txt"
+    universe_file.write_text("symbol\nRELIANCE\n")
+
+    db_file = tmp_path / "reporter_test.db"
+    cache_dir = tmp_path / "reporter_test_cache"
+    reports_dir = tmp_path / "reporter_test_reports"
+
+    return Config(
+        universe_path=str(universe_file),
+        historical_data_years=1, # Keep small for tests
+        cache_dir=str(cache_dir),
+        cache_refresh_days=30,
+        hold_period=20,
+        min_trades_threshold=5, # Keep small for tests
+        edge_score_weights={'win_pct': 0.6, 'sharpe': 0.4},
+        database_path=str(db_file),
+        reports_output_dir=str(reports_dir),
+        edge_score_threshold=0.50,
+        freeze_date=None
+    )

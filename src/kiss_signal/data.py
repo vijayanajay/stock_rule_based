@@ -128,14 +128,22 @@ def _needs_refresh(symbol: str, cache_dir: Path, refresh_days: int) -> bool:
     """
     cache_file = cache_dir / f"{symbol}.NS.csv"
     
-    if not cache_file.exists():
-        return True
-    
     try:
-        file_modified = datetime.fromtimestamp(cache_file.stat().st_mtime)
-        cutoff = datetime.now() - timedelta(days=refresh_days)
-        return file_modified < cutoff
-    except (OSError, ValueError):
+        if not cache_file.exists():
+            return True # Needs refresh if file doesn't exist
+
+        # If exists, check modification time
+        file_modified_timestamp = cache_file.stat().st_mtime
+        file_modified_date = datetime.fromtimestamp(file_modified_timestamp)
+        cutoff_date = datetime.now() - timedelta(days=refresh_days)
+
+        return file_modified_date < cutoff_date # Needs refresh if older than cutoff
+
+    except OSError: # Catch OS errors from .exists() or .stat()
+        logger.warning(f"OSError checking cache status for {symbol}, assuming refresh needed.")
+        return True # Assume refresh is needed if we can't check
+    except ValueError: # Catch potential errors from fromtimestamp
+        logger.warning(f"ValueError checking cache status for {symbol}, assuming refresh needed.")
         return True
 
 
@@ -231,7 +239,18 @@ def _validate_data_quality(data: pd.DataFrame, symbol: str) -> bool:
         return False
     
     # Check for large data gaps
-    max_gap_days = data.sort_values('date')['date'].diff().dt.days.max()
+    if 'date' in data.columns:
+        date_series = data.sort_values('date')['date']
+    elif isinstance(data.index, pd.DatetimeIndex):
+        date_series = data.index.to_series().sort_values()
+    else:
+        # Cannot determine date series for gap check
+        logger.warning(f"Could not determine date series for gap check for {symbol}")
+        # Assuming True if date series cannot be determined, to not fail valid data.
+        # This case should ideally not happen with standardized data.
+        date_series = pd.Series(dtype='datetime64[ns]') # Empty series to avoid error, max_gap_days will be NaN
+
+    max_gap_days = date_series.diff().dt.days.max()
     if pd.notna(max_gap_days) and max_gap_days > 5:
         logger.warning(f"Large data gap detected for {symbol}: {max_gap_days} days")
         return False
