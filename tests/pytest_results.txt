@@ -1,0 +1,102 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-8.4.0, pluggy-1.6.0 -- D:\Code\stock_rule_based\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Code\stock_rule_based
+configfile: pyproject.toml
+plugins: cov-6.2.1
+collecting ... collected 127 items
+
+test_backtester.py::TestBacktester::test_init_default_parameters PASSED  [  0%]
+test_backtester.py::TestBacktester::test_init_custom_parameters PASSED   [  1%]
+test_backtester.py::TestBacktester::test_calc_edge_score_basic PASSED    [  2%]
+test_backtester.py::TestBacktester::test_calc_edge_score_zero_values PASSED [  3%]
+test_backtester.py::TestBacktester::test_generate_signals_empty_rule_stack PASSED [  3%]
+test_backtester.py::TestBacktester::test_generate_signals_sma_crossover PASSED [  4%]
+test_backtester.py::TestBacktester::test_generate_signals_invalid_rule PASSED [  5%]
+test_backtester.py::TestBacktester::test_generate_signals_missing_parameters PASSED [  6%]
+test_backtester.py::TestBacktester::test_find_optimal_strategies_no_baseline PASSED [  7%]
+test_backtester.py::TestBacktester::test_find_optimal_strategies_no_trades PASSED [  7%]
+test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow PASSED [  8%]
+test_backtester.py::TestBacktesterFixtures::test_sample_backtest_data_fixture PASSED [  9%]
+test_cli_advanced.py::test_run_command_with_persistence PASSED           [ 10%]
+test_cli_advanced.py::test_run_command_persistence_failure_handling PASSED [ 11%]
+test_cli_advanced.py::test_run_command_backtest_value_error PASSED       [ 11%]
+test_cli_advanced.py::test_run_command_file_not_found_in_backtest PASSED [ 12%]
+test_cli_advanced.py::test_run_command_backtest_generic_exception_verbose FAILED [ 13%]
+test_cli_advanced.py::test_run_command_log_save_failure PASSED           [ 14%]
+test_cli_basic.py::test_cli_import PASSED                                [ 14%]
+test_cli_basic.py::test_run_command_help FAILED                          [ 15%]
+test_cli_basic.py::test_display_results_empty PASSED                     [ 16%]
+test_cli_basic.py::test_run_command_basic PASSED                         [ 17%]
+test_cli_basic.py::test_run_command_verbose PASSED                       [ 18%]
+test_cli_basic.py::test_run_command_freeze_date PASSED                   [ 18%]
+test_cli_basic.py::test_run_command_success PASSED                       [ 19%]
+test_cli_basic.py::test_run_command_invalid_freeze_date PASSED           [ 20%]
+test_cli_basic.py::test_run_command_no_config PASSED                     [ 21%]
+test_cli_basic.py::test_run_command_missing_rules PASSED                 [ 22%]
+test_config.py::test_config_model_valid PASSED                           [ 22%]
+test_config.py::test_config_model_invalid_weights PASSED                 [ 23%]
+test_config.py::test_load_config_missing_file PASSED                     [ 24%]
+test_config.py::test_load_rules_invalid_structure PASSED                 [ 25%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_get_price_data_missing_cache PASSED [ 25%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_freeze_mode PASSED [ 26%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_success PASSED [ 27%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_multiindex_columns PASSED [ 28%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_tuple_columns PASSED [ 29%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_fetch_failure PASSED [ 29%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_validation_failure PASSED [ 30%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_get_price_data_fetch_fails PASSED [ 31%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_empty_df PASSED [ 32%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_missing_columns PASSED [ 33%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_api_exception PASSED [ 33%]
+test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_and_store_data_fetch_fails 
+
+================================== FAILURES ===================================
+_____________ test_run_command_backtest_generic_exception_verbose _____________
+
+mock_data = <MagicMock name='data' id='2315277065760'>
+mock_run_backtests = <MagicMock name='_run_backtests' id='2315278409776'>
+sample_config = {'cache_dir': 'data/cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
+
+    @patch("kiss_signal.cli._run_backtests", side_effect=Exception("Generic backtest error"))
+    @patch("kiss_signal.cli.data")
+    def test_run_command_backtest_generic_exception_verbose(
+        mock_data, mock_run_backtests, sample_config: Dict[str, Any]
+    ) -> None:
+        """Test that a generic exception during backtesting is handled with verbose output."""
+        with runner.isolated_filesystem() as fs:
+            data_dir = Path(fs) / "data"
+            data_dir.mkdir()
+            universe_path = data_dir / "nifty_large_mid.csv"
+            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
+            sample_config["universe_path"] = str(universe_path)
+            config_path = Path("config.yaml")
+            config_path.write_text(yaml.dump(sample_config))
+            rules_path = Path(fs) / "config" / "rules.yaml"
+            rules_path.parent.mkdir()
+            rules_path.write_text(VALID_RULES_YAML)
+    
+            result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--verbose"])
+    
+>           assert result.exit_code == 1
+E           assert 2 == 1
+E            +  where 2 = <Result SystemExit(2)>.exit_code
+
+test_cli_advanced.py:191: AssertionError
+____________________________ test_run_command_help ____________________________
+
+    def test_run_command_help() -> None:
+        """Test run command help shows expected content."""
+        result = runner.invoke(app, ["run", "--help"])
+>       assert result.exit_code == 0
+E       assert 1 == 0
+E        +  where 1 = <Result SystemExit(1)>.exit_code
+
+test_cli_basic.py:33: AssertionError
+=========================== short test summary info ===========================
+FAILED test_cli_advanced.py::test_run_command_backtest_generic_exception_verbose
+FAILED test_cli_basic.py::test_run_command_help - assert 1 == 0
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+D:\Code\stock_rule_based\src\kiss_signal\data.py:309: KeyboardInterrupt
+(to show a full traceback on KeyboardInterrupt use --full-trace)
+======================== 2 failed, 41 passed in 53.62s ========================

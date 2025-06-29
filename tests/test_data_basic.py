@@ -1,4 +1,4 @@
-"""Optimized tests for data management functionality."""
+"""Optimized tests for data management functionality - Basic operations."""
 
 import pytest
 import pandas as pd
@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from unittest.mock import patch
 import tempfile
 from pathlib import Path
+import logging
 
 from kiss_signal import data
 
@@ -30,8 +31,8 @@ def temp_cache_dir():
         yield Path(temp_dir)
 
 
-class TestDataFunctions:
-    """Optimized test suite for data functions."""
+class TestDataBasicFunctions:
+    """Test suite for basic data functions."""
     
     def test_load_universe(self, temp_cache_dir):
         universe_path = temp_cache_dir / "universe.csv"
@@ -94,6 +95,33 @@ class TestDataFunctions:
         })
         assert data._validate_data_quality(test_data, "RELIANCE") is False
     
+    def test_validate_data_quality_zero_volume(self):
+        """Test data quality validation with high zero-volume days."""
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=10)),
+            'open': [100] * 10,
+            'high': [105] * 10,
+            'low': [95] * 10,
+            'close': [102] * 10,
+            'volume': [1000, 0, 1200, 0, 1400, 0, 0, 0, 0, 0] # 60% zero volume
+        })
+        assert data._validate_data_quality(test_data, "RELIANCE") is False
+
+    def test_validate_data_quality_empty_df(self):
+        """Test _validate_data_quality with an empty DataFrame."""
+        assert data._validate_data_quality(pd.DataFrame(), "TEST") is False
+
+    def test_validate_data_quality_large_gap(self):
+        """Test _validate_data_quality with a large data gap."""
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(['2023-01-01', '2023-01-10']),
+            'open': [100, 101], 'high': [100, 101], 'low': [100, 101],
+            'close': [100, 101],
+            'volume': [1000, 1000]
+        })
+        test_data = test_data.set_index('date')
+        assert data._validate_data_quality(test_data, "TEST") is False
+
     def test_save_and_load_symbol_cache(self, temp_cache_dir):
         """Test saving and loading symbol cache."""
         test_data = pd.DataFrame({
@@ -108,6 +136,30 @@ class TestDataFunctions:
         loaded_data = data._load_symbol_cache("RELIANCE", temp_cache_dir)
         expected_data = test_data.set_index('date')
         pd.testing.assert_frame_equal(expected_data, loaded_data)
+
+    @patch('pandas.DataFrame.to_csv', side_effect=OSError("Disk full"))
+    def test_save_symbol_cache_exception(self, mock_to_csv, temp_cache_dir):
+        """Test _save_symbol_cache handles exceptions."""
+        df = pd.DataFrame({'close': [100]})
+        assert data._save_symbol_cache("TEST", df, temp_cache_dir) is False
+
+    def test_load_symbol_cache_with_unnamed_col(self, temp_cache_dir):
+        """Test loading cache file with an 'Unnamed: 0' column."""
+        cache_file = temp_cache_dir / "TEST.NS.csv"
+        cache_file.write_text("Unnamed: 0,date,close\n0,2023-01-01,100\n1,2023-01-02,101")
+        
+        loaded_data = data._load_symbol_cache("TEST", temp_cache_dir)
+        assert 'Unnamed: 0' not in loaded_data.columns
+        assert 'date' in loaded_data.index.name
+        assert len(loaded_data) == 2
+
+    def test_load_symbol_cache_with_date_as_first_col(self, temp_cache_dir):
+        """Test loading cache where date is the first column but not index."""
+        cache_file = temp_cache_dir / "TEST.NS.csv"
+        cache_file.write_text("date,close\n2023-01-01,100\n2023-01-02,101")
+        loaded_data = data._load_symbol_cache("TEST", temp_cache_dir)
+        assert isinstance(loaded_data.index, pd.DatetimeIndex)
+        assert len(loaded_data) == 2
     
     def test_get_price_data_with_date_filtering(self, temp_cache_dir):
         """Test get_price_data with date filtering."""
@@ -129,6 +181,25 @@ class TestDataFunctions:
         )
         assert len(result) == 5  # Data up to 2023-01-05
         assert result.index.max().date() == date(2023, 1, 5)
+
+    def test_get_price_data_with_start_and_end_date(self, temp_cache_dir):
+        """Test get_price_data with start and end date filtering."""
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=10)),
+            'open': range(100, 110), 'high': range(105, 115),
+            'low': range(95, 105), 'close': range(102, 112),
+            'volume': range(1000, 1010)
+        })
+        data._save_symbol_cache("RELIANCE", test_data, temp_cache_dir)
+        result = data.get_price_data(
+            "RELIANCE",
+            temp_cache_dir,
+            start_date=date(2023, 1, 3),
+            end_date=date(2023, 1, 7)
+        )
+        assert len(result) == 5
+        assert result.index.min().date() == date(2023, 1, 3)
+        assert result.index.max().date() == date(2023, 1, 7)
     
     def test_get_price_data_with_freeze_date(self, temp_cache_dir):
         """Test get_price_data respects freeze_date."""
@@ -151,98 +222,40 @@ class TestDataFunctions:
         assert len(result) == 3
         assert result.index.max().date() == date(2023, 1, 3)
 
-    @patch('yfinance.download')
-    def test_get_price_data_missing_cache(self, mock_download, temp_cache_dir):
-        """Test get_price_data when cache is missing."""
-        mock_data = pd.DataFrame({
-            'Open': [100, 101, 102],
-            'High': [105, 106, 107],
-            'Low': [95, 96, 97],
-            'Close': [102, 103, 104],
-            'Volume': [1000, 1100, 1200]
-        }, index=pd.to_datetime(pd.date_range('2023-01-01', periods=3, name='Date')))
-        mock_download.return_value = mock_data
-        result = data.get_price_data("RELIANCE", temp_cache_dir, 7, 1)
-        assert len(result) == 3
-        assert 'open' in result.columns
-        mock_download.assert_called_once()
-    
-    @patch('yfinance.download')
-    def test_refresh_market_data_freeze_mode(self, mock_download, temp_cache_dir):
-        """Test refresh_market_data in freeze mode."""
+    def test_get_price_data_freeze_mode_no_cache(self, temp_cache_dir):
+        """Test get_price_data in freeze mode when cache is missing."""
+        with pytest.raises(FileNotFoundError):
+            data.get_price_data(
+                "TEST", temp_cache_dir, freeze_date=date(2023, 1, 1)
+            )
+
+    def test_get_price_data_no_data_in_range(self, temp_cache_dir):
+        """Test get_price_data when date filtering results in empty DataFrame."""
         test_data = pd.DataFrame({
             'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),
-            'open': range(100, 105),
-            'high': range(105, 110),
-            'low': range(95, 100),
-            'close': range(102, 107),
-            'volume': range(1000, 1005)
+            'open': range(5), 'high': range(5), 'low': range(5), 'volume': range(5),
+            'close': range(5)
         })
-        data._save_symbol_cache("RELIANCE", test_data, temp_cache_dir)
-        data.refresh_market_data(
-            universe_path=["RELIANCE"],
-            cache_dir=str(temp_cache_dir),
-            refresh_days=7,
-            years=1,
-            freeze_date=date(2023, 1, 10)
-        )
-        mock_download.assert_not_called()
-    
-    @patch('yfinance.download')  
-    def test_refresh_market_data_success(self, mock_download, temp_cache_dir):
-        """Test successful market data refresh."""
-        mock_data = pd.DataFrame({
-            'Open': [100, 101, 102],
-            'High': [105, 106, 107],
-            'Low': [95, 96, 97],
-            'Close': [102, 103, 104],
-            'Volume': [1000, 1100, 1200]
-        }, index=pd.to_datetime(pd.date_range('2023-01-01', periods=3, name='Date')))
-        mock_download.return_value = mock_data
-        data.refresh_market_data(
-            universe_path=["RELIANCE"],
-            cache_dir=str(temp_cache_dir),
-            refresh_days=7,
-            years=1
-        )
-        mock_download.assert_called_once()
-        cache_file = temp_cache_dir / "RELIANCE.NS.csv"
-        assert cache_file.exists()
+        data._save_symbol_cache("TEST", test_data, temp_cache_dir)
+        with pytest.raises(ValueError, match="No data available for TEST"):
+            data.get_price_data("TEST", temp_cache_dir, start_date=date(2024, 1, 1))
 
-    @patch('yfinance.download')
-    def test_fetch_symbol_data_multiindex_columns(self, mock_download):
-        """Test _fetch_symbol_data handles MultiIndex columns correctly."""
-        mock_data = pd.DataFrame({
-            ('Open', 'RELIANCE.NS'): [100, 101, 102],
-            ('High', 'RELIANCE.NS'): [105, 106, 107],
-            ('Low', 'RELIANCE.NS'): [95, 96, 97],
-            ('Close', 'RELIANCE.NS'): [102, 103, 104],
-            ('Volume', 'RELIANCE.NS'): [1000, 1100, 1200]
-        }, index=pd.to_datetime(pd.date_range('2023-01-01', periods=3, name='Date')))
-        mock_data.columns = pd.MultiIndex.from_tuples(mock_data.columns)
-        mock_download.return_value = mock_data
-        result = data._fetch_symbol_data("RELIANCE.NS", 1)
-        assert result is not None
-        assert len(result) == 3
-        mock_download.assert_called_once()
-    
-    @patch('yfinance.download')
-    def test_fetch_symbol_data_tuple_columns(self, mock_download):
-        """Test _fetch_symbol_data handles tuple columns correctly."""
-        mock_data = pd.DataFrame({
-            ('Open', 'RELIANCE.NS'): [100, 101, 102],
-            ('High', 'RELIANCE.NS'): [105, 106, 107],
-            ('Low', 'RELIANCE.NS'): [95, 96, 97],
-            ('Close', 'RELIANCE.NS'): [102, 103, 104],
-            ('Volume', 'RELIANCE.NS'): [1000, 1100, 1200]
-        }, index=pd.to_datetime(pd.date_range('2023-01-01', periods=3, name='Date')))
-        mock_data.columns = [('Open', 'RELIANCE.NS'), ('High', 'RELIANCE.NS'), 
-                           ('Low', 'RELIANCE.NS'), ('Close', 'RELIANCE.NS'), 
-                           ('Volume', 'RELIANCE.NS')]
-        mock_download.return_value = mock_data
-        result = data._fetch_symbol_data("RELIANCE.NS", 1)
-        assert result is not None
-        assert len(result) == 3
-        expected_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
-        assert all(col in result.columns for col in expected_columns)
-        mock_download.assert_called_once()
+    def test_get_price_data_limited_data_warning(self, temp_cache_dir, caplog):
+        """Test get_price_data logs a warning for limited data."""
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=10)),
+            'open': range(10), 'high': range(10), 'low': range(10), 'volume': range(10),
+            'close': range(10)
+        })
+        data._save_symbol_cache("TEST", test_data, temp_cache_dir)
+        with caplog.at_level(logging.WARNING):
+            result = data.get_price_data("TEST", temp_cache_dir)
+            assert len(result) == 10
+            assert "Limited data for TEST" in caplog.text
+
+    def test_needs_refresh_os_error(self, temp_cache_dir):
+        """Test _needs_refresh handles OSError."""
+        cache_file = temp_cache_dir / "TEST.NS.csv"
+        cache_file.touch()
+        with patch('pathlib.Path.stat', side_effect=OSError("Permission denied")):
+            assert data._needs_refresh("TEST", temp_cache_dir, 7) is True

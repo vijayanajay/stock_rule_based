@@ -4,96 +4,329 @@ cachedir: .pytest_cache
 rootdir: D:\Code\stock_rule_based
 configfile: pyproject.toml
 plugins: cov-6.2.1
-collecting ... collected 87 items
+collecting ... collected 127 items
 
-tests/test_backtester.py::TestBacktester::test_init_default_parameters PASSED [  1%]
-tests/test_backtester.py::TestBacktester::test_init_custom_parameters PASSED [  2%]
-tests/test_backtester.py::TestBacktester::test_calc_edge_score_basic PASSED [  3%]
-tests/test_backtester.py::TestBacktester::test_calc_edge_score_zero_values PASSED [  4%]
-tests/test_backtester.py::TestBacktester::test_generate_signals_empty_rule_stack PASSED [  5%]
-tests/test_backtester.py::TestBacktester::test_generate_signals_sma_crossover PASSED [  6%]
-tests/test_backtester.py::TestBacktester::test_generate_signals_invalid_rule PASSED [  8%]
-tests/test_backtester.py::TestBacktester::test_generate_signals_missing_parameters PASSED [  9%]
-tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow PASSED [ 10%]
-tests/test_backtester.py::TestBacktesterFixtures::test_sample_backtest_data_fixture PASSED [ 11%]
-tests/test_cli.py::test_cli_import PASSED                                [ 12%]
-tests/test_cli.py::test_run_command_help PASSED                          [ 13%]
-tests/test_cli.py::test_run_command_basic PASSED                         [ 14%]
-tests/test_cli.py::test_run_command_verbose PASSED                       [ 16%]
-tests/test_cli.py::test_run_command_freeze_date PASSED                   [ 17%]
-tests/test_cli.py::test_run_command_success PASSED                       [ 18%]
-tests/test_cli.py::test_run_command_invalid_freeze_date PASSED           [ 19%]
-tests/test_cli.py::test_run_command_no_config PASSED                     [ 20%]
-tests/test_cli.py::test_run_command_missing_rules PASSED                 [ 21%]
-tests/test_cli.py::test_run_command_with_persistence PASSED              [ 22%]
-tests/test_cli.py::test_run_command_persistence_failure_handling PASSED  [ 24%]
-tests/test_config.py::test_config_model_valid PASSED                     [ 25%]
-tests/test_config.py::test_config_model_invalid_weights PASSED           [ 26%]
-tests/test_config.py::test_load_config_missing_file PASSED               [ 27%]
-tests/test_data.py::TestDataFunctions::test_load_universe PASSED         [ 28%]
-tests/test_data.py::TestDataFunctions::test_load_universe_missing_file PASSED [ 29%]
-tests/test_data.py::TestDataFunctions::test_load_universe_malformed PASSED [ 31%]
-tests/test_data.py::TestDataFunctions::test_add_ns_suffix PASSED         [ 32%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_missing_file PASSED [ 33%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_fresh_file PASSED [ 34%]
-tests/test_data.py::TestDataFunctions::test_needs_refresh_stale_file PASSED [ 35%]
-tests/test_data.py::TestDataFunctions::test_validate_data_quality_good_data PASSED [ 36%]
-tests/test_data.py::TestDataFunctions::test_validate_data_quality_negative_prices PASSED [ 37%]
-tests/test_data.py::TestDataFunctions::test_save_and_load_symbol_cache PASSED [ 39%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_with_date_filtering PASSED [ 40%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_with_freeze_date PASSED [ 41%]
-tests/test_data.py::TestDataFunctions::test_get_price_data_missing_cache PASSED [ 42%]
-tests/test_data.py::TestDataFunctions::test_refresh_market_data_freeze_mode PASSED [ 43%]
-tests/test_data.py::TestDataFunctions::test_refresh_market_data_success PASSED [ 44%]
-tests/test_data.py::TestDataFunctions::test_fetch_symbol_data_multiindex_columns PASSED [ 45%]
-tests/test_data.py::TestDataFunctions::test_fetch_symbol_data_tuple_columns PASSED [ 47%]
-tests/test_integration.py::TestCLIIntegration::test_config_loading_integration PASSED [ 48%]
-tests/test_integration.py::TestCLIIntegration::test_data_loading_integration PASSED [ 49%]
-tests/test_integration.py::TestCLIIntegration::test_backtester_with_real_rules PASSED [ 50%]
-tests/test_integration.py::TestCLIIntegration::test_end_to_end_cli_workflow PASSED [ 51%]
-tests/test_integration.py::TestCLIIntegration::test_error_handling_integration PASSED [ 52%]
-tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_function_lookup PASSED [ 54%]
-tests/test_integration.py::TestBacktesterRuleIntegration::test_rule_parameter_validation PASSED [ 55%]
-tests/test_performance.py::test_performance_monitor_context_manager PASSED [ 56%]
-tests/test_performance.py::test_performance_monitor_decorator PASSED     [ 57%]
-tests/test_performance.py::test_get_summary PASSED                       [ 58%]
-tests/test_performance.py::test_get_summary_empty PASSED                 [ 59%]
-tests/test_performance.py::test_duration_warning PASSED                  [ 60%]
-tests/test_performance.py::test_global_monitor_instance PASSED           [ 62%]
-tests/test_persistence.py::TestCreateDatabase::test_create_database_success PASSED [ 63%]
-tests/test_persistence.py::TestCreateDatabase::test_create_database_idempotent PASSED [ 64%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_success PASSED [ 65%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_empty_list PASSED [ 66%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_transaction_rollback PASSED [ 67%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_invalid_rule_stack PASSED [ 68%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_database_not_exists PASSED [ 70%]
-tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_multiple_batches PASSED [ 71%]
-tests/test_persistence.py::TestIntegration::test_create_and_save_workflow PASSED [ 72%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_success PASSED [ 73%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_threshold_filtering PASSED [ 74%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_no_results PASSED [ 75%]
-tests/test_reporter.py::TestFetchBestStrategies::test_fetch_strategies_database_error PASSED [ 77%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_with_valid_rule PASSED [ 78%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_no_signal PASSED [ 79%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_empty_data PASSED [ 80%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_unknown_rule PASSED [ 81%]
-tests/test_reporter.py::TestCheckForSignal::test_check_signal_rule_exception PASSED [ 82%]
-tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_success PASSED [ 83%]
-tests/test_reporter.py::TestIdentifyNewSignals::test_identify_signals_no_strategies PASSED [ 85%]
-tests/test_reporter.py::TestGenerateDailyReport::test_generate_report_with_positions PASSED [ 86%]
-tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 87%]
-tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 88%]
-tests/test_rule_funcs.py::TestSMACrossover::test_invalid_periods PASSED  [ 89%]
-tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_calculation PASSED  [ 90%]
-tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_insufficient_data PASSED [ 91%]
-tests/test_rule_funcs.py::TestRSIOversold::test_oversold_signal_generation PASSED [ 93%]
-tests/test_rule_funcs.py::TestRSIOversold::test_insufficient_data_rsi PASSED [ 94%]
-tests/test_rule_funcs.py::TestEMACrossover::test_ema_crossover_signal PASSED [ 95%]
-tests/test_rule_funcs.py::TestEdgeCases::test_empty_dataframe PASSED     [ 96%]
-tests/test_rule_funcs.py::TestEdgeCases::test_single_price_data PASSED   [ 97%]
-tests/test_rule_funcs.py::TestEdgeCases::test_nan_price_data PASSED      [ 98%]
+tests/test_backtester.py::TestBacktester::test_init_default_parameters PASSED [  0%]
+tests/test_backtester.py::TestBacktester::test_init_custom_parameters PASSED [  1%]
+tests/test_backtester.py::TestBacktester::test_calc_edge_score_basic PASSED [  2%]
+tests/test_backtester.py::TestBacktester::test_calc_edge_score_zero_values PASSED [  3%]
+tests/test_backtester.py::TestBacktester::test_generate_signals_empty_rule_stack PASSED [  3%]
+tests/test_backtester.py::TestBacktester::test_generate_signals_sma_crossover PASSED [  4%]
+tests/test_backtester.py::TestBacktester::test_generate_signals_invalid_rule PASSED [  5%]
+tests/test_backtester.py::TestBacktester::test_generate_signals_missing_parameters PASSED [  6%]
+tests/test_backtester.py::TestBacktester::test_find_optimal_strategies_no_baseline PASSED [  7%]
+tests/test_backtester.py::TestBacktester::test_find_optimal_strategies_no_trades PASSED [  7%]
+tests/test_backtester.py::TestBacktesterIntegration::test_find_optimal_strategies_basic_flow PASSED [  8%]
+tests/test_backtester.py::TestBacktesterFixtures::test_sample_backtest_data_fixture PASSED [  9%]
+tests/test_cli_advanced.py::test_run_command_with_persistence PASSED     [ 10%]
+tests/test_cli_advanced.py::test_run_command_persistence_failure_handling PASSED [ 11%]
+tests/test_cli_advanced.py::test_run_command_backtest_value_error PASSED [ 11%]
+tests/test_cli_advanced.py::test_run_command_file_not_found_in_backtest PASSED [ 12%]
+tests/test_cli_advanced.py::test_run_command_backtest_generic_exception_verbose FAILED [ 13%]
+tests/test_cli_advanced.py::test_run_command_log_save_failure PASSED     [ 14%]
+tests/test_cli_basic.py::test_cli_import PASSED                          [ 14%]
+tests/test_cli_basic.py::test_run_command_help PASSED                    [ 15%]
+tests/test_cli_basic.py::test_display_results_empty PASSED               [ 16%]
+tests/test_cli_basic.py::test_run_command_basic PASSED                   [ 17%]
+tests/test_cli_basic.py::test_run_command_verbose PASSED                 [ 18%]
+tests/test_cli_basic.py::test_run_command_freeze_date PASSED             [ 18%]
+tests/test_cli_basic.py::test_run_command_success PASSED                 [ 19%]
+tests/test_cli_basic.py::test_run_command_invalid_freeze_date PASSED     [ 20%]
+tests/test_cli_basic.py::test_run_command_no_config PASSED               [ 21%]
+tests/test_cli_basic.py::test_run_command_missing_rules PASSED           [ 22%]
+tests/test_config.py::test_config_model_valid PASSED                     [ 22%]
+tests/test_config.py::test_config_model_invalid_weights PASSED           [ 23%]
+tests/test_config.py::test_load_config_missing_file PASSED               [ 24%]
+tests/test_config.py::test_load_rules_invalid_structure PASSED           [ 25%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_get_price_data_missing_cache PASSED [ 25%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_freeze_mode PASSED [ 26%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_success PASSED [ 27%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_multiindex_columns PASSED [ 28%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_tuple_columns PASSED [ 29%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_fetch_failure PASSED [ 29%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_validation_failure PASSED [ 30%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_get_price_data_fetch_fails PASSED [ 31%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_empty_df PASSED [ 32%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_missing_columns PASSED [ 33%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_symbol_data_api_exception PASSED [ 33%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_and_store_data_fetch_fails PASSED [ 34%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_and_store_data_validation_fails PASSED [ 35%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_fetch_and_store_data_save_fails PASSED [ 36%]
+tests/test_data_advanced.py::TestDataAdvancedFunctions::test_refresh_market_data_with_list PASSED [ 37%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_load_universe PASSED [ 37%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_load_universe_missing_file PASSED [ 38%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_load_universe_malformed PASSED [ 39%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_add_ns_suffix PASSED [ 40%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_needs_refresh_missing_file PASSED [ 40%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_needs_refresh_fresh_file PASSED [ 41%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_needs_refresh_stale_file PASSED [ 42%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_validate_data_quality_good_data PASSED [ 43%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_validate_data_quality_negative_prices PASSED [ 44%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_validate_data_quality_zero_volume PASSED [ 44%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_validate_data_quality_empty_df PASSED [ 45%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_validate_data_quality_large_gap FAILED [ 46%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_save_and_load_symbol_cache PASSED [ 47%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_save_symbol_cache_exception PASSED [ 48%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_load_symbol_cache_with_unnamed_col PASSED [ 48%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_load_symbol_cache_with_date_as_first_col PASSED [ 49%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_get_price_data_with_date_filtering PASSED [ 50%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_get_price_data_with_start_and_end_date PASSED [ 51%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_get_price_data_with_freeze_date PASSED [ 51%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_get_price_data_freeze_mode_no_cache PASSED [ 52%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_get_price_data_no_data_in_range PASSED [ 53%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_get_price_data_limited_data_warning PASSED [ 54%]
+tests/test_data_basic.py::TestDataBasicFunctions::test_needs_refresh_os_error FAILED [ 55%]
+tests/test_integration_backtester.py::TestBacktesterRuleIntegration::test_rule_function_lookup PASSED [ 55%]
+tests/test_integration_backtester.py::TestBacktesterRuleIntegration::test_rule_parameter_validation PASSED [ 56%]
+tests/test_integration_backtester.py::TestBacktesterRuleIntegration::test_backtester_with_real_rules PASSED [ 57%]
+tests/test_integration_cli.py::TestCLIIntegration::test_config_loading_integration PASSED [ 58%]
+tests/test_integration_cli.py::TestCLIIntegration::test_data_loading_integration PASSED [ 59%]
+tests/test_integration_cli.py::TestCLIIntegration::test_end_to_end_cli_workflow PASSED [ 59%]
+tests/test_integration_cli.py::TestCLIIntegration::test_error_handling_integration PASSED [ 60%]
+tests/test_performance.py::test_performance_monitor_context_manager PASSED [ 61%]
+tests/test_performance.py::test_performance_monitor_decorator PASSED     [ 62%]
+tests/test_performance.py::test_get_summary PASSED                       [ 62%]
+tests/test_performance.py::test_get_summary_empty PASSED                 [ 63%]
+tests/test_performance.py::test_duration_warning PASSED                  [ 64%]
+tests/test_performance.py::test_global_monitor_instance PASSED           [ 65%]
+tests/test_performance.py::test_performance_benchmark_simulation PASSED  [ 66%]
+tests/test_persistence.py::TestCreateDatabase::test_create_database_success PASSED [ 66%]
+tests/test_persistence.py::TestCreateDatabase::test_create_database_idempotent PASSED [ 67%]
+tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_success PASSED [ 68%]
+tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_empty_list PASSED [ 69%]
+tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_transaction_rollback PASSED [ 70%]
+tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_invalid_rule_stack PASSED [ 70%]
+tests/test_persistence.py::TestSaveStrategiesBatch::test_save_strategies_batch_database_not_exists PASSED [ 71%]
+tests/test_persistence.py::TestAddPositions::test_add_new_position_skips_existing_open PASSED [ 72%]
+tests/test_persistence.py::TestAddPositions::test_save_strategies_multiple_batches PASSED [ 73%]
+tests/test_persistence.py::TestIntegration::test_create_and_save_workflow PASSED [ 74%]
+tests/test_reporter_advanced.py::TestIdentifyNewSignalsEdgeCases::test_identify_signals_data_load_failure PASSED [ 74%]
+tests/test_reporter_advanced.py::TestReportFormatting::test_format_new_buys_table_empty PASSED [ 75%]
+tests/test_reporter_advanced.py::TestReportFormatting::test_format_open_positions_table_empty PASSED [ 76%]
+tests/test_reporter_advanced.py::TestReportFormatting::test_format_sell_positions_table_empty PASSED [ 77%]
+tests/test_reporter_advanced.py::TestReportFormatting::test_format_open_positions_table_with_na PASSED [ 77%]
+tests/test_reporter_advanced.py::TestGenerateDailyReport::test_generate_report_with_positions PASSED [ 78%]
+tests/test_reporter_advanced.py::TestGenerateDailyReport::test_generate_report_file_write_error PASSED [ 79%]
+tests/test_reporter_advanced.py::TestGenerateDailyReport::test_generate_report_generic_exception PASSED [ 80%]
+tests/test_reporter_core.py::TestFetchBestStrategies::test_fetch_strategies_success PASSED [ 81%]
+tests/test_reporter_core.py::TestFetchBestStrategies::test_fetch_strategies_threshold_filtering PASSED [ 81%]
+tests/test_reporter_core.py::TestFetchBestStrategies::test_fetch_strategies_no_results PASSED [ 82%]
+tests/test_reporter_core.py::TestFetchBestStrategies::test_fetch_strategies_database_error PASSED [ 83%]
+tests/test_reporter_core.py::TestCheckForSignal::test_check_signal_with_valid_rule PASSED [ 84%]
+tests/test_reporter_core.py::TestCheckForSignal::test_check_signal_no_signal PASSED [ 85%]
+tests/test_reporter_core.py::TestCheckForSignal::test_check_signal_empty_data PASSED [ 85%]
+tests/test_reporter_core.py::TestCheckForSignal::test_check_signal_unknown_rule PASSED [ 86%]
+tests/test_reporter_core.py::TestCheckForSignal::test_check_signal_rule_exception PASSED [ 87%]
+tests/test_reporter_core.py::TestReportFormatting::test_format_new_buys_table_empty PASSED [ 88%]
+tests/test_reporter_core.py::TestReportFormatting::test_format_open_positions_table_empty PASSED [ 88%]
+tests/test_reporter_core.py::TestReportFormatting::test_format_sell_positions_table_empty PASSED [ 89%]
+tests/test_reporter_core.py::TestReportFormatting::test_format_open_positions_table_with_na PASSED [ 90%]
+tests/test_rule_funcs.py::TestSMACrossover::test_valid_crossover_signal PASSED [ 91%]
+tests/test_rule_funcs.py::TestSMACrossover::test_insufficient_data PASSED [ 92%]
+tests/test_rule_funcs.py::TestSMACrossover::test_invalid_periods PASSED  [ 92%]
+tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_calculation PASSED  [ 93%]
+tests/test_rule_funcs.py::TestCalculateRSI::test_rsi_insufficient_data PASSED [ 94%]
+tests/test_rule_funcs.py::TestRSIOversold::test_oversold_signal_generation PASSED [ 95%]
+tests/test_rule_funcs.py::TestRSIOversold::test_insufficient_data_rsi PASSED [ 96%]
+tests/test_rule_funcs.py::TestEMACrossover::test_ema_crossover_signal PASSED [ 96%]
+tests/test_rule_funcs.py::TestEdgeCases::test_empty_dataframe PASSED     [ 97%]
+tests/test_rule_funcs.py::TestEdgeCases::test_single_price_data PASSED   [ 98%]
+tests/test_rule_funcs.py::TestEdgeCases::test_nan_price_data PASSED      [ 99%]
 tests/test_rule_funcs.py::TestIntegration::test_all_rules_with_real_data PASSED [100%]
 
+================================== FAILURES ===================================
+_____________ test_run_command_backtest_generic_exception_verbose _____________
+
+mock_data = <MagicMock name='data' id='2098851830704'>
+mock_run_backtests = <MagicMock name='_run_backtests' id='2098851826816'>
+sample_config = {'cache_dir': 'data/cache', 'cache_refresh_days': 7, 'edge_score_weights': {'sharpe': 0.4, 'win_pct': 0.6}, 'freeze_date': None, ...}
+
+    @patch("kiss_signal.cli._run_backtests", side_effect=Exception("Generic backtest error"))
+    @patch("kiss_signal.cli.data")
+    def test_run_command_backtest_generic_exception_verbose(
+        mock_data, mock_run_backtests, sample_config: Dict[str, Any]
+    ) -> None:
+        """Test that a generic exception during backtesting is handled with verbose output."""
+        with runner.isolated_filesystem() as fs:
+            data_dir = Path(fs) / "data"
+            data_dir.mkdir()
+            universe_path = data_dir / "nifty_large_mid.csv"
+            universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
+            sample_config["universe_path"] = str(universe_path)
+            config_path = Path("config.yaml")
+            config_path.write_text(yaml.dump(sample_config))
+            rules_path = Path(fs) / "config" / "rules.yaml"
+            rules_path.parent.mkdir()
+            rules_path.write_text(VALID_RULES_YAML)
+    
+            result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--verbose"])
+    
+>           assert result.exit_code == 1
+E           assert 2 == 1
+E            +  where 2 = <Result SystemExit(2)>.exit_code
+
+tests\test_cli_advanced.py:191: AssertionError
+_________ TestDataBasicFunctions.test_validate_data_quality_large_gap _________
+
+self = Index(['open', 'high', 'low', 'close', 'volume'], dtype='object')
+key = 'date'
+
+    def get_loc(self, key):
+        """
+        Get integer location, slice or boolean mask for requested label.
+    
+        Parameters
+        ----------
+        key : label
+    
+        Returns
+        -------
+        int if unique index, slice if monotonic index, else mask
+    
+        Examples
+        --------
+        >>> unique_index = pd.Index(list('abc'))
+        >>> unique_index.get_loc('b')
+        1
+    
+        >>> monotonic_index = pd.Index(list('abbc'))
+        >>> monotonic_index.get_loc('b')
+        slice(1, 3, None)
+    
+        >>> non_monotonic_index = pd.Index(list('abcb'))
+        >>> non_monotonic_index.get_loc('b')
+        array([False,  True, False,  True])
+        """
+        casted_key = self._maybe_cast_indexer(key)
+        try:
+>           return self._engine.get_loc(casted_key)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+venv\Lib\site-packages\pandas\core\indexes\base.py:3812: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+pandas/_libs/index.pyx:167: in pandas._libs.index.IndexEngine.get_loc
+    ???
+pandas/_libs/index.pyx:196: in pandas._libs.index.IndexEngine.get_loc
+    ???
+pandas/_libs/hashtable_class_helper.pxi:7088: in pandas._libs.hashtable.PyObjectHashTable.get_item
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   ???
+E   KeyError: 'date'
+
+pandas/_libs/hashtable_class_helper.pxi:7096: KeyError
+
+The above exception was the direct cause of the following exception:
+
+self = <tests.test_data_basic.TestDataBasicFunctions object at 0x000001E8A7E053A0>
+
+    def test_validate_data_quality_large_gap(self):
+        """Test _validate_data_quality with a large data gap."""
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(['2023-01-01', '2023-01-10']),
+            'open': [100, 101], 'high': [100, 101], 'low': [100, 101],
+            'close': [100, 101],
+            'volume': [1000, 1000]
+        })
+        test_data = test_data.set_index('date')
+>       assert data._validate_data_quality(test_data, "TEST") is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_data_basic.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\kiss_signal\data.py:234: in _validate_data_quality
+    max_gap_days = data.sort_values('date')['date'].diff().dt.days.max()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+venv\Lib\site-packages\pandas\core\frame.py:4107: in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Index(['open', 'high', 'low', 'close', 'volume'], dtype='object')
+key = 'date'
+
+    def get_loc(self, key):
+        """
+        Get integer location, slice or boolean mask for requested label.
+    
+        Parameters
+        ----------
+        key : label
+    
+        Returns
+        -------
+        int if unique index, slice if monotonic index, else mask
+    
+        Examples
+        --------
+        >>> unique_index = pd.Index(list('abc'))
+        >>> unique_index.get_loc('b')
+        1
+    
+        >>> monotonic_index = pd.Index(list('abbc'))
+        >>> monotonic_index.get_loc('b')
+        slice(1, 3, None)
+    
+        >>> non_monotonic_index = pd.Index(list('abcb'))
+        >>> non_monotonic_index.get_loc('b')
+        array([False,  True, False,  True])
+        """
+        casted_key = self._maybe_cast_indexer(key)
+        try:
+            return self._engine.get_loc(casted_key)
+        except KeyError as err:
+            if isinstance(casted_key, slice) or (
+                isinstance(casted_key, abc.Iterable)
+                and any(isinstance(x, slice) for x in casted_key)
+            ):
+                raise InvalidIndexError(key)
+>           raise KeyError(key) from err
+E           KeyError: 'date'
+
+venv\Lib\site-packages\pandas\core\indexes\base.py:3819: KeyError
+_____________ TestDataBasicFunctions.test_needs_refresh_os_error ______________
+
+self = <tests.test_data_basic.TestDataBasicFunctions object at 0x000001E8A7E066F0>
+temp_cache_dir = WindowsPath('C:/Users/user/AppData/Local/Temp/tmpaidtnp41')
+
+    def test_needs_refresh_os_error(self, temp_cache_dir):
+        """Test _needs_refresh handles OSError."""
+        cache_file = temp_cache_dir / "TEST.NS.csv"
+        cache_file.touch()
+        with patch('pathlib.Path.stat', side_effect=OSError("Permission denied")):
+>           assert data._needs_refresh("TEST", temp_cache_dir, 7) is True
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_data_basic.py:261: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\kiss_signal\data.py:131: in _needs_refresh
+    if not cache_file.exists():
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\pathlib.py:860: in exists
+    self.stat(follow_symlinks=follow_symlinks)
+C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1139: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1143: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='stat' id='2098853424944'>, args = ()
+kwargs = {'follow_symlinks': True}, effect = OSError('Permission denied')
+
+    def _execute_mock_call(self, /, *args, **kwargs):
+        # separate from _increment_mock_call so that awaited functions are
+        # executed separately from their call, also AsyncMock overrides this method
+    
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               OSError: Permission denied
+
+C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1198: OSError
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -101,14 +334,18 @@ Name                             Stmts   Miss  Cover
 ----------------------------------------------------
 src\kiss_signal\__init__.py          4      0   100%
 src\kiss_signal\_version.py         13     13     0%
-src\kiss_signal\backtester.py       81     12    85%
-src\kiss_signal\cli.py             160     27    83%
-src\kiss_signal\config.py           68     11    84%
-src\kiss_signal\data.py            160     41    74%
+src\kiss_signal\backtester.py       81     10    88%
+src\kiss_signal\cli.py             160     18    89%
+src\kiss_signal\config.py           68      7    90%
+src\kiss_signal\data.py            162     14    91%
 src\kiss_signal\performance.py      41      0   100%
-src\kiss_signal\persistence.py     118     17    86%
-src\kiss_signal\reporter.py        206     43    79%
+src\kiss_signal\persistence.py     118     15    87%
+src\kiss_signal\reporter.py        214     61    71%
 src\kiss_signal\rules.py            50      3    94%
 ----------------------------------------------------
-TOTAL                              901    167    81%
-============================= 87 passed in 22.99s =============================
+TOTAL                              911    141    85%
+=========================== short test summary info ===========================
+FAILED tests/test_cli_advanced.py::test_run_command_backtest_generic_exception_verbose
+FAILED tests/test_data_basic.py::TestDataBasicFunctions::test_validate_data_quality_large_gap
+FAILED tests/test_data_basic.py::TestDataBasicFunctions::test_needs_refresh_os_error
+======================= 3 failed, 124 passed in 36.16s ========================

@@ -6,6 +6,7 @@ portfolio creation, metrics calculation, and strategy ranking.
 
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 import numpy as np
@@ -85,6 +86,31 @@ class TestBacktester:
         
         with pytest.raises(ValueError, match="Missing parameters for rule 'sma_crossover'"):
             backtester._generate_signals(rule_combo, sample_price_data)
+
+    def test_find_optimal_strategies_no_baseline(self, sample_price_data):
+        """Test find_optimal_strategies with no baseline rule in config."""
+        backtester = Backtester()
+        rules_config = {'layers': [{'name': 'test', 'type': 'sma_crossover', 'params': {}}]}
+        
+        result = backtester.find_optimal_strategies(
+            rules_config=rules_config,
+            price_data=sample_price_data,
+            symbol="TEST.NS"
+        )
+        assert result == []
+
+    def test_find_optimal_strategies_no_trades(self, sample_price_data, sample_rules_config):
+        """Test find_optimal_strategies when a rule generates no trades."""
+        backtester = Backtester(min_trades_threshold=1)
+        
+        with patch.object(backtester, '_generate_signals') as mock_generate:
+            mock_generate.return_value = pd.Series(False, index=sample_price_data.index)
+            result = backtester.find_optimal_strategies(
+                rules_config=sample_rules_config,
+                price_data=sample_price_data,
+                symbol="TEST.NS"
+            )
+            assert result == []
 
 @pytest.fixture
 def sample_price_data():

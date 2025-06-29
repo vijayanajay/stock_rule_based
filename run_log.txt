@@ -1,19 +1,61 @@
-           INFO     Loaded 2 symbols from universe                             
-           ERROR    Universe file not found: nonexistent.csv                   
-           WARNING  Negative prices detected for RELIANCE                      
-           WARNING  Limited data for RELIANCE: only 5 rows                     
-           WARNING  Limited data for RELIANCE: only 3 rows                     
+[16:29:05] INFO     === KISS Signal CLI Run Started ===                        
+┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
+│ KISS Signal CLI                                                             │
+│ Keep-It-Simple Data Foundation                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+Error: Invalid isoformat string for freeze_date: 'invalid-date'
+[16:29:05] INFO     === KISS Signal CLI Run Started ===                        
+Error loading configuration: Configuration file not found: nonexistent.yaml
+[16:29:05] INFO     === KISS Signal CLI Run Started ===                        
+Error loading configuration: Rules file not found: nonexistent_rules.yaml
            INFO     Downloading fresh data for RELIANCE                        
            WARNING  Limited data for RELIANCE: only 3 rows                     
            INFO     Freeze mode active, skipping cache refresh                 
            INFO     Refreshing 1 of 1 symbols                                  
            INFO     Successfully refreshed 1/1 symbols                         
+           INFO     Refreshing 1 of 1 symbols                                  
+[16:29:06] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType' object has
+                    no attribute 'empty'                                       
+[16:29:07] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType' object has
+                    no attribute 'empty'                                       
+[16:29:09] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType' object has
+                    no attribute 'empty'                                       
+           WARNING  Failed to fetch or validate data for RELIANCE              
+           INFO     Successfully refreshed 0/1 symbols                         
+           INFO     Refreshing 1 of 1 symbols                                  
+           WARNING  Negative prices detected for RELIANCE                      
+           WARNING  Failed to fetch or validate data for RELIANCE              
+           INFO     Successfully refreshed 0/1 symbols                         
+           INFO     Downloading fresh data for TEST                            
+           WARNING  No data returned for TEST.NS                               
+           ERROR    Missing required columns for TEST.NS: Index(['index',      
+                    'open'], dtype='object')                                   
+           ERROR    Failed to fetch data for TEST.NS: API Error                
+[16:29:12] WARNING  Failed to fetch or validate data for TEST                  
+           WARNING  Failed to fetch or validate data for TEST                  
+           WARNING  Failed to save cache for TEST                              
+           INFO     Refreshing 2 of 2 symbols                                  
+           INFO     Successfully refreshed 2/2 symbols                         
            INFO     Loaded 2 symbols from universe                             
+           ERROR    Universe file not found: nonexistent.csv                   
+           WARNING  Negative prices detected for RELIANCE                      
+           WARNING  High zero-volume days for RELIANCE                         
+           WARNING  Empty data for TEST                                        
+           ERROR    Failed to save cache for TEST: Disk full                   
+           WARNING  Limited data for RELIANCE: only 5 rows                     
+           WARNING  Limited data for RELIANCE: only 5 rows                     
+           WARNING  Limited data for RELIANCE: only 3 rows                     
+           WARNING  Limited data for TEST: only 10 rows                        
            INFO     Backtester initialized: hold_period=20, min_trades=5       
-           INFO     Using data up to freeze date: 2024-06-01                   
-           INFO     Backtesting 2 rule combinations for RELIANCE               
-[11:04:21] INFO     find_optimal_strategies completed in 0.96s                 
-[11:04:21] INFO     === KISS Signal CLI Run Started ===                        
+           INFO     Using data up to freeze date: 2023-03-31                   
+           INFO     Backtesting 2 rule combinations for TEST                   
+           WARNING  Strategy 'sma_10_20_crossover' on 'TEST' generated only 0  
+                    trades, which is below the threshold of 5.                 
+           WARNING  Strategy 'sma_10_20_crossover + rsi_oversold_30' on 'TEST' 
+                    generated only 0 trades, which is below the threshold of 5.
+           INFO     find_optimal_strategies completed in 0.04s                 
+[16:29:13] INFO     Loaded 2 symbols from universe                             
+[16:29:13] INFO     === KISS Signal CLI Run Started ===                        
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -25,10 +67,10 @@
            INFO     Backtester initialized: hold_period=20, min_trades=5       
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for RELIANCE               
-           INFO     find_optimal_strategies completed in 0.06s                 
+[16:29:14] INFO     find_optimal_strategies completed in 1.31s                 
            INFO     Using data up to freeze date: 2024-06-01                   
            INFO     Backtesting 2 rule combinations for INFY                   
-           INFO     find_optimal_strategies completed in 0.07s                 
+           INFO     find_optimal_strategies completed in 0.06s                 
 [4/4] Analysis complete. Results summary:
                          Top Strategies by Edge Score                          
 ┌──────────┬───────────────────────────┬────────────┬───────┬────────┬────────┐
@@ -52,8 +94,8 @@
 [5/5] Generating report...
            INFO     Fetched 0 open positions.                                  
            WARNING  No strategies found for timestamp                          
-                    2025-06-29T11:04:21.799707 above threshold 0.5             
+                    2025-06-29T16:29:14.454325 above threshold 0.5             
            INFO     No strategies found above threshold, no signals to generate
            INFO     Report generated: reports\signals_2025-06-29.md            
 * Report generated: reports\signals_2025-06-29.md
-           INFO     full_backtest completed in 0.32s                           
+           INFO     full_backtest completed in 1.63s                           

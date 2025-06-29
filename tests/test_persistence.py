@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Dict, Any
 
-from kiss_signal.persistence import create_database, save_strategies_batch
+from kiss_signal.persistence import create_database, save_strategies_batch, add_new_positions_from_signals
 
 
 @pytest.fixture
@@ -181,6 +181,28 @@ class TestSaveStrategiesBatch:
         result = save_strategies_batch(non_existent_path, sample_strategies, "2025-06-24T10:00:00")
         
         assert result is False
+
+
+class TestAddPositions:
+    """Tests for adding new positions."""
+
+    def test_add_new_position_skips_existing_open(self, temp_db_path: Path):
+        """Test that adding a new position is skipped if one is already open for the symbol."""
+        create_database(temp_db_path)
+        
+        # Add an initial open position for RELIANCE
+        initial_signal = [{'ticker': 'RELIANCE', 'date': '2025-01-01', 'entry_price': 100.0, 'rule_stack_used': '[]'}]
+        add_new_positions_from_signals(temp_db_path, initial_signal)
+        
+        # Try to add another position for RELIANCE
+        new_signal = [{'ticker': 'RELIANCE', 'date': '2025-01-02', 'entry_price': 105.0, 'rule_stack_used': '[]'}]
+        add_new_positions_from_signals(temp_db_path, new_signal)
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM positions WHERE symbol = 'RELIANCE'")
+            count = cursor.fetchone()[0]
+            assert count == 1 # Should still be 1, not 2
     
     def test_save_strategies_multiple_batches(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]) -> None:
         """Test saving multiple batches to same database."""

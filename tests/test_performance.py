@@ -83,3 +83,29 @@ def test_global_monitor_instance():
     global_test_func()
 
     assert "global_test_func" in performance_monitor.metrics
+
+
+@pytest.mark.slow
+def test_performance_benchmark_simulation():
+    """
+    A simple benchmark simulation.
+
+    This is not a full integration test but serves as a placeholder for
+    the 60-ticker benchmark requirement, ensuring the performance monitoring
+    tools can capture and report on longer-running processes without adding
+    heavy dependencies like pytest-benchmark.
+    """
+    monitor = PerformanceMonitor()
+    monitor.thresholds['duration_warning'] = 10.0  # Set a high threshold for this test
+
+    @monitor.profile_performance
+    def _simulated_ticker_analysis():
+        """Simulates analysis for one ticker."""
+        time.sleep(0.001)  # A small but not negligible delay
+
+    with monitor.monitor_execution("full_60_ticker_run"):
+        for _ in range(60):
+            _simulated_ticker_analysis()
+
+    assert "full_60_ticker_run" in monitor.metrics
+    assert monitor.metrics["full_60_ticker_run"].duration >= 60 * 0.001

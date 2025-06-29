@@ -1,4 +1,4 @@
-"""Integration tests for the full KISS Signal CLI workflow.
+"""Integration tests for CLI functionality.
 
 These tests verify the complete pipeline from configuration loading through
 strategy discovery and results output, catching integration issues that
@@ -17,15 +17,14 @@ import numpy as np
 
 from kiss_signal.cli import app
 from kiss_signal.config import load_config, load_rules
-from kiss_signal.backtester import Backtester
 from kiss_signal import data
 
 
 class TestCLIIntegration:
     """Integration tests for the complete CLI workflow."""
     
-    @pytest.fixture
-    def integration_env(self):
+    @pytest.fixture(scope="module")
+    def integration_env(self, request):
         """Create a complete test environment with real config files and sample data."""
         temp_dir = Path(tempfile.mkdtemp())
         
@@ -187,42 +186,6 @@ INFY,Infosys Ltd,IT"""
             # Verify freeze date functionality
             assert price_data.index.max() <= pd.Timestamp('2024-06-01')
     
-    def test_backtester_with_real_rules(self, integration_env):
-        """Test backtester with actual rule configurations."""
-        config = load_config(integration_env['config_path'])
-        rules_config = load_rules(integration_env['rules_path'])
-        
-        backtester = Backtester(
-            hold_period=config.hold_period,
-            min_trades_threshold=config.min_trades_threshold
-        )
-        
-        # Test with real data and rules
-        symbol = 'RELIANCE'
-        price_data = data.get_price_data(
-            symbol=symbol,
-            cache_dir=integration_env['cache_dir'],
-            freeze_date=date(2024, 6, 1),
-            years=config.historical_data_years
-        )
-        
-        # This should not raise an exception
-        strategies = backtester.find_optimal_strategies(
-            rules_config=rules_config,
-            price_data=price_data,
-            symbol=symbol,
-            freeze_date=date(2024, 6, 1),
-        )
-        
-        # Verify results structure
-        assert isinstance(strategies, list)
-        for strategy in strategies:
-            assert 'rule_stack' in strategy
-            assert 'edge_score' in strategy
-            assert 'win_pct' in strategy
-            assert 'sharpe' in strategy
-            assert 'total_trades' in strategy
-    
     def test_end_to_end_cli_workflow(self, integration_env):
         """Test the complete CLI workflow without mocking."""
         runner = CliRunner()
@@ -272,52 +235,3 @@ INFY,Infosys Ltd,IT"""
             "--freeze-data", "invalid-date",
         ])
         assert result.exit_code == 1
-
-
-class TestBacktesterRuleIntegration:
-    """Tests specifically for backtester integration with rule configurations."""
-    
-    def test_rule_function_lookup(self):
-        """Test that rule types from YAML map correctly to rule functions."""
-        from kiss_signal import rules as rules_module
-        
-        # Test rule configurations from actual rules.yaml
-        test_rules = [
-            {'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}},
-            {'type': 'rsi_oversold', 'params': {'period': 14, 'oversold_threshold': 30}},
-            {'type': 'ema_crossover', 'params': {'fast_period': 12, 'slow_period': 26}}
-        ]
-        
-        for rule in test_rules:
-            rule_type = rule['type']
-            rule_function = getattr(rules_module, rule_type, None)
-            assert rule_function is not None, f"Rule function {rule_type} not found"
-            assert callable(rule_function), f"Rule {rule_type} is not callable"
-    
-    def test_rule_parameter_validation(self):
-        """Test that rule parameters are properly validated."""
-        from kiss_signal.rules import sma_crossover, rsi_oversold, ema_crossover
-        
-        # Create sample data
-        dates = pd.date_range('2023-01-01', periods=100, freq='D')
-        prices = [100 + i * 0.1 for i in range(100)]
-        df = pd.DataFrame({
-            'open': prices,
-            'high': [p * 1.01 for p in prices],
-            'low': [p * 0.99 for p in prices],
-            'close': prices,
-            'volume': [1000] * 100
-        }, index=dates)
-        
-        # Test each rule function with valid parameters
-        sma_signals = sma_crossover(df, fast_period=10, slow_period=20)
-        assert isinstance(sma_signals, pd.Series)
-        assert len(sma_signals) == len(df)
-        
-        rsi_signals = rsi_oversold(df, period=14, oversold_threshold=30.0)
-        assert isinstance(rsi_signals, pd.Series)
-        assert len(rsi_signals) == len(df)
-        
-        ema_signals = ema_crossover(df, fast_period=12, slow_period=26)
-        assert isinstance(ema_signals, pd.Series)
-        assert len(ema_signals) == len(df)

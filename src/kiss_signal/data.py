@@ -292,23 +292,53 @@ def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
     return data
 
 
+def _fetch_and_store_data(
+    symbol: str, years: int, freeze_date: Optional[date], cache_path: Path
+) -> bool:
+    """Fetch, validate, and store data for a single symbol."""
+    symbol_with_suffix = _add_ns_suffix(symbol)
+
+    # Fetch data with retry logic
+    fetched_data = None
+    for attempt in range(3):  # Max 3 retries
+        fetched_data = _fetch_symbol_data(symbol_with_suffix, years, freeze_date)
+        if fetched_data is not None:
+            break
+
+        if attempt < 2:  # Don't sleep on final attempt
+            time.sleep(2 ** attempt)  # Exponential backoff
+
+    if fetched_data is not None and _validate_data_quality(fetched_data, symbol):
+        success = _save_symbol_cache(symbol, fetched_data, cache_path)
+        if not success:
+            logger.warning(f"Failed to save cache for {symbol}")
+        return success
+    
+    logger.warning(f"Failed to fetch or validate data for {symbol}")
+    return False
+
+
+def _log_refresh_summary(results: Dict[str, bool], total_to_fetch: int) -> None:
+    """Log the summary of the data refresh operation."""
+    successful = sum(1 for success in results.values() if success)
+    logger.info(f"Successfully refreshed {successful}/{total_to_fetch} symbols")
+
+
 def refresh_market_data(
     universe_path: Union[str, List[str]],
     cache_dir: str,
-    refresh_days: int = 7,
     years: int = 3,
+    refresh_days: int = 7,
     freeze_date: Optional[date] = None,
-    symbols: Optional[List[str]] = None
 ) -> Dict[str, bool]:
     """Fetch latest data for symbols with intelligent caching.
     
     Args:
         universe_path: Path to universe CSV file or list of symbols
         cache_dir: Directory for cached data files
-        refresh_days: Days before cache refresh
         years: Years of historical data to fetch
+        refresh_days: Days before cache refresh
         freeze_date: Optional freeze date for backtesting
-        symbols: Optional list of symbols to refresh. If None, loads from universe.
         
     Returns:
         Dict mapping symbol -> success status
@@ -316,11 +346,11 @@ def refresh_market_data(
     cache_path = Path(cache_dir)
     cache_path.mkdir(parents=True, exist_ok=True)
     
-    if symbols is None:
-        if isinstance(universe_path, list):
-            symbols = universe_path
-        else:
-            symbols = load_universe(universe_path)
+    # Load symbols from universe_path
+    if isinstance(universe_path, list):
+        symbols = universe_path
+    else:
+        symbols = load_universe(universe_path)
     
     # Skip cache refresh in freeze mode to maintain repeatability
     if freeze_date is not None:
@@ -339,30 +369,11 @@ def refresh_market_data(
     
     logger.info(f"Refreshing {len(symbols_to_fetch)} of {len(symbols)} symbols")
     
-    results = {}
+    results = {
+        symbol: _fetch_and_store_data(symbol, years, freeze_date, cache_path)
+        for symbol in symbols_to_fetch
+    }
     
-    for symbol in symbols_to_fetch:
-        symbol_with_suffix = _add_ns_suffix(symbol)
-        
-        # Fetch data with retry logic        data = None
-        for attempt in range(3):  # Max 3 retries
-            data = _fetch_symbol_data(symbol_with_suffix, years, freeze_date)
-            if data is not None:
-                break
-            
-            if attempt < 2:  # Don't sleep on final attempt
-                time.sleep(2 ** attempt)  # Exponential backoff
-        
-        if data is not None and _validate_data_quality(data, symbol):
-            success = _save_symbol_cache(symbol, data, cache_path)
-            results[symbol] = success
-            if not success:
-                logger.warning(f"Failed to save cache for {symbol}")
-        else:
-            logger.warning(f"Failed to fetch or validate data for {symbol}")
-            results[symbol] = False
-    
-    successful = sum(1 for success in results.values() if success)
-    logger.info(f"Successfully refreshed {successful}/{len(symbols_to_fetch)} symbols")
+    _log_refresh_summary(results, len(symbols_to_fetch))
     
     return results

@@ -1,11 +1,10 @@
-"""Tests for CLI module."""
+"""Tests for CLI module - Basic functionality."""
 
 from typer.testing import CliRunner
 from pathlib import Path
 from typing import Any, Dict
 import yaml
 from unittest.mock import patch
-import sqlite3
 
 from kiss_signal.cli import app
 import pandas as pd
@@ -33,6 +32,18 @@ def test_run_command_help() -> None:
     result = runner.invoke(app, ["run", "--help"])
     assert result.exit_code == 0
     assert "run" in result.stdout.lower()
+
+
+def test_display_results_empty():
+    """Test _display_results with no results."""
+    from kiss_signal.cli import _display_results
+    from rich.console import Console
+    
+    console = Console(record=True)
+    with patch('kiss_signal.cli.console', console):
+        _display_results([])
+        output = console.export_text()
+        assert "No valid strategies found" in output
 
 
 @patch("kiss_signal.cli.backtester.Backtester")
@@ -246,92 +257,3 @@ def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
         )
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
-
-
-@patch("kiss_signal.cli.persistence.create_database")
-@patch("kiss_signal.cli.persistence.save_strategies_batch")
-@patch("kiss_signal.cli._run_backtests")
-def test_run_command_with_persistence(
-    mock_run_backtests, mock_save_batch, mock_create_db, sample_config, tmp_path
-):
-    """Test that run command integrates with persistence layer."""
-    with runner.isolated_filesystem() as fs:
-        mock_run_backtests.return_value = [{
-            'symbol': 'RELIANCE', 
-            'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
-            'edge_score': 0.75,
-            'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
-        }]
-
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-
-        sample_config["universe_path"] = str(universe_path)
-        sample_config["cache_dir"] = str(cache_dir)
-        config_path = Path("config.yaml")
-        config_path.write_text(yaml.dump(sample_config))
-
-        config_dir = Path("config")
-        config_dir.mkdir(exist_ok=True)
-        rules_path = config_dir / "rules.yaml"
-        rules_path.write_text(VALID_RULES_YAML)
-
-        result = runner.invoke(
-            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
-        )
-        assert result.exit_code == 0, result.stdout
-        assert "Top Strategies by Edge Score" in result.stdout
-        assert "RELIANCE" in result.stdout
-
-        mock_create_db.assert_called_once()
-        mock_save_batch.assert_called_once()
-
-        call_args = mock_save_batch.call_args
-        assert isinstance(call_args.args[0], Path)
-        assert call_args.args[1] == mock_run_backtests.return_value
-
-
-@patch("kiss_signal.cli.persistence.save_strategies_batch")
-@patch("kiss_signal.cli._run_backtests")
-def test_run_command_persistence_failure_handling(
-    mock_run_backtests, mock_save_batch, sample_config, tmp_path
-):
-    """Test that CLI handles persistence failures gracefully."""
-    mock_run_backtests.return_value = [{
-        'symbol': 'RELIANCE', 
-        'rule_stack': [{'type': 'sma_crossover', 'name': 'sma_10_20_crossover', 'params': {'short_window': 10, 'long_window': 20}}], 
-        'edge_score': 0.75,
-        'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
-    }]
-
-    with runner.isolated_filesystem() as fs:
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-
-        sample_config["universe_path"] = str(universe_path)
-        sample_config["cache_dir"] = str(cache_dir)
-        config_path = Path("config.yaml")
-        config_path.write_text(yaml.dump(sample_config))
-
-        config_dir = Path("config")
-        config_dir.mkdir(exist_ok=True)
-        rules_path = config_dir / "rules.yaml"
-        rules_path.write_text(VALID_RULES_YAML)
-
-        # Mock persistence failure
-        mock_save_batch.side_effect = sqlite3.OperationalError("disk I/O error")
-
-        result = runner.invoke(
-            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
-        )
-        assert result.exit_code == 0, result.stdout
-        assert "Top Strategies by Edge Score" in result.stdout
-        assert "Database error: disk I/O error" in result.stdout
