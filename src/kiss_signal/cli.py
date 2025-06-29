@@ -210,6 +210,9 @@ def main(
     """
     KISS Signal CLI.
     """
+    if ctx.resilient_parsing:
+        return
+
     setup_logging(verbose)
     
     # Store loaded configs in the context

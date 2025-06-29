@@ -330,3 +330,13 @@
 **Prevention**: When refactoring a component, it is critical to identify and update all its consumers—including other modules and, crucially, all test files—in the same atomic commit. Test code must be treated as a first-class consumer of a component's API and kept synchronized to prevent the test suite from becoming a source of failure and architectural drift.
 
 ---
+
+### Brittle CLI Callback and Test Assumptions (2025-07-20)
+**Issue**: Multiple CLI tests were failing with framework-level `UsageError` (exit code 2) or unexpected application errors (exit code 1) on `--help` calls.
+**Root Cause**: A structural flaw in `cli.py` where the main callback eagerly performed file loading and validation, even for meta-commands like `--help`. This made the CLI brittle, as it required a complete and valid configuration environment just to display a help message. Additionally, tests were not respecting the CLI framework's argument parsing order (global options must precede commands), leading to framework errors instead of application errors.
+**Fix**:
+1.  **Robust Callback**: Implemented `if ctx.resilient_parsing: return` at the start of the main CLI callback. This standard `typer` pattern prevents the callback from executing its logic during "resilient parsing" modes, such as help message generation or command completion.
+2.  **Corrected Tests**: Fixed test invocations to place global options (like `--verbose`) before the command name (e.g., `run`), aligning the tests with the framework's expected syntax.
+**Prevention**: When using CLI frameworks like Typer, main callbacks should be lightweight or use mechanisms like `ctx.resilient_parsing` to avoid side-effects on meta-commands. Tests must mirror the exact command-line syntax, including the ordering of global and command-specific options, to be reliable.
+
+---
