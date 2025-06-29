@@ -90,6 +90,7 @@ source = ["src"]
 omit = [
     "*/tests/*",
     "*/test_*",
+    "src/kiss_signal/_version.py",
 ]
 
 [tool.coverage.report]

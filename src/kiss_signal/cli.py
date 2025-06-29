@@ -299,14 +299,18 @@ def run(
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")
         if verbose:
-            console.print_exception()
+            try:
+                console.print_exception()
+            except Exception as pe_e: # pe_e for print_exception_error
+                # Log this internal error to stderr, as console might be problematic
+                print(f"Error during console.print_exception(): {pe_e}", file=sys.stderr)
         raise typer.Exit(1)
     finally:
         # Always save the log, even if errors occurred
         try:
             # Use console.export_text() and standard file I/O for robustness.
             # console.save_text() can be brittle in some environments (e.g., CI/CD).
-            Path("run_log.txt").write_text(console.export_text(), encoding="utf-8")
+            Path("run_log.txt").write_text(console.export_text(clear=False), encoding="utf-8")
             # This message will be on console but not in the saved file.
             print("\nLog file saved to run_log.txt", file=sys.stderr)
         except Exception as e:
