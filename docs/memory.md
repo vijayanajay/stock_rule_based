@@ -174,3 +174,9 @@
 - **Evidence**: Application went from 0 signals to 20+ signals per symbol after fix
 - **Prevention**: ANY time `asfreq()` is used, immediately check for and handle NaN values
 - **Memory Aid**: asfreq = "as frequency" = calendar gaps = NaN poison = ALWAYS ffill()
+
+## Rule Implementation Drift: Strict vs. Standard Definitions (2025-07-01)
+- **Issue**: The `engulfing_pattern` rule failed to detect a valid pattern because its implementation used a strict less-than (`<`) comparison for the low engulfment (`current_open < prev_close`) instead of the standard less-than-or-equal-to (`<=`). This caused the rule to miss edge-case signals where the open of the current candle was exactly at the close of the previous one.
+- **Symptom**: Tests for `engulfing_pattern` failed on valid edge-case data. Backtests would silently miss valid trading signals, leading to suboptimal strategy discovery.
+- **Fix**: The comparison was changed from `<` to `<=` to align with the standard financial definition of the pattern.
+- **Lesson**: Financial rule implementations must be rigorously validated against their standard definitions, including edge cases. A seemingly minor logical error (like `<` vs. `<=`) can represent a significant "implementation drift" from the intended strategy, creating a structural flaw in the rule library. Future rule development should include a "definitional review" step to ensure the code accurately reflects the financial concept it represents.

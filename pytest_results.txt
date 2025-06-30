@@ -87,7 +87,7 @@ tests/test_integration_cli.py::TestCLIIntegration::test_end_to_end_cli_workflow 
 tests/test_integration_cli.py::TestCLIIntegration::test_error_handling_integration PASSED [ 44%]
 tests/test_performance.py::test_performance_monitor_context_manager PASSED [ 44%]
 tests/test_performance.py::test_performance_monitor_decorator PASSED     [ 45%]
-tests/test_performance.py::test_get_summary FAILED                       [ 45%]
+tests/test_performance.py::test_get_summary PASSED                       [ 45%]
 tests/test_performance.py::test_get_summary_empty PASSED                 [ 46%]
 tests/test_performance.py::test_duration_warning PASSED                  [ 46%]
 tests/test_performance.py::test_global_monitor_instance PASSED           [ 47%]
@@ -168,11 +168,11 @@ tests/test_rule_funcs.py::TestVolumeSpike::test_volume_spike_detection PASSED [ 
 tests/test_rule_funcs.py::TestVolumeSpike::test_volume_spike_insufficient_data PASSED [ 89%]
 tests/test_rule_funcs.py::TestVolumeSpike::test_volume_spike_invalid_params PASSED [ 89%]
 tests/test_rule_funcs.py::TestVolumeSpike::test_volume_spike_missing_columns PASSED [ 90%]
-tests/test_rule_funcs.py::TestHammerPattern::test_hammer_pattern_detection FAILED [ 91%]
+tests/test_rule_funcs.py::TestHammerPattern::test_hammer_pattern_detection PASSED [ 91%]
 tests/test_rule_funcs.py::TestHammerPattern::test_hammer_pattern_empty_data PASSED [ 91%]
 tests/test_rule_funcs.py::TestHammerPattern::test_hammer_pattern_invalid_params PASSED [ 92%]
 tests/test_rule_funcs.py::TestHammerPattern::test_hammer_pattern_missing_columns PASSED [ 92%]
-tests/test_rule_funcs.py::TestEngulfingPattern::test_engulfing_pattern_detection FAILED [ 93%]
+tests/test_rule_funcs.py::TestEngulfingPattern::test_engulfing_pattern_detection PASSED [ 93%]
 tests/test_rule_funcs.py::TestEngulfingPattern::test_engulfing_pattern_insufficient_data PASSED [ 93%]
 tests/test_rule_funcs.py::TestEngulfingPattern::test_engulfing_pattern_invalid_params PASSED [ 94%]
 tests/test_rule_funcs.py::TestEngulfingPattern::test_engulfing_pattern_missing_columns PASSED [ 94%]
@@ -186,86 +186,6 @@ tests/test_rule_funcs.py::TestBollingerSqueeze::test_bollinger_squeeze_invalid_p
 tests/test_rule_funcs.py::TestBollingerSqueeze::test_bollinger_squeeze_missing_columns PASSED [ 99%]
 tests/test_rule_funcs.py::TestNewRulesIntegration::test_all_new_rules_with_sample_data PASSED [100%]
 
-================================== FAILURES ===================================
-______________________________ test_get_summary _______________________________
-
-    def test_get_summary():
-        """Test the get_summary method."""
-        monitor = PerformanceMonitor()
-        with monitor.monitor_execution("fast_op"):
-            time.sleep(0.01)
-        with monitor.monitor_execution("slow_op"):
-            time.sleep(0.02)
-    
-        summary = monitor.get_summary()
-    
-        assert summary['total_functions'] == 2
->       assert summary['total_duration'] == pytest.approx(0.03, abs=0.01)
-E       assert 0.043927669525146484 == 0.03 ± 0.01
-E         
-E         comparison failed
-E         Obtained: 0.043927669525146484
-E         Expected: 0.03 ± 0.01
-
-tests\test_performance.py:48: AssertionError
----------------------------- Captured stdout call -----------------------------
-           INFO     fast_op completed in 0.02s                                 
-           INFO     slow_op completed in 0.03s                                 
------------------------------- Captured log call ------------------------------
-INFO     kiss_signal.performance:performance.py:42 fast_op completed in 0.02s
-INFO     kiss_signal.performance:performance.py:42 slow_op completed in 0.03s
-_______________ TestHammerPattern.test_hammer_pattern_detection _______________
-
-self = <tests.test_rule_funcs.TestHammerPattern object at 0x00000185455BB620>
-hammer_pattern_data =     open  high  low  close  volume
-0  100.0   101   99  100.5    1000
-1   95.0    96   90   94.5    1200
-2   99.5   100   98   99.8    1100
-3  104.0   105  103  104.2    1050
-
-    def test_hammer_pattern_detection(self, hammer_pattern_data: pd.DataFrame) -> None:
-        """Test hammer pattern detection with known patterns."""
-        signals = hammer_pattern(hammer_pattern_data, body_ratio=0.3, shadow_ratio=2.0)
-    
-        assert isinstance(signals, pd.Series)
-        assert signals.dtype == bool
-        assert len(signals) == len(hammer_pattern_data)
-    
-        # Should detect hammer on day 1 (index 1)
->       assert signals.iloc[1]
-E       assert np.False_
-
-tests\test_rule_funcs.py:316: AssertionError
----------------------------- Captured stdout call -----------------------------
-           DEBUG    Hammer pattern signals: 2 triggers                         
------------------------------- Captured log call ------------------------------
-DEBUG    kiss_signal.rules:rules.py:250 Hammer pattern signals: 2 triggers
-____________ TestEngulfingPattern.test_engulfing_pattern_detection ____________
-
-self = <tests.test_rule_funcs.TestEngulfingPattern object at 0x00000185455BA690>
-engulfing_pattern_data =    open  close   high    low  volume
-0   100   99.0  100.2   98.8    1000
-1    99  101.5  102.0   98.5    1200
-2    98   97.5   98.2   97.0    1100
-3   101  102.0  102.5  100.8    1300
-
-    def test_engulfing_pattern_detection(self, engulfing_pattern_data: pd.DataFrame) -> None:
-        """Test engulfing pattern detection with known patterns."""
-        signals = engulfing_pattern(engulfing_pattern_data, min_body_ratio=1.2)
-    
-        assert isinstance(signals, pd.Series)
-        assert signals.dtype == bool
-        assert len(signals) == len(engulfing_pattern_data)
-    
-        # Should detect engulfing on day 1 (green candle engulfs red)
->       assert signals.iloc[1]
-E       assert np.False_
-
-tests\test_rule_funcs.py:352: AssertionError
----------------------------- Captured stdout call -----------------------------
-           DEBUG    Engulfing pattern signals: 0 triggers                      
------------------------------- Captured log call ------------------------------
-DEBUG    kiss_signal.rules:rules.py:298 Engulfing pattern signals: 0 triggers
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -279,11 +199,7 @@ src\kiss_signal\data.py            174     15    91%
 src\kiss_signal\performance.py      41      0   100%
 src\kiss_signal\persistence.py     121     15    88%
 src\kiss_signal\reporter.py        214     10    95%
-src\kiss_signal\rules.py           145      3    98%
+src\kiss_signal\rules.py           146      3    98%
 ----------------------------------------------------
-TOTAL                             1042     82    92%
-=========================== short test summary info ===========================
-FAILED tests/test_performance.py::test_get_summary - assert 0.043927669525146...
-FAILED tests/test_rule_funcs.py::TestHammerPattern::test_hammer_pattern_detection
-FAILED tests/test_rule_funcs.py::TestEngulfingPattern::test_engulfing_pattern_detection
-======================= 3 failed, 176 passed in 39.62s ========================
+TOTAL                             1043     82    92%
+============================ 179 passed in 40.35s =============================

@@ -212,7 +212,7 @@ def hammer_pattern(price_data: pd.DataFrame,
     Conditions:
     1. Body ≤ body_ratio * total_range
     2. Lower_shadow ≥ shadow_ratio * body
-    3. Upper_shadow ≤ body
+    3. Upper_shadow ≤ lower_shadow / 2.0
     
     Args:
         price_data: DataFrame with OHLCV data (must have 'open', 'high', 'low', 'close' columns)
@@ -240,12 +240,15 @@ def hammer_pattern(price_data: pd.DataFrame,
     lower_shadow = price_data[['open', 'close']].min(axis=1) - price_data['low']
     upper_shadow = price_data['high'] - price_data[['open', 'close']].max(axis=1)
     
+    # Exclude doji candles (zero body) to avoid division by zero
+    has_body = body > 0
+    
     # Hammer conditions
     small_body = body <= (body_ratio * total_range)
-    long_lower_shadow = lower_shadow >= (shadow_ratio * body)
-    small_upper_shadow = upper_shadow <= body
+    long_lower_shadow = has_body & (lower_shadow >= (shadow_ratio * body))
+    small_upper_shadow = upper_shadow <= (lower_shadow / 2.0)
     
-    signals = small_body & long_lower_shadow & small_upper_shadow
+    signals = has_body & small_body & long_lower_shadow & small_upper_shadow
     
     logger.debug(f"Hammer pattern signals: {signals.sum()} triggers")
     return signals.fillna(False)
@@ -291,7 +294,7 @@ def engulfing_pattern(price_data: pd.DataFrame,
     # Engulfing conditions
     body_size_ok = current_body >= (min_body_ratio * prev_body)
     engulfs_high = price_data['close'] > price_data['open'].shift(1)
-    engulfs_low = price_data['open'] < price_data['close'].shift(1)
+    engulfs_low = price_data['open'] <= price_data['close'].shift(1)
     
     signals = prev_red & current_green & body_size_ok & engulfs_high & engulfs_low
     

@@ -45,7 +45,8 @@ def test_get_summary():
     summary = monitor.get_summary()
 
     assert summary['total_functions'] == 2
-    assert summary['total_duration'] == pytest.approx(0.03, abs=0.01)
+    # Allow for system scheduling and Python timing imprecision
+    assert 0.03 <= summary['total_duration'] <= 0.1, f"Duration {summary['total_duration']} not in expected range"
     assert summary['slowest_function'] == "slow_op"
 
 

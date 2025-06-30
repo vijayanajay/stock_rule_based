@@ -190,9 +190,9 @@ def test_run_command_backtest_generic_exception_verbose(
         # Corrected order: global options like --verbose must come before the command
         result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
 
-        assert result.exit_code == 1
+        assert result.exit_code == 1, f"Expected exit code 1, but got {result.exit_code}. Output: {result.stdout}"
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
-        assert "Traceback (most recent call last)" in result.stdout  # Match Rich's traceback format
+        assert "Traceback (most recent call last)" in result.stdout
 
 
 @patch("rich.console.Console.export_text", side_effect=Exception("Cannot export"))
