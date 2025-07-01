@@ -7,7 +7,7 @@ positions to sell.
 """
 
 from pathlib import Path
-from datetime import date
+from datetime import date, timedelta
 from typing import List, Dict, Any, Optional
 import logging
 import json
@@ -68,43 +68,35 @@ def _fetch_best_strategies(db_path: Path, run_timestamp: str, threshold: float) 
         return []
 
 
-def _check_for_signal(price_data: pd.DataFrame, rule_def: Dict[str, Any]) -> bool:
+def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict[str, Any]]) -> pd.Series:
     """
-    Private helper to check if a rule triggers BUY signal on the last trading day.
+    Private helper to apply a full rule stack and find all signal triggers.
     
     Args:
-        price_data: DataFrame with OHLCV data
-        rule_def: Rule definition with type and parameters
+        price_data: DataFrame with OHLCV data.
+        rule_stack_defs: A list of rule definitions to apply.
         
     Returns:
-        True if signal is active on last day, False otherwise
+        A boolean Series with True for any day a signal triggered.
     """
     try:
-        if len(price_data) == 0:
-            return False
+        if not rule_stack_defs or price_data.empty:
+            return pd.Series(False, index=price_data.index)
+
+        # Start with a Series of all True, then AND with each rule's signals
+        combined_signals = pd.Series(True, index=price_data.index)
+        for rule_def in rule_stack_defs:
+            rule_type = rule_def['type']
+            rule_params = rule_def.get('params', {})
+            rule_func = getattr(rules, rule_type)
             
-        rule_type = rule_def['type']
-        rule_params = rule_def.get('params', {})
-        
-        # Get rule function from rules module
-        if not hasattr(rules, rule_type):
-            logger.error(f"Unknown rule type: {rule_type}")
-            return False
-            
-        rule_func = getattr(rules, rule_type)
-        
-        # Apply rule to price data
-        signals = rule_func(price_data, **rule_params)
-        
-        if len(signals) == 0:
-            return False
-            
-        # Check if signal is active on the last day
-        return bool(signals.iloc[-1]) if len(signals) > 0 else False
-        
+            # AND the signals together
+            combined_signals &= rule_func(price_data, **rule_params)
+
+        return combined_signals.fillna(False)
     except Exception as e:
-        logger.error(f"Error checking signal for rule {rule_def.get('type', 'unknown')}: {e}")
-        return False
+        logger.error(f"Error finding signals for rule stack: {e}")
+        return pd.Series(False, index=price_data.index)
 
 
 def _identify_new_signals(
@@ -113,68 +105,60 @@ def _identify_new_signals(
     config: Config,
 ) -> List[Dict[str, Any]]:
     """
-    Identifies new buy signals by applying optimal strategies to latest data.
+    Identifies buy signals from the last `hold_period` days.
     
     Args:
-        db_path: Path to SQLite database
-        run_timestamp: Timestamp of the backtesting run
-        config: Application configuration
-        
+        db_path: Path to SQLite database.
+        run_timestamp: Timestamp of the backtesting run.
+        config: Config object
     Returns:
-        List of signal dictionaries ready for report generation
+        List of dicts with new signal info
     """
-    # 1. Fetch best strategies using _fetch_best_strategies
     strategies = _fetch_best_strategies(db_path, run_timestamp, config.edge_score_threshold)
-    
     if not strategies:
         logger.info("No strategies found above threshold, no signals to generate")
         return []
-        
+
     signals = []
     for strategy in strategies:
-        symbol = strategy['symbol']
-        rule_stack_json = strategy['rule_stack']
         try:
-            rule_stack_defs = json.loads(rule_stack_json)
-            if not rule_stack_defs or not isinstance(rule_stack_defs, list):
-                logger.warning(f"Skipping invalid or empty rule stack for {symbol}: {rule_stack_json}")
-                continue
-            try:
-                price_data = data.get_price_data(
-                    symbol=symbol,
-                    cache_dir=Path(config.cache_dir),
-                    refresh_days=config.cache_refresh_days,
-                    years=config.historical_data_years,
-                    freeze_date=config.freeze_date,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to load price data for {symbol}: {e}")
+            symbol = strategy['symbol']
+            rule_stack_defs = json.loads(strategy['rule_stack'])
+            price_data = data.get_price_data(
+                symbol=symbol,
+                cache_dir=Path(config.cache_dir),
+                refresh_days=config.cache_refresh_days,
+                years=config.historical_data_years,
+                freeze_date=config.freeze_date,
+            )
+            if not isinstance(rule_stack_defs, list):
+                logger.warning(f"Rule stack for {symbol} is not a list, skipping.")
                 continue
             if price_data.empty:
                 continue
-            # Check all rules in the stack (AND logic)
-            is_signal = True
-            for rule_def in rule_stack_defs:
-                if not isinstance(rule_def, dict):
-                    logger.warning(f"Skipping invalid rule definition in stack for {symbol}: {rule_def}")
-                    is_signal = False
-                    break
-                if not _check_for_signal(price_data, rule_def):
-                    is_signal = False
-                    break
-            if is_signal:
-                latest_date = price_data.index[-1]
-                entry_price = price_data['close'].iloc[-1]
-                signal_date = latest_date.strftime('%Y-%m-%d')
-                rule_stack_str = " + ".join([r.get('name', r.get('type', '')) for r in rule_stack_defs])
+
+            # Find all signals for the given strategy
+            all_signals = _find_signals_in_window(price_data, rule_stack_defs)
+            
+            # Determine the start date for recent signals
+            start_date_filter = (date.today() - timedelta(days=config.hold_period)) if hasattr(config, 'hold_period') and config.hold_period else date.today()
+            # Filter for signals within the last `hold_period` days
+            recent_signals = all_signals[all_signals.index.date >= start_date_filter]
+
+            for signal_date, is_signal_active in recent_signals.items():
+                if not is_signal_active:
+                    continue
+                
+                entry_price = price_data.loc[signal_date]['close']
+                rule_stack_str = " + ".join([(r.get("name") or r.get("type") or "") for r in rule_stack_defs if isinstance(r, dict)])
                 signals.append({
                     'ticker': symbol,
-                    'date': signal_date,
+                    'date': signal_date.strftime('%Y-%m-%d'),
                     'entry_price': entry_price,
                     'rule_stack': rule_stack_str,
                     'edge_score': strategy['edge_score']
                 })
-                logger.info(f"New signal: {symbol} at {entry_price} using {rule_stack_str}")
+                logger.info(f"Found recent signal for {symbol} on {signal_date.date()} at {entry_price:.2f}")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse rule stack for {symbol}: {e}")
             continue

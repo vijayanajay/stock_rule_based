@@ -95,13 +95,18 @@ class Backtester:
         for i, combo in enumerate(combinations_to_test):
             try:
                 # Generate combined signal for the rule combination
-                entry_signals = None
+                entry_signals: Optional[pd.Series] = None
                 for rule_def in combo:
                     rule_signals = self._generate_signals(rule_def, price_data)
                     if entry_signals is None:
                         entry_signals = rule_signals.copy()
                     else:
                         entry_signals &= rule_signals
+                
+                if entry_signals is None:
+                    # This case should ideally not be reached if combos are always non-empty
+                    logger.warning(f"Could not generate entry signals for combo: {[r.name for r in combo]}")
+                    continue
                 
                 # Generate time-based exit signals: exit after hold_period days
                 exit_signals = self._generate_time_based_exits(entry_signals, self.hold_period)

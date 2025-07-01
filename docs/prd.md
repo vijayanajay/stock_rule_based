@@ -61,8 +61,8 @@
         **NEW BUYS**
         | Ticker | Recommended Buy Date | Entry Price | Rule Stack | Edge Score |
         | :--- | :--- | :--- | :--- | :--- |
-        | TATAMOTORS | 2025-06-14 | 950.25 | baseline,rsi14_confirm | 0.62 |
-        | INFY | 2025-06-14 | 1500.00 | baseline,bull_regime | 0.55 |
+        | TATAMOTORS | 2025-06-14 | 950.25 | baseline,rsi_confirm | 0.62 |
+        | INFY | 2025-06-12 | 1495.50 | baseline,bull_regime | 0.55 |
 
         **OPEN POSITIONS**
         | Ticker | Entry Date | Entry Price | Current Price | Return % | NIFTY Period Return % | Day in Trade |
@@ -74,6 +74,13 @@
         | Ticker | Status | Reason |
         | :--- | :--- | :--- |
         | WIPRO | SELL | Exit: End of 20-day holding period. |
+
+        **RECENT SIGNALS (Last 20 Days)**
+        | Ticker | Recommended Buy Date | Entry Price | Rule Stack | Edge Score |
+        | :--- | :--- | :--- | :--- | :--- |
+        | TATAMOTORS | 2025-06-14 | 950.25 | baseline,rsi_confirm | 0.62 |
+        | INFY | 2025-06-12 | 1495.50 | baseline,bull_regime | 0.55 |
+        | RELIANCE | 2025-06-10 | 2880.10 | baseline,volume_spike | 0.71 |
 
 **Recommendation:**
 * [cite_start]**Add Summary to Report:** To improve clarity, the first line of the markdown report should be a high-level summary, e.g., `Summary: 2 New Buy Signals, 2 Open Positions, 1 Position to Sell.` [cite: 1]

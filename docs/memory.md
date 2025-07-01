@@ -180,3 +180,30 @@
 - **Symptom**: Tests for `engulfing_pattern` failed on valid edge-case data. Backtests would silently miss valid trading signals, leading to suboptimal strategy discovery.
 - **Fix**: The comparison was changed from `<` to `<=` to align with the standard financial definition of the pattern.
 - **Lesson**: Financial rule implementations must be rigorously validated against their standard definitions, including edge cases. A seemingly minor logical error (like `<` vs. `<=`) can represent a significant "implementation drift" from the intended strategy, creating a structural flaw in the rule library. Future rule development should include a "definitional review" step to ensure the code accurately reflects the financial concept it represents.
+
+## Test Harness Integrity: CLI and Fixture Robustness (2025-07-18)
+- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic itself.
+    1.  **CLI Invocation Errors**: Tests were calling the Typer CLI with incorrect argument order (e.g., `run --verbose` instead of `--verbose run`), leading to `UsageError` (exit code 2) instead of the expected application error (exit code 1).
+    2.  **Incomplete Fixtures**: A pytest fixture for the `Config` object was providing a path to a `universe.csv` file but not creating the file itself. This caused Pydantic's `field_validator`, which checks for file existence, to fail during test setup.
+- **Fix**:
+    1.  Corrected the argument order in `runner.invoke` calls within `test_cli_advanced.py` to place global options before the command.
+    2.  Modified the fixture in `test_reporter_position_management.py` to create the dummy `universe.csv` file, ensuring the `Config` object is instantiated in a valid state.
+- **Lesson**: A project's test harness is part of its core structure. Tests must be robust and reflect real-world usage (correct CLI syntax). Fixtures must create a complete and valid state for the components they provide, especially when those components have built-in validation logic. An incomplete fixture is a bug in the test suite.
+
+## Test Suite Desynchronization and API Drift (2025-07-18)
+- **Issue**: A large number of test failures in the `reporter` module were caused by a structural desynchronization between the test suite and the application code. This included:
+    1.  **API Contract Drift**: Function signatures (e.g., `_identify_new_signals`) were modified in the implementation without updating test calls, leading to `TypeError`.
+    2.  **Incomplete Refactoring**: Tests for a refactored private helper (`_check_for_signal`) were left behind, creating "zombie tests" that failed with `AttributeError`.
+    3.  **Brittle Tests**: Some tests used incorrect assertion patterns for numpy booleans (`is True`) or patched non-existent attributes, making them fragile.
+- **Fix**: A comprehensive cleanup was performed:
+    1.  Corrected the function signatures in `reporter.py` to match their required data contracts.
+    2.  Deleted obsolete test files and classes (`test_reporter_signal_checking.py`, `TestCheckForSignal`) that targeted non-existent code.
+    3.  Refactored brittle tests to use robust assertion patterns and valid mocks.
+- **Lesson**: The test suite must be treated as a first-class consumer of the application's API. Any refactoring or signature change is incomplete until the corresponding tests are updated or removed. Maintaining test-code synchronization is critical to prevent architectural drift and ensure the test suite remains a reliable safety net.
+
+## Test Suite Integrity: Refactoring Drift and Obsolete Tests (2025-07-18)
+- **Issue**: Multiple test failures in the `reporter` module were caused by a single root cause: a refactoring where the `_check_for_signal` helper was removed or replaced, but the test suite was not updated. This resulted in an entire obsolete test file (`test_reporter_signal_checking.py`) and incorrect patch targets in other tests, all failing with `AttributeError`.
+- **Fix**:
+    1.  The obsolete test file (`test_reporter_signal_checking.py`) was deleted.
+    2.  The patch target in `test_reporter_identify_signals.py` was corrected to point to the current implementation (`_find_signals_in_window`).
+- **Lesson**: Test code is not second-class; it must be maintained with the same discipline as application code. When refactoring, the task is not complete until the corresponding tests are updated or removed. Leaving "zombie tests" behind erodes trust in the test suite and creates significant noise during debugging.

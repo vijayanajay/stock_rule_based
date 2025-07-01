@@ -152,10 +152,10 @@ class TestIdentifyNewSignalsEdgeCases:
             result = reporter._identify_new_signals(db_path, 'test_run', reporter_config_obj_fixture)
         assert len(result) == 0
 
-    @patch('src.kiss_signal.reporter._check_for_signal', side_effect=Exception("Unexpected signal check error"))
+    @patch('src.kiss_signal.reporter._find_signals_in_window', side_effect=Exception("Unexpected signal check error"))
     @patch('src.kiss_signal.reporter.data.get_price_data')
     def test_identify_signals_unexpected_error_in_processing(
-        self, mock_get_price_data, mock_check_signal, tmp_path, reporter_config_obj_fixture
+        self, mock_get_price_data, mock_find_signals, tmp_path, reporter_config_obj_fixture
     ):
         """Test generic exception handling during signal processing loop."""
         db_path = Path(reporter_config_obj_fixture.database_path)
@@ -177,4 +177,4 @@ class TestIdentifyNewSignalsEdgeCases:
 
         result = reporter._identify_new_signals(db_path, 'test_run', reporter_config_obj_fixture)
         assert len(result) == 0
-        mock_check_signal.assert_called() # Ensure it was called before the error
+        mock_find_signals.assert_called() # Ensure it was called before the error

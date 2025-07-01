@@ -3,7 +3,6 @@ Tests for the reporter module - Core functionality.
 """
 
 import pytest
-from unittest.mock import Mock, patch
 from pathlib import Path
 import sqlite3
 import pandas as pd
@@ -201,76 +200,6 @@ class TestFetchBestStrategies:
         
         result = reporter._fetch_best_strategies(db_path, 'test_timestamp', 0.50)
         assert len(result) == 0
-
-
-class TestCheckForSignal:
-    """Test _check_for_signal private function."""
-    
-    def test_check_signal_with_valid_rule(self, sample_price_data):
-        """Test signal checking with valid rule."""
-        rule_def = {
-            'type': 'sma_crossover',
-            'params': {'short_window': 5, 'long_window': 10}
-        }
-        
-        with patch('src.kiss_signal.reporter.rules') as mock_rules:
-            # Mock rule function that returns signals
-            mock_func = Mock()
-            mock_signals = pd.Series([False] * 29 + [True], index=sample_price_data.index)
-            mock_func.return_value = mock_signals
-            mock_rules.sma_crossover = mock_func
-            
-            result = reporter._check_for_signal(sample_price_data, rule_def)
-            
-            assert result is True
-            mock_func.assert_called_once_with(sample_price_data, short_window=5, long_window=10)
-    
-    def test_check_signal_no_signal(self, sample_price_data):
-        """Test when rule returns no signal."""
-        rule_def = {
-            'type': 'sma_crossover',
-            'params': {'short_window': 5, 'long_window': 10}
-        }
-        
-        with patch('src.kiss_signal.reporter.rules') as mock_rules:
-            mock_func = Mock()
-            mock_signals = pd.Series([False] * 30, index=sample_price_data.index)
-            mock_func.return_value = mock_signals
-            mock_rules.sma_crossover = mock_func
-            
-            result = reporter._check_for_signal(sample_price_data, rule_def)
-            
-            assert result is False
-    
-    def test_check_signal_empty_data(self):
-        """Test with empty price data."""
-        empty_data = pd.DataFrame()
-        rule_def = {'type': 'sma_crossover', 'params': {}}
-        
-        result = reporter._check_for_signal(empty_data, rule_def)
-        assert result is False
-    
-    def test_check_signal_unknown_rule(self, sample_price_data):
-        """Test with unknown rule type."""
-        rule_def = {'type': 'unknown_rule', 'params': {}}
-        
-        with patch('src.kiss_signal.reporter.rules') as mock_rules:
-            mock_rules.unknown_rule = None
-            del mock_rules.unknown_rule  # Simulate missing attribute
-            
-            result = reporter._check_for_signal(sample_price_data, rule_def)
-            assert result is False
-    
-    def test_check_signal_rule_exception(self, sample_price_data):
-        """Test when rule function raises exception."""
-        rule_def = {'type': 'sma_crossover', 'params': {}}
-        
-        with patch('src.kiss_signal.reporter.rules') as mock_rules:
-            mock_func = Mock(side_effect=Exception("Rule error"))
-            mock_rules.sma_crossover = mock_func
-            
-            result = reporter._check_for_signal(sample_price_data, rule_def)
-            assert result is False
 
 
 class TestReportFormatting:
