@@ -1,63 +1,116 @@
-# Trading Rules Configuration
-# 
-# This file defines the technical analysis rules used for signal generation,
-# structured as a baseline rule and optional layers to test on top of it.
+# =============================================================================
+# KISS Signal - Master Rules Configuration
+#
+# This file contains definitions for ALL implemented indicators, grouped into
+# logical strategies.
+#
+# HOW TO USE:
+# To test a strategy, make sure ONLY ONE 'baseline' and its corresponding
+# 'layers' section are uncommented. The file is pre-configured to test
+# Strategy 1 by default.
+# =============================================================================
 
+# -----------------------------------------------------------------------------
+# STRATEGY 1: Candlestick Reversal Strategy (Recommended for Candlestick Testing)
+# GOAL: Find a strong reversal pattern and confirm it's happening in favorable conditions.
+# This is the CORRECT way to test candlestick patterns.
+# -----------------------------------------------------------------------------
 baseline:
-  name: "sma_10_20_crossover"
-  type: "sma_crossover"
-  description: "Baseline: Buy when 10-day SMA crosses above 20-day SMA"
+  name: "bullish_engulfing_reversal"
+  type: "engulfing_pattern"
+  description: "Baseline: Enter on a bullish engulfing pattern, a strong 2-day reversal signal."
   params:
-    fast_period: 10
-    slow_period: 20
+    min_body_ratio: 1.2
 
 layers:
-  - name: "rsi_momentum"
+  - name: "filter_with_rsi_oversold"
     type: "rsi_oversold"
-    description: "Layer: Confirm with RSI momentum (RSI > 40 or recovering from oversold)"
+    description: "Filter: Only accept signals if RSI is recovering from an oversold state (RSI > 30)."
     params:
       period: 14
       oversold_threshold: 30.0
-  - name: "ema_confirm"
-    type: "ema_crossover"
-    description: "Layer: Confirm with 12-day EMA crossing above 26-day EMA"
-    params:
-      fast_period: 12
-      slow_period: 26
-  - name: "volume_confirmation"
-    type: "volume_spike"
-    description: "Volume spike with 2x average and 1% price move"
-    params:
-      period: 20
-      spike_multiplier: 2.0
-      price_change_threshold: 0.01
-  - name: "hammer_reversal"
-    type: "hammer_pattern" 
-    description: "Hammer/hanging man reversal pattern"
-    params:
-      body_ratio: 0.3
-      shadow_ratio: 2.0
-  - name: "bullish_engulfing"
-    type: "engulfing_pattern"
-    description: "Bullish engulfing pattern"
-    params:
-      min_body_ratio: 1.2
-  - name: "macd_momentum"
-    type: "macd_crossover"
-    description: "MACD line crosses above signal line" 
-    params:
-      fast_period: 12
-      slow_period: 26
-      signal_period: 9
-  - name: "bollinger_breakout"
-    type: "bollinger_squeeze"
-    description: "Breakout after Bollinger Band squeeze"
-    params:
-      period: 20
-      std_dev: 2.0
-      squeeze_threshold: 0.1
 
-# Rule validation constraints (for reference)
+  - name: "filter_with_volume_spike"
+    type: "volume_spike"
+    description: "Filter: Confirm the reversal is backed by a significant volume increase."
+    params:
+      period: 20
+      spike_multiplier: 1.5 # A slightly lower multiplier to catch more valid signals
+      price_change_threshold: 0.01
+
+  - name: "filter_with_hammer_nearby"
+    type: "hammer_pattern"
+    description: "Filter: Check if a hammer pattern also occurred, signaling a potential bottom."
+    params:
+      body_ratio: 0.4
+      shadow_ratio: 2.0
+
+
+# -----------------------------------------------------------------------------
+# STRATEGY 2: Trend-Following Momentum Strategy
+# GOAL: Enter a stock that is already in a confirmed uptrend.
+# To use this, comment out Strategy 1 and uncomment this section.
+# -----------------------------------------------------------------------------
+# baseline:
+#   name: "sma_10_20_crossover"
+#   type: "sma_crossover"
+#   description: "Baseline: Enter when the 10-day SMA crosses above the 20-day SMA."
+#   params:
+#     fast_period: 10
+#     slow_period: 20
+#
+# layers:
+#   - name: "confirm_with_ema_crossover"
+#     type: "ema_crossover"
+#     description: "Layer: Confirm with a nearly simultaneous 12/26 EMA crossover."
+#     params:
+#       fast_period: 12
+#       slow_period: 26
+#
+#   - name: "confirm_with_macd_momentum"
+#     type: "macd_crossover"
+#     description: "Layer: Confirm that MACD is also showing bullish momentum."
+#     params:
+#       fast_period: 12
+#       slow_period: 26
+#       signal_period: 9
+
+
+# -----------------------------------------------------------------------------
+# STRATEGY 3: Volatility Breakout Strategy
+# GOAL: Enter when a stock breaks out of a low-volatility period.
+# To use this, comment out other strategies and uncomment this section.
+# -----------------------------------------------------------------------------
+# baseline:
+#   name: "bollinger_breakout"
+#   type: "bollinger_squeeze"
+#   description: "Baseline: Enter on a price breakout after a Bollinger Band squeeze."
+#   params:
+#     period: 20
+#     std_dev: 2.0
+#     squeeze_threshold: 0.1
+#
+# layers:
+#   - name: "confirm_with_breakout_volume"
+#     type: "volume_spike"
+#     description: "Layer: Confirm the breakout occurred on high volume."
+#     params:
+#       period: 20
+#       spike_multiplier: 2.0
+#       price_change_threshold: 0.01
+#
+#   - name: "confirm_with_macd_turn"
+#     type: "macd_crossover"
+#     description: "Layer: Confirm momentum is turning positive with the breakout."
+#     params:
+#       fast_period: 12
+#       slow_period: 26
+#       signal_period: 9
+
+
+# =============================================================================
+# Rule Validation Constraints (for reference)
+# =============================================================================
 validation:
   sma_crossover:
     fast_period: {min: 2, max: 50}
@@ -85,4 +138,3 @@ validation:
     period: {min: 10, max: 50}
     std_dev: {min: 1.0, max: 3.0}
     squeeze_threshold: {min: 0.05, max: 0.2}
-
