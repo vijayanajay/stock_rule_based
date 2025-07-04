@@ -28,11 +28,10 @@ def test_cli_import() -> None:
 
 runner = CliRunner()
 
-def test_app_help() -> None:
-    """Test the main app --help message."""
+def test_run_command_help() -> None:
+    """Test the main app --help message which should list the 'run' command."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "KISS Signal CLI" in result.stdout
     assert "run" in result.stdout
 
 

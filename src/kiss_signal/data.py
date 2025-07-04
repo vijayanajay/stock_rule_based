@@ -346,6 +346,27 @@ def _log_refresh_summary(results: Dict[str, bool], total_to_fetch: int) -> None:
     logger.info(f"Successfully refreshed {successful}/{total_to_fetch} symbols")
 
 
+def _get_symbols_to_fetch(symbols: List[str], cache_path: Path, refresh_days: int) -> List[str]:
+    """Filter a list of symbols to only those that need a data refresh."""
+    return [
+        symbol for symbol in symbols
+        if _needs_refresh(symbol, cache_path, refresh_days)
+    ]
+
+
+def _fetch_data_for_symbols(
+    symbols_to_fetch: List[str], years: int, freeze_date: Optional[date], cache_path: Path
+) -> Dict[str, bool]:
+    """Fetch and store data for a list of symbols, returning the results."""
+    if not symbols_to_fetch:
+        logger.info("All symbols are fresh, no refresh needed")
+        return {}
+
+    logger.info(f"Refreshing {len(symbols_to_fetch)} symbols")
+    results = {symbol: _fetch_and_store_data(symbol, years, freeze_date, cache_path) for symbol in symbols_to_fetch}
+    return results
+
+
 def refresh_market_data(
     universe_path: Union[str, List[str]],
     cache_dir: str,
@@ -368,34 +389,13 @@ def refresh_market_data(
     cache_path = Path(cache_dir)
     cache_path.mkdir(parents=True, exist_ok=True)
     
-    # Load symbols from universe_path
-    if isinstance(universe_path, list):
-        symbols = universe_path
-    else:
-        symbols = load_universe(universe_path)
+    symbols = universe_path if isinstance(universe_path, list) else load_universe(universe_path)
     
-    # Skip cache refresh in freeze mode to maintain repeatability
     if freeze_date is not None:
         logger.info("Freeze mode active, skipping cache refresh")
         return {symbol: True for symbol in symbols}
     
-    # Filter symbols that need refresh
-    symbols_to_fetch = [
-        symbol for symbol in symbols 
-        if _needs_refresh(symbol, cache_path, refresh_days)
-    ]
-    
-    if not symbols_to_fetch:
-        logger.info("All symbols are fresh, no refresh needed")
-        return {symbol: True for symbol in symbols}
-    
-    logger.info(f"Refreshing {len(symbols_to_fetch)} of {len(symbols)} symbols")
-    
-    results = {
-        symbol: _fetch_and_store_data(symbol, years, freeze_date, cache_path)
-        for symbol in symbols_to_fetch
-    }
-    
+    symbols_to_fetch = _get_symbols_to_fetch(symbols, cache_path, refresh_days)
+    results = _fetch_data_for_symbols(symbols_to_fetch, years, freeze_date, cache_path)
     _log_refresh_summary(results, len(symbols_to_fetch))
-    
-    return results
+    return {symbol: results.get(symbol, True) for symbol in symbols}

@@ -1,7 +1,7 @@
 # src/kiss_signal/persistence.py
 """SQLite persistence layer for storing backtesting results and trading signals."""
 
-from pathlib import Path
+from pathlib import Path  # Standard library
 from typing import List, Dict, Any
 import sqlite3
 import json

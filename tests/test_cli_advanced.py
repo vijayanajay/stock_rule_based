@@ -189,10 +189,9 @@ def test_run_command_backtest_generic_exception_verbose(
         rules_path.parent.mkdir()
         rules_path.write_text(VALID_RULES_YAML)
 
-        # Corrected order: global options must come before the command.
         result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
 
-        assert result.exit_code == 1, f"Expected exit code 1, but got {result.exit_code}. Output:\n{result.stdout}"
+        assert result.exit_code == 1
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
 

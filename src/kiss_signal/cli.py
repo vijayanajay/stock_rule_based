@@ -191,7 +191,7 @@ def _generate_and_save_report(
             run_timestamp=run_timestamp,
             config=app_config,
         )
-        if report_path:
+        if report_path: # Only print if report was generated
             console.print(f"* Report generated: {report_path}", style="green")
         else:
             console.print("(WARN) Report generation failed", style="yellow")
@@ -213,7 +213,7 @@ def main(
     if ctx.resilient_parsing:
         return
 
-    setup_logging(True)  # Temporarily force debug logging
+    setup_logging(verbose)
     
     # Store loaded configs in the context
     try:
@@ -311,14 +311,12 @@ def run(
     finally:
         # Always save the log, even if errors occurred
         try:
-            # Use console.export_text() and standard file I/O for robustness.
-            # console.save_text() can be brittle in some environments (e.g., CI/CD).
-            Path("run_log.txt").write_text(console.export_text(clear=False), encoding="utf-8")
-            # This message will be on console but not in the saved file.
-            print("\nLog file saved to run_log.txt", file=sys.stderr)
-        except Exception as e:
-            # Fallback to standard print if console is broken
-            print(f"\nCritical error: Could not save log file: {e}", file=sys.stderr)
+            log_path = Path("run_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            print(f"\nLog file saved to {log_path}", file=sys.stderr)
+        except Exception as log_e:
+            print("Critical error: Could not save log file", file=sys.stderr)
+            logger.error(f"Log save error: {log_e}", exc_info=True)
 
 
 @app.command(name="analyze-rules")
