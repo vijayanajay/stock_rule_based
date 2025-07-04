@@ -18,6 +18,7 @@ __all__ = [
     "engulfing_pattern",
     "macd_crossover",
     "bollinger_squeeze",
+    "price_above_sma",
 ]
 
 logger = logging.getLogger(__name__)
@@ -401,3 +402,15 @@ def bollinger_squeeze(price_data: pd.DataFrame,
     
     logger.debug(f"Bollinger squeeze signals: {breakout.sum()} triggers")
     return breakout.fillna(False)
+
+
+def price_above_sma(price_data: pd.DataFrame, period: int = 50) -> pd.Series:
+    """
+    Generates a confirmation signal if the closing price is above its SMA.
+    """
+    _validate_ohlcv_columns(price_data, ['close'])
+    if len(price_data) < period:
+        return pd.Series(False, index=price_data.index)
+    sma = price_data['close'].rolling(window=period).mean()
+    signals = price_data['close'] > sma
+    return signals.fillna(False)

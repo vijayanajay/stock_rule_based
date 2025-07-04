@@ -20,12 +20,12 @@ baseline:
   type: "engulfing_pattern"
   description: "Baseline: Enter on a bullish engulfing pattern, a strong 2-day reversal signal."
   params:
-    min_body_ratio: 1.2
+    min_body_ratio: 1.5
 
 layers:
   - name: "filter_with_rsi_oversold"
     type: "rsi_oversold"
-    description: "Filter: Only accept signals if RSI is recovering from an oversold state (RSI > 30)."
+    description: "Filter: Ensure momentum is healthy (RSI > 40) or just recovering from oversold (crossing 30)."
     params:
       period: 14
       oversold_threshold: 30.0
@@ -35,15 +35,14 @@ layers:
     description: "Filter: Confirm the reversal is backed by a significant volume increase."
     params:
       period: 20
-      spike_multiplier: 1.5 # A slightly lower multiplier to catch more valid signals
+      spike_multiplier: 2.0 # Require volume to be at least 2x the 20-day average for higher conviction.
       price_change_threshold: 0.01
 
-  - name: "filter_with_hammer_nearby"
-    type: "hammer_pattern"
-    description: "Filter: Check if a hammer pattern also occurred, signaling a potential bottom."
+  - name: "filter_with_uptrend_context"
+    type: "price_above_sma"
+    description: "Filter: Ensure the reversal is happening in a broader uptrend (Price > 50-day SMA)."
     params:
-      body_ratio: 0.4
-      shadow_ratio: 2.0
+      period: 50
 
 
 # -----------------------------------------------------------------------------
