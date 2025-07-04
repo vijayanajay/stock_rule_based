@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS positions (
     status TEXT NOT NULL CHECK(status IN ('OPEN', 'CLOSED')),
     rule_stack_used TEXT NOT NULL,
     final_return_pct REAL,
+    exit_reason TEXT,
     final_nifty_return_pct REAL,
     days_held INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -168,7 +169,7 @@ def close_positions_batch(db_path: Path, closed_positions: List[Dict[str, Any]])
     update_sql = """
     UPDATE positions
     SET status = 'CLOSED', exit_date = ?, exit_price = ?, final_return_pct = ?, 
-        final_nifty_return_pct = ?, days_held = ?
+        final_nifty_return_pct = ?, days_held = ?, exit_reason = ?
     WHERE id = ?;
     """
     
@@ -179,7 +180,8 @@ def close_positions_batch(db_path: Path, closed_positions: List[Dict[str, Any]])
             for pos in closed_positions:
                 cursor.execute(update_sql, (
                     pos.get('exit_date'), pos.get('exit_price'), pos.get('final_return_pct'),
-                    pos.get('final_nifty_return_pct'), pos.get('days_held'), pos['id']
+                    pos.get('final_nifty_return_pct'), pos.get('days_held'), pos.get('exit_reason'),
+                    pos['id']
                 ))
             cursor.execute("COMMIT")
             logger.info(f"Closed {len(closed_positions)} positions.")

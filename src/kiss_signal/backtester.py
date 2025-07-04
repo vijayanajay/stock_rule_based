@@ -108,13 +108,19 @@ class Backtester:
                     logger.warning(f"Could not generate entry signals for combo: {[r.name for r in combo]}")
                     continue
                 
-                # Generate time-based exit signals: exit after hold_period days
-                exit_signals = self._generate_time_based_exits(entry_signals, self.hold_period)
+                # Generate exit signals from sell_conditions and time-based exits
+                exit_signals, sl_stop, tp_stop = self._generate_exit_signals(
+                    entry_signals, price_data, rules_config.sell_conditions
+                )
                 
                 # Debug logging
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug(f"Entry signals for {symbol}: {entry_signals.sum()} total")
                     logger.debug(f"Exit signals for {symbol}: {exit_signals.sum()} total")
+                    if sl_stop:
+                        logger.debug(f"Stop loss: {sl_stop:.1%}")
+                    if tp_stop:
+                        logger.debug(f"Take profit: {tp_stop:.1%}")
                     if entry_signals.sum() > 0:
                         logger.debug(f"First 3 entry dates: {entry_signals[entry_signals].index[:3].tolist()}")
                         logger.debug(f"Last 3 entry dates: {entry_signals[entry_signals].index[-3:].tolist()}")
@@ -123,6 +129,8 @@ class Backtester:
                     close=price_data['close'],
                     entries=entry_signals,
                     exits=exit_signals,
+                    sl_stop=sl_stop,
+                    tp_stop=tp_stop,
                     fees=0.001,
                     slippage=0.0005,
                     init_cash=self.initial_capital,
@@ -222,3 +230,60 @@ class Backtester:
         logger.info(f"Rule '{rule_type}' generated {signal_count} signals on {len(price_data)} data points")
 
         return entry_signals
+
+    def _generate_exit_signals(
+        self, 
+        entry_signals: pd.Series, 
+        price_data: pd.DataFrame, 
+        sell_conditions: list
+    ) -> tuple[pd.Series, Optional[float], Optional[float]]:
+        """Generate combined exit signals from sell_conditions and time-based exits.
+        
+        Args:
+            entry_signals: Boolean series of entry signals
+            price_data: DataFrame with OHLCV data
+            sell_conditions: List of RuleDef objects for exit conditions
+            
+        Returns:
+            Tuple of (exit_signals, sl_stop, tp_stop)
+        """
+        # Initialize return values
+        sl_stop = None
+        tp_stop = None
+        exit_signals_list = []
+        
+        # Process sell_conditions
+        if sell_conditions:
+            for rule_def in sell_conditions:
+                if rule_def.type == 'stop_loss_pct':
+                    if sl_stop is None:
+                        sl_stop = rule_def.params['percentage']
+                    else:
+                        logger.warning(f"Multiple stop_loss_pct rules found, using first one: {sl_stop:.1%}")
+                        
+                elif rule_def.type == 'take_profit_pct':
+                    if tp_stop is None:
+                        tp_stop = rule_def.params['percentage']
+                    else:
+                        logger.warning(f"Multiple take_profit_pct rules found, using first one: {tp_stop:.1%}")
+                        
+                else:
+                    # Generate signals for indicator-based exits
+                    try:
+                        exit_signal = self._generate_signals(rule_def, price_data)
+                        exit_signals_list.append(exit_signal)
+                        logger.debug(f"Generated {exit_signal.sum()} exit signals for {rule_def.name}")
+                    except Exception as e:
+                        logger.error(f"Failed to generate exit signals for {rule_def.name}: {e}")
+        
+        # Combine indicator-based exits with logical OR
+        combined_exit_signals = pd.Series(False, index=price_data.index)
+        if exit_signals_list:
+            combined_exit_signals = pd.concat(exit_signals_list, axis=1).any(axis=1)
+        
+        # Add time-based exit (always included as fallback)
+        time_based_exits = self._generate_time_based_exits(entry_signals, self.hold_period)
+        final_exit_signals = combined_exit_signals | time_based_exits
+        
+        logger.debug(f"Combined exit signals: {final_exit_signals.sum()} total")
+        return final_exit_signals, sl_stop, tp_stop

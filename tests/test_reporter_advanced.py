@@ -234,7 +234,7 @@ class TestReportFormatting:
 
     def test_format_sell_positions_table_empty(self):
         """Test formatting sell positions table with no positions."""
-        result = reporter._format_sell_positions_table([], 20)
+        result = reporter._format_sell_positions_table([])
         assert result == "*No positions to sell.*"
 
     def test_format_open_positions_table_with_na(self):
@@ -286,9 +286,13 @@ class TestGenerateDailyReport:
 
         def get_mock_price_data(symbol, **kwargs):
             if symbol == 'RELIANCE':
-                return pd.DataFrame({'close': [2950.0]}, index=[pd.to_datetime(today)])
+                return pd.DataFrame(
+                    {'open': [2940], 'high': [2960], 'low': [2930], 'close': [2950.0]},
+                    index=[pd.to_datetime(today)])
             if symbol == 'WIPRO':
-                return pd.DataFrame({'close': [160.0]}, index=[pd.to_datetime(today)])
+                return pd.DataFrame(
+                    {'open': [159], 'high': [161], 'low': [158], 'close': [160.0]},
+                    index=[pd.to_datetime(today)])
             if symbol == '^NSEI':
                 start = kwargs.get('start_date')
                 end = kwargs.get('end_date')
@@ -304,6 +308,7 @@ class TestGenerateDailyReport:
             db_path=db_path,
             run_timestamp="test_run", # This timestamp is for fetching new strategies
             config=sample_config,
+            rules_config={},
         )
         
         # 4. Assertions
@@ -311,10 +316,11 @@ class TestGenerateDailyReport:
         assert report_path.exists()
         report_content = report_path.read_text()
 
-        assert "**Summary:** 1 New Buy Signals, 1 Open Positions, 1 Positions to Sell." in report_content
+        assert "**Summary:** 1 New Buy Signals, 1 Open Positions, 1 Positions to Sell." in report_content, f"Report content was: {report_content}"
         assert "INFY" in report_content and "1500.00" in report_content
         assert "RELIANCE" in report_content and "2900.00" in report_content and "2950.00" in report_content
-        assert "WIPRO" in report_content and "End of 20-day holding period." in report_content
+        assert "WIPRO" in report_content
+        assert f"Exit: End of {sample_config.hold_period}-day holding period." in report_content
 
         # Verify DB state
         with sqlite3.connect(str(db_path)) as conn:
@@ -349,6 +355,7 @@ class TestGenerateDailyReport:
             db_path=db_path,
             run_timestamp="test_run",
             config=sample_config,
+            rules_config={},
         )
         assert result is None
         mock_write_text.assert_called_once()
@@ -363,6 +370,7 @@ class TestGenerateDailyReport:
             db_path=db_path,
             run_timestamp="test_run",
             config=sample_config,
+            rules_config={},
         )
         assert report_path is None
 

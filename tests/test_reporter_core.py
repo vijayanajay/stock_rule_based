@@ -245,7 +245,7 @@ class TestReportFormatting:
 
     def test_format_sell_positions_table_empty(self):
         """Test formatting sell positions table with no positions."""
-        result = reporter._format_sell_positions_table([], 20)
+        result = reporter._format_sell_positions_table([])
         assert result == "*No positions to sell.*"
 
     def test_format_open_positions_table_with_na(self):

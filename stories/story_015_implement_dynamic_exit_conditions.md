@@ -1,6 +1,6 @@
 # Story 015: Implement Dynamic Exit Conditions & Basic Risk Management
 
-**Status:** Ready for Development
+**Status:** InProgress
 **Estimated Story Points:** 8
 **Priority:** High (Critical for risk management)
 **Created:** 2025-07-22

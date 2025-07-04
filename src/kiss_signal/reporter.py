@@ -206,7 +206,7 @@ def _format_open_positions_table(
 
 
 def _format_sell_positions_table(
-    closed_positions: List[Dict[str, Any]], hold_period: int
+    closed_positions: List[Dict[str, Any]]
 ) -> str:
     """Formats the markdown table for positions to sell."""
     if not closed_positions:
@@ -215,7 +215,7 @@ def _format_sell_positions_table(
     header = "| Ticker | Status | Reason |\n"
     separator = "|:-------|:-------|:-------|\n"
     rows = [
-        f"| {pos['symbol']} | SELL | Exit: End of {hold_period}-day holding period. |"
+        f"| {pos['symbol']} | SELL | {pos.get('exit_reason', 'Unknown')} |"
         for pos in closed_positions
     ]
     return header + separator + "\n".join(rows)
@@ -236,7 +236,7 @@ def _build_report_content(
     )
     new_buys_table = _format_new_buys_table(new_signals)
     open_pos_table = _format_open_positions_table(open_positions, config.hold_period)
-    sell_pos_table = _format_sell_positions_table(closed_positions, config.hold_period)
+    sell_pos_table = _format_sell_positions_table(closed_positions)
 
     return f"""# Signal Report: {report_date_str}
 
@@ -260,6 +260,7 @@ def generate_daily_report(
     db_path: Path,
     run_timestamp: str,
     config: Config,
+    rules_config: Dict[str, Any],
 ) -> Optional[Path]:
     """
     Generates the main daily markdown report with consolidated position logic.
@@ -274,7 +275,7 @@ def generate_daily_report(
         positions_to_hold: List[Dict[str, Any]] = []
         positions_to_close: List[Dict[str, Any]] = []
 
-        # 2. Process each open position in a single loop
+        # 2. Process each open position with dynamic exit checking
         for pos in open_positions:
             entry_date = date.fromisoformat(pos["entry_date"])
             days_held = (run_date - entry_date).days
@@ -284,13 +285,24 @@ def generate_daily_report(
                 nifty_data = data.get_price_data(symbol="^NSEI", cache_dir=Path(config.cache_dir), start_date=entry_date, end_date=run_date, freeze_date=config.freeze_date, years=config.historical_data_years)
 
                 current_price = price_data['close'].iloc[-1] if not price_data.empty else pos['entry_price']
+                current_low = price_data['low'].iloc[-1] if not price_data.empty else current_price
+                current_high = price_data['high'].iloc[-1] if not price_data.empty else current_price
                 return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
                 nifty_return_pct = ((nifty_data['close'].iloc[-1] - nifty_data['close'].iloc[0]) / nifty_data['close'].iloc[0] * 100) if nifty_data is not None and not nifty_data.empty and nifty_data['close'].iloc[0] > 0 else 0.0
 
                 pos.update({'current_price': current_price, 'return_pct': return_pct, 'nifty_return_pct': nifty_return_pct, 'days_held': days_held})
 
-                if days_held >= config.hold_period:
-                    pos.update({'exit_date': run_date.isoformat(), 'exit_price': current_price, 'final_return_pct': return_pct, 'final_nifty_return_pct': nifty_return_pct})
+                # Check for dynamic exit conditions
+                exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, rules_config.get('sell_conditions', []), days_held, config.hold_period)
+                
+                if exit_reason:
+                    pos.update({
+                        'exit_date': run_date.isoformat(), 
+                        'exit_price': current_price, 
+                        'final_return_pct': return_pct, 
+                        'final_nifty_return_pct': nifty_return_pct,
+                        'exit_reason': exit_reason
+                    })
                     positions_to_close.append(pos)
                 else:
                     positions_to_hold.append(pos)
@@ -399,3 +411,57 @@ def format_rule_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
         rows.append(row)
     
     return title + description + header + separator + "\n".join(rows)
+
+def _check_exit_conditions(
+    position: Dict[str, Any], 
+    price_data: pd.DataFrame,
+    current_low: float,
+    current_high: float,
+    sell_conditions: List[Dict[str, Any]],
+    days_held: int,
+    hold_period: int
+) -> Optional[str]:
+    """
+    Check exit conditions for an open position in priority order.
+    
+    Returns the exit reason string if any condition is met, None otherwise.
+    Priority: 1. Stop-loss, 2. Take-profit, 3. Indicator-based, 4. Time-based
+    """
+    entry_price = position['entry_price']
+    
+    # Process sell_conditions in order
+    for condition in sell_conditions:
+        rule_type = condition.get('type')
+        params = condition.get('params', {})
+        
+        # 1. Check stop-loss percentage
+        if rule_type == 'stop_loss_pct':
+            percentage = params.get('percentage', 0)
+            stop_price = entry_price * (1 - percentage)
+            if current_low <= stop_price:
+                return f"Stop-loss at -{percentage:.1%}"
+        
+        # 2. Check take-profit percentage  
+        elif rule_type == 'take_profit_pct':
+            percentage = params.get('percentage', 0)
+            target_price = entry_price * (1 + percentage)
+            if current_high >= target_price:
+                return f"Take-profit at +{percentage:.1%}"
+        
+        # 3. Check indicator-based exits
+        else:
+            try:
+                rule_func = getattr(rules, rule_type, None)
+                if rule_func:
+                    exit_signals = rule_func(price_data, **params)
+                    # Check if exit signal triggered on the last day
+                    if not exit_signals.empty and exit_signals.iloc[-1]:
+                        return f"Rule: {condition.get('name', rule_type)}"
+            except Exception as e:
+                logger.warning(f"Error checking exit rule {rule_type}: {e}")
+    
+    # 4. Check time-based exit as fallback
+    if days_held >= hold_period:
+        return f"Exit: End of {hold_period}-day holding period."
+    
+    return None

@@ -181,7 +181,7 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]], run_timesta
 
 
 def _generate_and_save_report(
-    app_config: Config, run_timestamp: str
+    app_config: Config, rules_config: Dict[str, Any], run_timestamp: str
 ) -> None:
     """Generate and save the daily report, handling errors gracefully."""
     console.print("[5/5] Generating report...", style="blue")
@@ -190,6 +190,7 @@ def _generate_and_save_report(
             db_path=Path(app_config.database_path),
             run_timestamp=run_timestamp,
             config=app_config,
+            rules_config=rules_config,
         )
         if report_path: # Only print if report was generated
             console.print(f"* Report generated: {report_path}", style="green")
@@ -280,7 +281,7 @@ def run(
             run_timestamp = datetime.now().isoformat()
             _display_results(all_results)
             _save_results(app_config, all_results, run_timestamp)
-            _generate_and_save_report(app_config, run_timestamp)
+            _generate_and_save_report(app_config, rules_config, run_timestamp)
 
         # Show performance summary if verbose
         if verbose:

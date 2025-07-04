@@ -29,10 +29,11 @@ def test_cli_import() -> None:
 runner = CliRunner()
 
 def test_run_command_help() -> None:
-    """Test the main app --help message which should list the 'run' command."""
+    """Test the main app --help message which should list the commands."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "run" in result.stdout
+    assert "analyze-rules" in result.stdout
 
 
 def test_display_results_empty():

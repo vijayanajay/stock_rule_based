@@ -19,6 +19,10 @@ __all__ = [
     "macd_crossover",
     "bollinger_squeeze",
     "price_above_sma",
+    # New functions (Story 015)
+    "sma_cross_under",
+    "stop_loss_pct",
+    "take_profit_pct",
 ]
 
 logger = logging.getLogger(__name__)
@@ -414,3 +418,83 @@ def price_above_sma(price_data: pd.DataFrame, period: int = 50) -> pd.Series:
     sma = price_data['close'].rolling(window=period).mean()
     signals = price_data['close'] > sma
     return signals.fillna(False)
+
+# =============================================================================
+# Story 015: Dynamic Exit Conditions
+# =============================================================================
+
+def sma_cross_under(price_data: pd.DataFrame, fast_period: int, slow_period: int) -> pd.Series:
+    """
+    Generates sell signals when the fast SMA crosses below the slow SMA.
+    
+    Args:
+        price_data: DataFrame with OHLCV data
+        fast_period: Period for the fast SMA
+        slow_period: Period for the slow SMA
+        
+    Returns:
+        Boolean Series where True indicates a bearish crossover
+    """
+    _validate_ohlcv_columns(price_data, ['close'])
+    
+    if fast_period >= slow_period:
+        raise ValueError(f"fast_period ({fast_period}) must be less than slow_period ({slow_period})")
+    
+    if len(price_data) < slow_period + 1:
+        return pd.Series(False, index=price_data.index)
+    
+    # Calculate SMAs
+    fast_sma = price_data['close'].rolling(window=fast_period).mean()
+    slow_sma = price_data['close'].rolling(window=slow_period).mean()
+    
+    # Check for crossover: fast was above slow, now it's below
+    previous_above = (fast_sma.shift(1) > slow_sma.shift(1))
+    current_below = (fast_sma < slow_sma)
+    crossover = previous_above & current_below
+    
+    logger.debug(f"SMA cross under signals: {crossover.sum()} triggers")
+    return crossover.fillna(False)
+
+
+def stop_loss_pct(price_data: pd.DataFrame, percentage: float) -> pd.Series:
+    """
+    Placeholder rule for percentage-based stop loss.
+    
+    This rule's logic is special-cased by the backtester and reporter.
+    The actual stop-loss check is performed against daily price movements,
+    not as a boolean signal like other rules.
+    
+    Args:
+        price_data: DataFrame with OHLCV data (unused)
+        percentage: Stop loss percentage (must be > 0)
+        
+    Returns:
+        Series of all False values (logic handled elsewhere)
+    """
+    if percentage <= 0:
+        raise ValueError(f"percentage must be > 0, got {percentage}")
+    
+    logger.debug(f"Stop loss percentage: {percentage:.1%}")
+    return pd.Series(False, index=price_data.index)
+
+
+def take_profit_pct(price_data: pd.DataFrame, percentage: float) -> pd.Series:
+    """
+    Placeholder rule for percentage-based take profit.
+    
+    This rule's logic is special-cased by the backtester and reporter.
+    The actual take-profit check is performed against daily price movements,
+    not as a boolean signal like other rules.
+    
+    Args:
+        price_data: DataFrame with OHLCV data (unused)
+        percentage: Take profit percentage (must be > 0)
+        
+    Returns:
+        Series of all False values (logic handled elsewhere)
+    """
+    if percentage <= 0:
+        raise ValueError(f"percentage must be > 0, got {percentage}")
+    
+    logger.debug(f"Take profit percentage: {percentage:.1%}")
+    return pd.Series(False, index=price_data.index)

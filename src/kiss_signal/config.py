@@ -66,6 +66,7 @@ class RulesConfig(BaseModel):
     """Defines the structure of the rules.yaml file."""
     baseline: RuleDef
     layers: List[RuleDef] = []
+    sell_conditions: List[RuleDef] = Field(default_factory=list)
     validation: Optional[Dict[str, Any]] = None # Allow validation block
 
 # impure

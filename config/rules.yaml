@@ -107,6 +107,31 @@ layers:
 #       signal_period: 9
 
 
+# -----------------------------------------------------------------------------
+# SELL CONDITIONS: Dynamic Exit Rules (Story 015)
+# GOAL: Define systematic exit conditions beyond simple time-based holds
+# -----------------------------------------------------------------------------
+sell_conditions:
+  - name: "stop_loss_5_pct"
+    type: "stop_loss_pct"
+    description: "Exit if price drops 5% from entry."
+    params:
+      percentage: 0.05
+
+  - name: "take_profit_15_pct" 
+    type: "take_profit_pct"
+    description: "Exit if price rises 15% from entry."
+    params:
+      percentage: 0.15
+
+  - name: "sma_cross_under_exit"
+    type: "sma_cross_under"
+    description: "Exit if the 10-day SMA crosses below the 20-day SMA."
+    params:
+      fast_period: 10
+      slow_period: 20
+
+
 # =============================================================================
 # Rule Validation Constraints (for reference)
 # =============================================================================

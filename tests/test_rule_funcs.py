@@ -17,6 +17,10 @@ from kiss_signal.rules import (
     engulfing_pattern,
     macd_crossover,
     bollinger_squeeze,
+    # New functions (Story 015)
+    sma_cross_under,
+    stop_loss_pct,
+    take_profit_pct,
 )
 
 
@@ -485,3 +489,114 @@ class TestNewRulesIntegration:
         total_signals = (volume_signals.sum() + hammer_signals.sum() + engulfing_signals.sum() + 
                         macd_signals.sum() + bollinger_signals.sum())
         assert total_signals >= 0  # At least no errors, some signals expected
+
+
+# =============================================================================
+# Story 015: Dynamic Exit Conditions Tests
+# =============================================================================
+
+def test_sma_cross_under_basic():
+    """Test SMA cross under detection."""
+    # Create data where fast SMA crosses under slow SMA
+    dates = pd.date_range('2023-01-01', periods=30, freq='D')
+    
+    # Start high then decline to trigger crossover
+    prices = [110, 109, 108, 107, 106, 105, 104, 103, 102, 101,  # declining
+              100, 99, 98, 97, 96, 95, 94, 93, 92, 91,           # continued decline
+              90, 89, 88, 87, 86, 85, 84, 83, 82, 81]           # further decline
+              
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': [p + 0.5 for p in prices],
+        'low': [p - 0.5 for p in prices],
+        'close': prices,
+        'volume': [1000] * 30
+    }, index=dates)
+    
+    signals = sma_cross_under(price_data, fast_period=5, slow_period=10)
+    assert isinstance(signals, pd.Series)
+    assert signals.dtype == bool
+    assert len(signals) == 30
+
+
+def test_sma_cross_under_parameter_validation():
+    """Test parameter validation for sma_cross_under."""
+    price_data = pd.DataFrame({
+        'open': [100, 101, 102],
+        'high': [101, 102, 103],
+        'low': [99, 100, 101],
+        'close': [100, 101, 102],
+        'volume': [1000, 1000, 1000]
+    })
+    
+    # fast_period must be less than slow_period
+    with pytest.raises(ValueError, match="fast_period.*must be less than slow_period"):
+        sma_cross_under(price_data, fast_period=10, slow_period=5)
+    
+    # Equal periods should also fail
+    with pytest.raises(ValueError, match="fast_period.*must be less than slow_period"):
+        sma_cross_under(price_data, fast_period=10, slow_period=10)
+
+
+def test_stop_loss_pct_validation():
+    """Test parameter validation for stop_loss_pct."""
+    price_data = pd.DataFrame({
+        'open': [100, 101, 102],
+        'high': [101, 102, 103],
+        'low': [99, 100, 101],
+        'close': [100, 101, 102],
+        'volume': [1000, 1000, 1000]
+    })
+    
+    # Valid percentage
+    signals = stop_loss_pct(price_data, percentage=0.05)
+    assert isinstance(signals, pd.Series)
+    assert signals.dtype == bool
+    assert all(~signals)  # Should always return False
+    
+    # Invalid percentage
+    with pytest.raises(ValueError, match="percentage must be > 0"):
+        stop_loss_pct(price_data, percentage=0)
+    
+    with pytest.raises(ValueError, match="percentage must be > 0"):
+        stop_loss_pct(price_data, percentage=-0.05)
+
+
+def test_take_profit_pct_validation():
+    """Test parameter validation for take_profit_pct."""
+    price_data = pd.DataFrame({
+        'open': [100, 101, 102],
+        'high': [101, 102, 103],
+        'low': [99, 100, 101],
+        'close': [100, 101, 102],
+        'volume': [1000, 1000, 1000]
+    })
+    
+    # Valid percentage
+    signals = take_profit_pct(price_data, percentage=0.15)
+    assert isinstance(signals, pd.Series)
+    assert signals.dtype == bool
+    assert all(~signals)  # Should always return False
+    
+    # Invalid percentage
+    with pytest.raises(ValueError, match="percentage must be > 0"):
+        take_profit_pct(price_data, percentage=0)
+    
+    with pytest.raises(ValueError, match="percentage must be > 0"):
+        take_profit_pct(price_data, percentage=-0.15)
+
+
+def test_sma_cross_under_insufficient_data():
+    """Test sma_cross_under with insufficient data."""
+    # Not enough data for slow SMA
+    price_data = pd.DataFrame({
+        'open': [100, 101],
+        'high': [101, 102], 
+        'low': [99, 100],
+        'close': [100, 101],
+        'volume': [1000, 1000]
+    })
+    
+    signals = sma_cross_under(price_data, fast_period=5, slow_period=10)
+    assert isinstance(signals, pd.Series)
+    assert all(~signals)
