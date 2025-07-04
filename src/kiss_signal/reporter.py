@@ -13,11 +13,12 @@ import logging
 import json
 import sqlite3
 import pandas as pd
+from collections import Counter, defaultdict
 
-from . import data, rules, persistence
+from . import data, rules, persistence, position_manager
 from .config import Config
 
-__all__ = ["generate_daily_report"]
+__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md"]
 
 logger = logging.getLogger(__name__)
 
@@ -168,126 +169,6 @@ def _identify_new_signals(
     return signals
 
 
-def _calculate_open_position_metrics(
-    open_positions: List[Dict[str, Any]], config: Config
-) -> List[Dict[str, Any]]:
-    """Calculate metrics for open positions for reporting."""
-    if not open_positions:
-        return []
-
-    augmented_positions = []
-    run_date = config.freeze_date or date.today()
-
-    for pos in open_positions:
-        entry_date = date.fromisoformat(pos["entry_date"])
-        days_held = (run_date - entry_date).days
-        try:
-            price_data = data.get_price_data(
-                symbol=pos["symbol"],
-                cache_dir=Path(config.cache_dir),
-                refresh_days=config.cache_refresh_days,
-                start_date=entry_date,
-                end_date=run_date,
-                freeze_date=config.freeze_date,
-            )
-            if price_data is None or price_data.empty:
-                logger.warning(f"Could not get price data for open position {pos['symbol']}. Reporting with N/A.")
-                pos.update({
-                    "current_price": None, "return_pct": None,
-                    "nifty_return_pct": None, "days_held": days_held,
-                })
-            else:
-                current_price = price_data['close'].iloc[-1]
-                return_pct = (current_price - pos["entry_price"]) / pos["entry_price"] * 100
-
-                nifty_data = data.get_price_data(
-                    symbol="^NSEI",
-                    cache_dir=Path(config.cache_dir),
-                    refresh_days=config.cache_refresh_days,
-                    start_date=entry_date,
-                    end_date=run_date,
-                    freeze_date=config.freeze_date,
-                )
-                
-                nifty_return_pct = 0.0
-                if nifty_data is not None and not nifty_data.empty:
-                    nifty_start_price = nifty_data['close'].iloc[0]
-                    nifty_end_price = nifty_data['close'].iloc[-1]
-                    if nifty_start_price > 0:
-                        nifty_return_pct = (nifty_end_price - nifty_start_price) / nifty_start_price * 100
-
-                pos.update({
-                    "current_price": current_price, "return_pct": return_pct,
-                    "nifty_return_pct": nifty_return_pct, "days_held": days_held,
-                })
-
-        except Exception as e:
-            logger.error(f"Error calculating metrics for position {pos['symbol']}: {e}")
-            pos.update({
-                "current_price": None, "return_pct": None,
-                "nifty_return_pct": None,
-                "days_held": days_held,
-            })
-        augmented_positions.append(pos)
-            
-    return augmented_positions
-
-
-def _manage_open_positions(
-    open_positions: List[Dict[str, Any]], config: Config
-) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Separates open positions into 'hold' and 'close' lists and calculates metrics."""
-    positions_to_hold: List[Dict[str, Any]] = []
-    positions_to_close: List[Dict[str, Any]] = []
-    run_date = config.freeze_date or date.today()
-
-    for pos in open_positions:
-        entry_date = date.fromisoformat(pos["entry_date"])
-        days_held = (run_date - entry_date).days
-        if days_held >= config.hold_period:
-            try:
-                price_data = data.get_price_data(
-                    symbol=pos["symbol"], cache_dir=Path(config.cache_dir),
-                    refresh_days=config.cache_refresh_days,
-                    start_date=entry_date, end_date=run_date,
-                    freeze_date=config.freeze_date
-                )
-                if price_data is not None and not price_data.empty:
-                    pos['exit_price'] = price_data['close'].iloc[-1]
-                    pos['exit_date'] = run_date.strftime('%Y-%m-%d')
-                    pos['days_held'] = days_held
-                    pos['final_return_pct'] = (pos['exit_price'] - pos['entry_price']) / pos['entry_price'] * 100
-                    nifty_data = data.get_price_data(
-                        symbol="^NSEI", cache_dir=Path(config.cache_dir),
-                        start_date=entry_date, end_date=run_date,
-                        freeze_date=config.freeze_date
-                    )
-                    pos['final_nifty_return_pct'] = 0.0
-                    if nifty_data is not None and not nifty_data.empty:
-                        nifty_start = nifty_data['close'].iloc[0]
-                        nifty_end = nifty_data['close'].iloc[-1]
-                        if nifty_start > 0:
-                            pos['final_nifty_return_pct'] = (nifty_end - nifty_start) / nifty_start * 100
-                else:
-                    logger.warning(f"Could not get exit price for closing position {pos['symbol']}: No data.")
-                    pos['exit_price'] = None
-                    pos['exit_date'] = run_date.strftime('%Y-%m-%d')
-                    pos['days_held'] = days_held
-                    pos['final_return_pct'] = None
-                    pos['final_nifty_return_pct'] = None
-            except Exception as e:
-                logger.warning(f"Could not get exit price for closing position {pos['symbol']}: {e}")
-                pos['exit_price'] = None
-                pos['exit_date'] = run_date.strftime('%Y-%m-%d')
-                pos['days_held'] = days_held
-                pos['final_return_pct'] = None
-                pos['final_nifty_return_pct'] = None
-            positions_to_close.append(pos)
-        else:
-            positions_to_hold.append(pos)
-    return positions_to_hold, positions_to_close
-
-
 def _format_new_buys_table(new_signals: List[Dict[str, Any]]) -> str:
     """Formats the markdown table for new buy signals."""
     if not new_signals:
@@ -374,7 +255,6 @@ def _build_report_content(
 *Report generated by KISS Signal CLI v1.4 on {report_date_str}*
 """
 
-# impure
 def generate_daily_report(
     db_path: Path,
     run_timestamp: str,
@@ -386,12 +266,13 @@ def generate_daily_report(
     Returns the path to the generated report file, or None if failed.
     """
     try:
-        # 1. Fetch all existing open positions and determine their status FIRST
+        # 1. Fetch all open positions from the database
         open_positions = persistence.get_open_positions(db_path)
-        positions_to_hold, positions_to_close = _manage_open_positions(open_positions, config)
-
-        # 2. Calculate metrics for reporting (on-the-fly for open positions to be held)
-        reportable_open_positions = _calculate_open_position_metrics(positions_to_hold, config)
+        
+        # 2. Use the position manager to decide which to hold and which to close
+        reportable_open_positions, positions_to_close = position_manager._manage_open_positions(
+            open_positions, config
+        )
 
         # 3. Close positions that have met their exit criteria
         if positions_to_close:
@@ -408,8 +289,8 @@ def generate_daily_report(
             persistence.add_new_positions_from_signals(db_path, new_signals)
             logger.info(f"Added {len(new_signals)} new positions to the database.")
 
-        # 5. Generate the report content using the separated lists
-        report_date_str = date.today().strftime("%Y-%m-%d")
+        # 5. Generate the report content
+        report_date_str = (config.freeze_date or date.today()).strftime("%Y-%m-%d")
         report_content = _build_report_content(
             report_date_str, new_signals, reportable_open_positions, positions_to_close, config
         )
@@ -425,3 +306,77 @@ def generate_daily_report(
     except Exception as e:
         logger.error(f"Failed to generate report: {e}")
         return None
+
+# impure
+def analyze_rule_performance(db_path: Path) -> List[Dict[str, Any]]:
+    """Analyzes the entire history of strategies to rank individual rule performance."""
+    rule_stats: Dict[str, Dict[str, List[Any]]] = defaultdict(lambda: {'metrics': [], 'symbols': []})
+
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT rule_stack, edge_score, win_pct, sharpe, symbol FROM strategies")
+            strategies = cursor.fetchall()
+
+        for strategy in strategies:
+            try:
+                rules_in_stack = json.loads(strategy['rule_stack'])
+                for rule_def in rules_in_stack:
+                    rule_name = rule_def.get('name')
+                    if not rule_name:
+                        continue
+                    
+                    metrics = {
+                        'edge_score': strategy['edge_score'],
+                        'win_pct': strategy['win_pct'],
+                        'sharpe': strategy['sharpe']
+                    }
+                    rule_stats[rule_name]['metrics'].append(metrics)
+                    rule_stats[rule_name]['symbols'].append(strategy['symbol'])
+            except (json.JSONDecodeError, TypeError):
+                continue  # Skip malformed rule stacks
+
+        analysis = []
+        for name, data in rule_stats.items():
+            freq = len(data['metrics'])
+            avg_edge = sum(m['edge_score'] for m in data['metrics']) / freq
+            avg_win = sum(m['win_pct'] for m in data['metrics']) / freq
+            avg_sharpe = sum(m['sharpe'] for m in data['metrics']) / freq
+            top_symbols_list = [s for s, count in Counter(data['symbols']).most_common(3)]
+            
+            analysis.append({
+                'rule_name': name,
+                'frequency': freq,
+                'avg_edge_score': avg_edge,
+                'avg_win_pct': avg_win,
+                'avg_sharpe': avg_sharpe,
+                'top_symbols': ", ".join(top_symbols_list),
+            })
+
+        return sorted(analysis, key=lambda x: x['avg_edge_score'], reverse=True)
+    except sqlite3.Error as e:
+        logger.error(f"Database error during rule analysis: {e}")
+        return []
+
+
+# pure
+def format_rule_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
+    """Formats the rule performance analysis into a markdown table."""
+    title = "# Rule Performance Analysis\n\n"
+    description = "This report analyzes all optimal strategies ever found to rank individual rule performance.\n\n"
+    header = "| Rule Name | Frequency | Avg Edge Score | Avg Win % | Avg Sharpe | Top Symbols |\n"
+    separator = "|:---|---:|---:|---:|---:|:---|\n"
+    
+    rows = []
+    for stats in analysis:
+        row = (
+            f"| {stats['rule_name']} "
+            f"| {stats['frequency']} "
+            f"| {stats['avg_edge_score']:.2f} "
+            f"| {stats['avg_win_pct']:.1%} "
+            f"| {stats['avg_sharpe']:.2f} "
+            f"| {stats['top_symbols']} |"
+        )
+        rows.append(row)
+    
+    return title + description + header + separator + "\n".join(rows)

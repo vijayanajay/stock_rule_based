@@ -321,5 +321,42 @@ def run(
             print(f"\nCritical error: Could not save log file: {e}", file=sys.stderr)
 
 
+@app.command(name="analyze-rules")
+def analyze_rules(
+    ctx: typer.Context,
+    output_file: Path = typer.Option(
+        "rule_performance_analysis.md",
+        "--output",
+        "-o",
+        help="Path to save the markdown analysis report.",
+    ),
+) -> None:
+    """Analyze and report on the historical performance of individual rules."""
+    console.print("[bold blue]Analyzing historical rule performance...[/bold blue]")
+    app_config = ctx.obj["config"]
+    db_path = Path(app_config.database_path)
+
+    if not db_path.exists():
+        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
+        raise typer.Exit(1)
+
+    try:
+        rule_performance = reporter.analyze_rule_performance(db_path)
+        if not rule_performance:
+            console.print("[yellow]No historical strategies found in the database to analyze.[/yellow]")
+            return
+
+        report_content = reporter.format_rule_analysis_as_md(rule_performance)
+        output_file.write_text(report_content, encoding="utf-8")
+        console.print(f"✅ Rule performance analysis saved to: [cyan]{output_file}[/cyan]")
+
+    except Exception as e:
+        console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
+        verbose = ctx.obj.get("verbose", False)
+        if verbose:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()

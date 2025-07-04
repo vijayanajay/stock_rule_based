@@ -6,9 +6,11 @@ from typing import Any, Dict
 import yaml
 from unittest.mock import patch
 import sqlite3
+import json
 
 from kiss_signal.cli import app
 from kiss_signal.config import RuleDef
+from kiss_signal import persistence
 
 
 VALID_RULES_YAML = """
@@ -187,10 +189,10 @@ def test_run_command_backtest_generic_exception_verbose(
         rules_path.parent.mkdir()
         rules_path.write_text(VALID_RULES_YAML)
 
-        # Corrected order: global options like --verbose must come before the command
+        # Corrected order: global options must come before the command.
         result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
 
-        assert result.exit_code == 1, f"Expected exit code 1, but got {result.exit_code}. Output: {result.stdout}"
+        assert result.exit_code == 1, f"Expected exit code 1, but got {result.exit_code}. Output:\n{result.stdout}"
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
 
@@ -217,3 +219,20 @@ def test_run_command_log_save_failure(
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"])
         assert result.exit_code == 0, result.stdout
         assert "Critical error: Could not save log file" in result.stderr
+
+
+def test_analyze_rules_command(tmp_path: Path):
+    """Test the 'analyze-rules' CLI command."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        db_path = fs_path / "test.db"
+        config_path = fs_path / "config.yaml"
+        output_path = fs_path / "analysis.md"
+
+        # 1. Create a populated database
+        persistence.create_database(db_path)
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                "INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                ('RELIANCE', 'run1', json.dumps([{'name': 'rule_A'}]), 0.8, 0.7, 1.5, 10, 0.05)
+            )

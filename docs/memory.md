@@ -201,9 +201,26 @@
     3.  Refactored brittle tests to use robust assertion patterns and valid mocks.
 - **Lesson**: The test suite must be treated as a first-class consumer of the application's API. Any refactoring or signature change is incomplete until the corresponding tests are updated or removed. Maintaining test-code synchronization is critical to prevent architectural drift and ensure the test suite remains a reliable safety net.
 
-## Test Suite Integrity: Refactoring Drift and Obsolete Tests (2025-07-18)
-- **Issue**: Multiple test failures in the `reporter` module were caused by a single root cause: a refactoring where the `_check_for_signal` helper was removed or replaced, but the test suite was not updated. This resulted in an entire obsolete test file (`test_reporter_signal_checking.py`) and incorrect patch targets in other tests, all failing with `AttributeError`.
+## Test Suite Integrity: Obsolete Tests and Flawed Invocations (2025-07-18)
+- **Issue**: Multiple test failures were caused by a desynchronization between the test suite and the application's state.
+    1.  **Obsolete Tests**: Tests in `test_reporter_position_management.py` targeted private helper functions (`_manage_open_positions`) that had been refactored away into a larger public method. These tests failed with `AttributeError` and no longer reflected the public API.
+    2.  **Flawed CLI Invocation**: A test in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order (global options after the command), causing a `UsageError` (exit code 2) instead of the expected application error (exit code 1).
 - **Fix**:
-    1.  The obsolete test file (`test_reporter_signal_checking.py`) was deleted.
-    2.  The patch target in `test_reporter_identify_signals.py` was corrected to point to the current implementation (`_find_signals_in_window`).
-- **Lesson**: Test code is not second-class; it must be maintained with the same discipline as application code. When refactoring, the task is not complete until the corresponding tests are updated or removed. Leaving "zombie tests" behind erodes trust in the test suite and creates significant noise during debugging.
+    1.  **Deletion of Obsolete Tests**: The obsolete test file (`test_reporter_position_management.py`) was deleted entirely. The consolidated logic is sufficiently covered by higher-level integration tests that validate the public API, not brittle implementation details.
+    2.  **Correction of Flawed Tests**: The CLI test invocation was corrected to place global options before the command, aligning the test with actual user behavior.
+- **Lesson**: The test suite is a core part of the application's structure and must be maintained with the same discipline as production code. Refactoring is incomplete until corresponding tests are updated or **deleted**. Zombie tests for non-existent private methods create noise and erode trust in the test suite. CLI tests must precisely mirror valid user invocation patterns to be reliable.
+
+## Structural Refactoring: Reporter and Position Management (2025-07-04)
+- **Issue**: The `reporter` module was responsible for both generating reports and managing the state of open positions (calculating metrics, determining whether to hold or sell). This violated the Single Responsibility Principle and made the reporter difficult to test and maintain. Test failures in `test_reporter_position_management.py` revealed this structural issue, with tests failing because the position management functions had been moved without updating the tests.
+- **Fix**:
+    1.  A new `position_manager.py` module was created to exclusively handle the business logic of managing open positions.
+    2.  The `_manage_open_positions` and `_calculate_open_position_metrics` functions were moved from `reporter.py` to `position_manager.py`.
+    3.  The `reporter.py` module was updated to import and use the `position_manager` module, delegating all position management tasks.
+    4.  The corresponding test file, `test_reporter_position_management.py`, was updated to import and test the `position_manager` module directly.
+- **Lesson**: Code should be organized by responsibility. Separating concerns into distinct modules (e.g., reporting vs. position management) improves modularity, testability, and maintainability. When tests for a specific piece of functionality break, it often signals a deeper structural issue that should be addressed through refactoring rather than a simple patch.
+
+### CLI Invocation Contract Violation (Recurring) (2025-07-19)
+- **Issue**: A test expecting an application error (exit code 1) failed with a framework `UsageError` (exit code 2), a recurring pattern of test harness desynchronization.
+- **Root Cause**: The test in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order, placing global options (`--config`, `--rules`) *after* the `run` command. The correct syntax requires all global options to precede the command.
+- **Fix**: Reordered the arguments in the `runner.invoke` call to `["--verbose", "--config", "cfg.yml", "--rules", "rules.yml", "run"]`.
+- **Lesson**: This is a repeat of a previously logged issue. The structural lesson is that the test suite's contract with the CLI must be rigorously maintained. Any test that fails with a `UsageError` is an immediate signal of a flawed test, not a flawed application. This pattern must be watched for in all new CLI tests.

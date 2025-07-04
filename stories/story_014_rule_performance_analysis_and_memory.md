@@ -1,10 +1,19 @@
 # Story 014: Implement Rule Performance Analysis and Memory
 
-**Status:** Ready for Development
+**Status:** ✅ COMPLETE
 **Estimated Story Points:** 5
 **Priority:** High (Directly addresses user need for strategy guidance)
 **Created:** 2025-07-18
+**Completed:** 2025-07-18
+
 **Prerequisites:** Story 013 (Expand Rule Library) ✅ Complete
+
+## Implementation Summary
+- **New CLI Command:** Added `analyze-rules` to generate a historical performance report for all individual rules.
+- **Analysis Logic:** Implemented `reporter.analyze_rule_performance` to query the entire `strategies` table, aggregate performance metrics (frequency, avg. edge score, win %, Sharpe), and identify top-performing symbols for each rule.
+- **Markdown Report:** The command generates a clean, sorted Markdown table (`rule_performance_analysis.md`) that provides a "memory" of which rules are effective.
+- **Bug Fix:** Corrected a bug in the daily signals report where `Current Price` and `Return %` for open positions were not being calculated correctly. Refactored position management logic in `reporter.py` for clarity and correctness.
+- **Quality:** All new logic is fully type-hinted, covered by tests, and adheres to project hard rules.
 
 ## User Story
 As a trader, I want to generate a **Markdown report** that analyzes the historical performance of all my trading rules across all backtests, so I can understand which individual rules are effective and which are not, and avoid reusing underperforming ones.
@@ -20,17 +29,17 @@ The analysis logic is designed to correctly attribute performance to individual 
 ## Acceptance Criteria
 
 ### AC-1: New CLI Command and Output
-- [ ] A new command `analyze-rules` is added to the CLI.
-- [ ] The command accepts an optional `--output <filename>.md` argument. If not provided, it defaults to `rule_performance_analysis.md`.
-- [ ] The command operates on the existing database specified in `config.yaml`.
+- [x] A new command `analyze-rules` is added to the CLI.
+- [x] The command accepts an optional `--output <filename>.md` argument. If not provided, it defaults to `rule_performance_analysis.md`.
+- [x] The command operates on the existing database specified in `config.yaml`.
 
 ### AC-2: Rule Performance Analysis Logic
-- [ ] A new function `analyze_rule_performance(db_path)` is implemented in `reporter.py`.
-- [ ] The function queries the **entire `strategies` table** to fetch all historical optimal strategy records, ensuring all rules ever used are analyzed.
-- [ ] It parses the `rule_stack` JSON from each record to identify the individual rules used (e.g., `sma_10_20_crossover`, `rsi_momentum`).
+- [x] A new function `analyze_rule_performance(db_path)` is implemented in `reporter.py`.
+- [x] The function queries the **entire `strategies` table** to fetch all historical optimal strategy records, ensuring all rules ever used are analyzed.
+- [x] It parses the `rule_stack` JSON from each record to identify the individual rules used (e.g., `sma_10_20_crossover`, `rsi_momentum`).
 
 ### AC-3: Aggregated Performance Metrics
-- [ ] The analysis logic aggregates the following metrics for each unique rule across all strategies it appeared in:
+- [x] The analysis logic aggregates the following metrics for each unique rule across all strategies it appeared in:
     - **Frequency:** The total count of times the rule was part of an optimal strategy.
     - **Avg. Edge Score:** The average edge score of the strategies that included this rule.
     - **Avg. Win %:** The average win percentage.
@@ -38,20 +47,20 @@ The analysis logic is designed to correctly attribute performance to individual 
     - **Top Symbols:** A comma-separated string of the top 3 symbols where this rule performed best, ranked by frequency.
 
 ### AC-4: Clear Markdown Report
-- [ ] The command generates a clean, readable Markdown file with the analysis results.
-- [ ] The report contains a Markdown table sorted by `Avg. Edge Score` in descending order.
-- [ ] The table columns are: `Rule Name`, `Frequency`, `Avg Edge Score`, `Avg Win %`, `Avg Sharpe`, `Top Symbols`.
+- [x] The command generates a clean, readable Markdown file with the analysis results.
+- [x] The report contains a Markdown table sorted by `Avg. Edge Score` in descending order.
+- [x] The table columns are: `Rule Name`, `Frequency`, `Avg Edge Score`, `Avg Win %`, `Avg Sharpe`, `Top Symbols`.
 
 ### AC-5: Bug Fix: Correct Open Position Reporting
-- [ ] The logic in `reporter.py` for calculating `Current Price` and `Return %` for open positions is refactored and corrected.
-- [ ] The `OPEN POSITIONS` table in the daily `signals_<date>.md` report now displays accurate, up-to-date performance metrics.
-- [ ] The refactoring simplifies the position management logic, making it more robust and readable.
+- [x] The logic in `reporter.py` for calculating `Current Price` and `Return %` for open positions is refactored and corrected.
+- [x] The `OPEN POSITIONS` table in the daily `signals_<date>.md` report now displays accurate, up-to-date performance metrics.
+- [x] The refactoring simplifies the position management logic, making it more robust and readable.
 
 ### AC-6: Code Quality and Compliance
-- [ ] The implementation adds no new external dependencies (H-10).
-- [ ] The new logic is housed entirely within `cli.py` and `reporter.py`.
-- [ ] All new functions are fully type-hinted and pass `mypy --strict` (H-7).
-- [ ] The new command and its logic are covered by unit and integration tests.
+- [x] The implementation adds no new external dependencies (H-10).
+- [x] The new logic is housed entirely within `cli.py` and `reporter.py`.
+- [x] All new functions are fully type-hinted and pass `mypy --strict` (H-7).
+- [x] The new command and its logic are covered by unit and integration tests.
 
 ## Technical Design
 
@@ -296,61 +305,61 @@ This report analyzes all optimal strategies ever found to rank individual rule p
 ```
 
 ## Definition of Done
-- [ ] All acceptance criteria are met and have been tested.
-- [ ] The `analyze-rules` command generates a correctly formatted Markdown file.
-- [ ] The analysis logic correctly queries the entire database history and aggregates stats for all rules.
-- [ ] The bug in the daily signals report is fixed; `Current Price` and `Return %` are now correct.
-- [ ] The position management logic in `reporter.py` has been refactored for simplicity and correctness.
-- [ ] The feature is covered by both unit and integration tests.
-- [ ] All code passes `mypy --strict` and adheres to project hard rules.
+- [x] All acceptance criteria are met and have been tested.
+- [x] The `analyze-rules` command generates a correctly formatted Markdown file.
+- [x] The analysis logic correctly queries the entire database history and aggregates stats for all rules.
+- [x] The bug in the daily signals report is fixed; `Current Price` and `Return %` are now correct.
+- [x] The position management logic in `reporter.py` has been refactored for simplicity and correctness.
+- [x] The feature is covered by both unit and integration tests.
+- [x] All code passes `mypy --strict` and adheres to project hard rules.
 
 ## Detailed Task List
 
 - **Task 1: Implement `analyze-rules` command in `cli.py`**
-  - [ ] Add the new Typer command with the `--output` option.
-  - [ ] Add logic to call the reporter and write the output file.
-  - [ ] Implement error handling for database not found or other exceptions.
+  - [x] Add the new Typer command with the `--output` option.
+  - [x] Add logic to call the reporter and write the output file.
+  - [x] Implement error handling for database not found or other exceptions.
 
 - **Task 2: Implement `analyze_rule_performance` in `reporter.py`**
-  - [ ] Write the SQL query to fetch all strategies.
-  - [ ] Implement the loop to parse JSON and aggregate stats in a dictionary.
-  - [ ] Implement the final processing loop to calculate averages and top symbols.
-  - [ ] Ensure the results are sorted correctly.
+  - [x] Write the SQL query to fetch all strategies.
+  - [x] Implement the loop to parse JSON and aggregate stats in a dictionary.
+  - [x] Implement the final processing loop to calculate averages and top symbols.
+  - [x] Ensure the results are sorted correctly.
 
 - **Task 3: Implement `format_rule_analysis_as_md` in `reporter.py`**
-  - [ ] Create the function to generate the Markdown table from the analysis data.
-  - [ ] Ensure correct formatting for numbers, percentages, and text alignment.
+  - [x] Create the function to generate the Markdown table from the analysis data.
+  - [x] Ensure correct formatting for numbers, percentages, and text alignment.
 
 - **Task 4: (Bug Fix) Refactor Position Management in `reporter.py`**
-  - [ ] Delete the `_manage_open_positions` and `_calculate_open_position_metrics` functions.
-  - [ ] Modify `generate_daily_report` to include a single, consolidated loop for processing open positions.
-  - [ ] Ensure the new logic correctly identifies positions to hold vs. close and calculates all required metrics.
-  - [ ] Verify that data fetching calls within the loop are correct and efficient.
+  - [x] Delete the `_manage_open_positions` and `_calculate_open_position_metrics` functions.
+  - [x] Modify `generate_daily_report` to include a single, consolidated loop for processing open positions.
+  - [x] Ensure the new logic correctly identifies positions to hold vs. close and calculates all required metrics.
+  - [x] Verify that data fetching calls within the loop are correct and efficient.
 
 - **Task 5: Add Comprehensive Tests**
-  - [ ] In `tests/test_reporter_advanced.py`, add tests for `analyze_rule_performance` using a pre-populated in-memory DB.
-  - [ ] Add a test for `format_rule_analysis_as_md` to check for correct output.
-  - [ ] In `tests/test_cli_advanced.py`, add an integration test for the `analyze-rules` command.
-  - [ ] In `tests/test_reporter_position_management.py`, update tests to reflect the refactored logic and verify the bug fix.
+  - [x] In `tests/test_reporter_advanced.py`, add tests for `analyze_rule_performance` using a pre-populated in-memory DB.
+  - [x] Add a test for `format_rule_analysis_as_md` to check for correct output.
+  - [x] In `tests/test_cli_advanced.py`, add an integration test for the `analyze-rules` command.
+  - [x] In `tests/test_reporter_position_management.py`, update tests to reflect the refactored logic and verify the bug fix.
 
 - **Task 6: Update `DEVELOPMENT_ROADMAP.md`**
-  - [ ] Mark Story 014 as complete.
-  - [ ] Update the "Current Story" to Story 015.
-  - [ ] Ensure the dependency map is correct.
+  - [x] Mark Story 014 as complete.
+  - [x] Update the "Current Story" to Story 015.
+  - [x] Ensure the dependency map is correct.
 
 # KISS Signal CLI - Development Stories Roadmap
 
-## Current Status: Story 014 Ready for Development
+## Current Status: Story 015 Ready for Development
 
 ### Completed Stories ✅
-- **Story 001 - 013:** All foundational, backtesting, persistence, reporting, and rule expansion stories are complete.
+- **Story 001 - 014:** All foundational, backtesting, persistence, reporting, and rule expansion stories are complete.
 
 ### Current Story 🚧
-- **Story 014:** Implement Rule Performance Analysis and Memory (🚧 Ready for Development)
+- **Story 015:** Advanced Portfolio Management & Risk Controls (🚧 Ready for Development)
 
 ### Planned Stories Pipeline 📋
 
-**Story 015: Advanced Portfolio Management & Risk Controls**
+**Story 015: Advanced Portfolio Management & Risk Controls (Current)**
 - **Priority:** HIGH
 - **Story Points:** 13
 - **Dependencies:** Story 014
@@ -388,20 +397,12 @@ The following areas will **not** be developed for this project:
 ```mermaid
 graph TD
     subgraph "Completed"
-        S013[Story 013: Expand Rule Library]
-    end
-
-    subgraph "In Progress"
         S014[Story 014: Rule Analysis]
     end
 
-    subgraph "Upcoming"
+    subgraph "In Progress"
         S015[Story 015: Portfolio Mgmt]
-        S016[Story 016: Advanced Signals]
-        S017[Story 017: Reporting Enhancements]
     end
 
-    S013 --> S014
     S014 --> S015
-    S015 --> S016
-    S016 --> S017
+```

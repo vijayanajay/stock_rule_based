@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import date
 import pandas as pd
 
-from src.kiss_signal import reporter
+from src.kiss_signal import position_manager
 from src.kiss_signal.config import Config
 
 @pytest.fixture
@@ -49,7 +49,7 @@ class TestPositionManagement:
             return None
         mock_get_price_data.side_effect = get_mock_data
 
-        to_hold, to_close = reporter._manage_open_positions(open_positions, config_fixture)
+        to_hold, to_close = position_manager._manage_open_positions(open_positions, config_fixture)
 
         assert len(to_hold) == 1
         assert to_hold[0]['symbol'] == 'HOLD'
@@ -75,7 +75,7 @@ class TestPositionManagement:
             return None
         mock_get_price_data.side_effect = get_mock_data
 
-        augmented = reporter._calculate_open_position_metrics(open_positions, config_fixture)
+        augmented = position_manager._calculate_open_position_metrics(open_positions, config_fixture)
 
         assert len(augmented) == 1
         pos = augmented[0]

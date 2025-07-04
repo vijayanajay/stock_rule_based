@@ -32,6 +32,44 @@ def sample_config(tmp_path: Path):
     )
 
 
+@pytest.fixture
+def populated_db(tmp_path: Path) -> Path:
+    """Creates and populates a temporary database for analysis tests."""
+    db_path = tmp_path / "analysis_test.db"
+    persistence.create_database(db_path)
+    
+    strategies = [
+        {
+            "symbol": "RELIANCE", "run_timestamp": "run1",
+            "rule_stack": '[{"name": "rule_A", "type": "t1"}, {"name": "rule_B", "type": "t2"}]',
+            "edge_score": 0.8, "win_pct": 0.7, "sharpe": 1.5, "total_trades": 10, "avg_return": 0.05
+        },
+        {
+            "symbol": "TCS", "run_timestamp": "run1",
+            "rule_stack": '[{"name": "rule_A", "type": "t1"}]',
+            "edge_score": 0.6, "win_pct": 0.5, "sharpe": 1.0, "total_trades": 12, "avg_return": 0.03
+        },
+        {
+            "symbol": "RELIANCE", "run_timestamp": "run2",
+            "rule_stack": '[{"name": "rule_B", "type": "t2"}]',
+            "edge_score": 0.9, "win_pct": 0.8, "sharpe": 1.8, "total_trades": 5, "avg_return": 0.08
+        },
+        {
+            "symbol": "INFY", "run_timestamp": "run2",
+            "rule_stack": '[{"name": "rule_C", "type": "t3"}]',
+            "edge_score": 0.5, "win_pct": 0.4, "sharpe": 0.8, "total_trades": 20, "avg_return": 0.01
+        },
+    ]
+
+    with sqlite3.connect(db_path) as conn:
+        for s in strategies:
+            conn.execute(
+                "INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (s['symbol'], s['run_timestamp'], s['rule_stack'], s['edge_score'], s['win_pct'], s['sharpe'], s['total_trades'], s['avg_return'])
+            )
+    return db_path
+
+
 class TestIdentifyNewSignalsEdgeCases:
     """Edge case tests for _identify_new_signals."""
 
@@ -196,3 +234,38 @@ class TestGenerateDailyReport:
             config=sample_config,
         )
         assert report_path is None
+
+
+class TestRulePerformanceAnalysis:
+    """Tests for rule performance analysis functionality."""
+
+    def test_analyze_rule_performance(self, populated_db: Path):
+        """Test the logic of analyzing rule performance from the database."""
+        analysis = reporter.analyze_rule_performance(populated_db)
+
+        assert len(analysis) == 3
+        analysis_map = {item['rule_name']: item for item in analysis}
+
+        assert analysis[0]['rule_name'] == 'rule_B'
+        rule_b = analysis_map['rule_B']
+        assert rule_b['frequency'] == 2
+        assert rule_b['avg_edge_score'] == pytest.approx(0.85)
+        assert rule_b['avg_win_pct'] == pytest.approx(0.75)
+        assert rule_b['avg_sharpe'] == pytest.approx(1.65)
+        assert rule_b['top_symbols'] == "RELIANCE"
+
+    def test_format_rule_analysis_as_md(self):
+        """Test the markdown formatting of the analysis results."""
+        analysis_data = [
+            {
+                'rule_name': 'rule_B', 'frequency': 2, 'avg_edge_score': 0.85,
+                'avg_win_pct': 0.75, 'avg_sharpe': 1.65, 'top_symbols': "RELIANCE"
+            }
+        ]
+        
+        md_content = reporter.format_rule_analysis_as_md(analysis_data)
+
+        assert "# Rule Performance Analysis" in md_content
+        assert "| Rule Name | Frequency | Avg Edge Score | Avg Win % | Avg Sharpe | Top Symbols |" in md_content
+        assert "|:---|---:|---:|---:|---:|:---|" in md_content
+        assert "| rule_B | 2 | 0.85 | 75.0% | 1.65 | RELIANCE |" in md_content
