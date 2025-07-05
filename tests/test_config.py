@@ -51,8 +51,8 @@ def test_config_universe_path_is_dir(sample_config: Dict[str, Any], tmp_path: Pa
 def test_load_config_invalid_yaml(tmp_path: Path) -> None:
     """Test loading a config file with invalid YAML content."""
     config_file = tmp_path / "invalid.yaml"
-    config_file.write_text("historical_data_years: 5\n  unclosed_bracket: [")
-    with pytest.raises(yaml.YAMLError, match="Invalid YAML in config file"):
+    config_file.write_text("key: value\n  bad_indent: true")
+    with pytest.raises(ValueError, match="Invalid YAML in config file"):
         load_config(config_file)
 
 def test_load_config_empty_file(tmp_path: Path) -> None:
@@ -95,11 +95,7 @@ def test_load_rules_missing_file(tmp_path: Path) -> None:
 def test_load_rules_invalid_yaml(tmp_path: Path) -> None:
     """Test loading a rules file with invalid YAML content."""
     rules_file = tmp_path / "invalid_rules.yaml"
-    rules_file.write_text("baseline: { name: base, type: t, params: {} }\n  layers: [ { name: l1, type: t, params: { unclosed: [ } ]")
-    # This might be caught by Pydantic's ValidationError first if it's structurally okay enough for YAML parser
-    # but syntactically bad for Pydantic. A pure YAML syntax error is harder to guarantee before Pydantic.
-    # Let's try a clear YAML error.
-    rules_file.write_text("baseline:\n  name: base\n  type: t\nparams: {}\nlayers:\n  - name: l1\n type: l1_type\n params: {key:val") # unclosed param string
+    rules_file.write_text("baseline:\n  name: base\n  type: t\n  params: {}\n bad_indent: true")
     with pytest.raises(ValueError, match="Invalid YAML in rules file"): # Expecting this to be wrapped by load_rules
         load_rules(rules_file)
 

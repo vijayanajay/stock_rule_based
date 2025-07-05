@@ -371,18 +371,18 @@ def refresh_market_data(
     universe_path: Union[str, List[str]],
     cache_dir: str,
     years: int = 3,
-    refresh_days: int = 7,
+    refresh_days: int = 2,
     freeze_date: Optional[date] = None,
 ) -> Dict[str, bool]:
-    """Fetch latest data for symbols with intelligent caching.
-    
+    """
+    Refresh market data for all symbols in the universe.
+
     Args:
-        universe_path: Path to universe CSV file or list of symbols
-        cache_dir: Directory for cached data files
-        years: Years of historical data to fetch
-        refresh_days: Days before cache refresh
-        freeze_date: Optional freeze date for backtesting
-        
+        universe_path: Path to universe file or list of symbols
+        cache_dir: Directory for cached data
+        years: Number of years of data to fetch
+        refresh_days: Days before data is considered stale
+        freeze_date: If set, skip refresh and use cached data as of this date
     Returns:
         Dict mapping symbol -> success status
     """

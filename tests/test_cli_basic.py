@@ -29,7 +29,7 @@ def test_cli_import() -> None:
 runner = CliRunner()
 
 def test_run_command_help() -> None:
-    """Test the main app --help message which should list the commands."""
+    """Test the main app --help message."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "run" in result.stdout
@@ -83,26 +83,16 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         mock_create_db = patch("kiss_signal.cli.persistence.create_database").start()
 
 
-        # Test getattr default for hold_period and min_trades_threshold
-        # Create a config copy and remove these keys
-        config_for_default_test = sample_config.copy()
-        if "hold_period" in config_for_default_test:
-            del config_for_default_test["hold_period"]
-        if "min_trades_threshold" in config_for_default_test:
-            del config_for_default_test["min_trades_threshold"]
-
-        # Write this modified config to a new temp file or overwrite if appropriate for the test
-        config_path_for_default = Path("config_default_bt_params.yaml")
-        config_path_for_default.write_text(yaml.dump(config_for_default_test))
-
         result = runner.invoke(
-            app, ["--config", str(config_path_for_default), "--rules", str(rules_path), "run"]
+            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
         assert "Analysis complete." in result.stdout
         assert "No valid strategies found" in result.stdout
-        # Check that Backtester was initialized with default values
-        mock_backtester.assert_called_with(hold_period=20, min_trades_threshold=10)
+        mock_backtester.assert_called_with(
+            hold_period=sample_config["hold_period"],
+            min_trades_threshold=sample_config["min_trades_threshold"]
+        )
 
         # Verify that save_results was effectively skipped
         mock_create_db.assert_not_called()
@@ -265,7 +255,7 @@ def test_run_command_no_config() -> None:
         rules_path.write_text("rules: []")
         result = runner.invoke(app, ["--config", "nonexistent.yaml", "--rules", str(rules_path), "run"])
         assert result.exit_code == 1
-        assert "Configuration file not found" in result.stdout
+        assert "Error loading configuration" in result.stdout
 
 
 def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:

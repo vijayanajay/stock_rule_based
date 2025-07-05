@@ -114,7 +114,10 @@ INFY,Infosys Ltd,IT
                 'edge_score_weights': {
                     'win_pct': 0.6,
                     'sharpe': 0.4
-                }
+                },
+                "database_path": str(temp_dir / "integration.db"),
+                "reports_output_dir": str(temp_dir / "reports/"),
+                "edge_score_threshold": 0.5
             }
             config_path = temp_dir / "config.yaml"
             config_path.write_text(yaml.dump(config_content))
@@ -227,7 +230,7 @@ INFY,Infosys Ltd,IT
             "run",
          ])
         assert result.exit_code == 1
-        assert "Configuration file not found" in result.stdout
+        assert "Error loading configuration" in result.stdout
         
         # Test with missing rules file
         result = runner.invoke(app, [

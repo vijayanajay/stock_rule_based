@@ -291,6 +291,8 @@ def test_analyze_rules_command(tmp_path: Path):
             "hold_period": 20, # Add other required fields by Config model
             "min_trades_threshold": 5,
             "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
+            "reports_output_dir": "reports/",
+            "edge_score_threshold": 0.5,
             # "freeze_date": null, # Optional
         }
         config_path.write_text(yaml.dump(sample_config_dict))
@@ -317,10 +319,12 @@ def test_analyze_rules_db_not_found(tmp_path: Path):
             "database_path": str(fs_path / "nonexistent.db"),
             "universe_path": str(dummy_universe_file), "cache_dir": str(dummy_cache_dir),
             "cache_refresh_days": 7, "historical_data_years": 5, "hold_period": 20,
-            "min_trades_threshold": 5, "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4}
+            "min_trades_threshold": 5, "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
+            "reports_output_dir": "reports/", # Added missing field
+            "edge_score_threshold": 0.5, # Added missing field
         }
         config_path.write_text(yaml.dump(sample_config_dict))
-        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path = fs_path / "config" / "rules.yaml" # Dummy, not used by analyze-rules
         rules_path.parent.mkdir(exist_ok=True)
         rules_path.write_text(VALID_RULES_YAML)
 
@@ -346,7 +350,9 @@ def test_analyze_rules_no_strategies_found(mock_analyze, tmp_path: Path):
             "database_path": str(db_path),
             "universe_path": str(dummy_universe_file), "cache_dir": str(dummy_cache_dir),
             "cache_refresh_days": 7, "historical_data_years": 5, "hold_period": 20,
-            "min_trades_threshold": 5, "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4}
+            "min_trades_threshold": 5, "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
+            "reports_output_dir": "reports/", # Added missing field
+            "edge_score_threshold": 0.5, # Added missing field
         }
         config_path.write_text(yaml.dump(sample_config_dict))
         rules_path = fs_path / "config" / "rules.yaml"
@@ -369,13 +375,17 @@ def test_analyze_rules_exception_handling(mock_analyze, tmp_path: Path):
 
         persistence.create_database(db_path) # DB needs to exist for the call to reporter
 
-        dummy_universe_file = fs_path / "dummy_universe.csv"; dummy_universe_file.touch()
-        dummy_cache_dir = fs_path / "dummy_cache"; dummy_cache_dir.mkdir()
+        dummy_universe_file = fs_path / "dummy_universe.csv"
+        dummy_universe_file.touch()
+        dummy_cache_dir = fs_path / "dummy_cache"
+        dummy_cache_dir.mkdir()
         sample_config_dict = {
             "database_path": str(db_path),
             "universe_path": str(dummy_universe_file), "cache_dir": str(dummy_cache_dir),
             "cache_refresh_days": 7, "historical_data_years": 5, "hold_period": 20,
-            "min_trades_threshold": 5, "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4}
+            "min_trades_threshold": 5, "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
+            "reports_output_dir": "reports/", # Added missing field
+            "edge_score_threshold": 0.5, # Added missing field
         }
         config_path.write_text(yaml.dump(sample_config_dict))
         rules_path = fs_path / "config" / "rules.yaml"

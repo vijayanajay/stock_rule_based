@@ -11,7 +11,7 @@ import logging # Import logging
 import pandas as pd
 
 from src.kiss_signal import reporter, persistence
-from src.kiss_signal.config import Config
+from kiss_signal.config import Config
 
 
 @pytest.fixture
@@ -24,10 +24,10 @@ def sample_config(tmp_path: Path):
         historical_data_years=3,
         cache_dir=str(tmp_path / "test_cache/"),
         cache_refresh_days=7,
-        hold_period=20,
+        hold_period=20, # Add missing fields
+        database_path=str(tmp_path / "test.db"),
         min_trades_threshold=10,
         edge_score_weights={'win_pct': 0.6, 'sharpe': 0.4},
-        database_path=str(tmp_path / "test.db"),
         reports_output_dir=str(tmp_path / "test_reports/"),
         edge_score_threshold=0.50
     )

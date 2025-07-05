@@ -2,16 +2,15 @@
 
 import logging  # Standard library
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from datetime import date
 import yaml
-from pydantic import BaseModel, Field, ValidationError, model_validator, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, ValidationError
 
 __all__ = [
     "Config",
     "EdgeScoreWeights",
-    "RuleDef",
     "RulesConfig",
     "load_config",
     "load_rules",
@@ -23,27 +22,33 @@ class EdgeScoreWeights(BaseModel):
     win_pct: float = Field(..., ge=0.0, le=1.0)
     sharpe: float = Field(..., ge=0.0, le=1.0)
 
-    @model_validator(mode='after')
-    def check_weights_sum(self) -> 'EdgeScoreWeights':
-        total = self.win_pct + self.sharpe
-        if abs(total - 1.0) > 1e-6:
-            raise ValueError(f'Weights must sum to 1.0, got {total}')
-        return self
+    @field_validator("sharpe")
+    def _weights_sum_to_one(cls, v: float, info: ValidationInfo) -> float:
+        if "win_pct" in info.data:
+            total = v + info.data["win_pct"]
+            if abs(total - 1.0) > 1e-6:
+                raise ValueError(f"Weights must sum to 1.0, got {total}")
+        return v
 
 class Config(BaseModel):
+    """Defines the structure of the main config.yaml file."""
     universe_path: str
-    historical_data_years: int = Field(default=3, ge=1, le=10)
-    cache_dir: str = Field(default="data")
-    cache_refresh_days: int = Field(default=7, ge=1)
-    hold_period: int = Field(default=20, gt=0)
-    min_trades_threshold: int = Field(default=10, ge=0)
-    edge_score_weights: EdgeScoreWeights = Field(
-        default_factory=lambda: EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
-    )
-    freeze_date: Optional[date] = Field(default=None)
-    database_path: str = Field(default="data/kiss_signal.db")
-    reports_output_dir: str = Field(default="reports/")
-    edge_score_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
+    historical_data_years: int = Field(..., gt=0)
+    cache_dir: str
+    cache_refresh_days: int = Field(..., ge=0)
+    hold_period: int = Field(..., gt=0)
+    min_trades_threshold: int = Field(..., ge=0)
+    edge_score_weights: EdgeScoreWeights
+    database_path: str
+    reports_output_dir: str
+    edge_score_threshold: float = Field(..., ge=0.0, le=1.0)
+    freeze_date: Optional[date] = None
+    verbose: bool = False
+
+    # The following are not in config.yaml but can be part of the object
+    # for runtime convenience, hence they are optional.
+    log_path: Optional[str] = None
+    report_dir: Optional[str] = None
 
     @field_validator("universe_path")
     @classmethod
@@ -70,32 +75,37 @@ class RulesConfig(BaseModel):
     validation: Optional[Dict[str, Any]] = None # Allow validation block
 
 # impure
-def load_config(config_path: Union[str, Path]) -> Config:
-    """Load application configuration from a YAML file."""
-    config_path = Path(config_path)  # Convert string to Path if needed
-    if not config_path.exists():
-        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+def load_config(config_path: Path) -> Config:
+    """Load and validate config from YAML file using Pydantic."""
     try:
-        data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
     except yaml.YAMLError as e:
-        raise yaml.YAMLError(f"Invalid YAML in config file: {e}") from e
+        raise ValueError(f"Invalid YAML in config file: {config_path}") from e
+
     if data is None:
         raise ValueError("Config file is empty or contains only comments")
-    return Config(**data)
+
+    try:
+        return Config(**data)
+    except ValidationError as e:
+        raise ValueError(f"Invalid configuration in {config_path}: {e}") from e
 
 # impure
-def load_rules(rules_path: Union[str, Path]) -> RulesConfig:
+def load_rules(rules_path: Path) -> RulesConfig:
     """Load and validate trading rules from a YAML file using Pydantic."""
-    rules_path = Path(rules_path)
     if not rules_path.exists():
         raise FileNotFoundError(f"Rules file not found: {rules_path}")
     try:
-        data = yaml.safe_load(rules_path.read_text(encoding="utf-8"))
-        if data is None:
-            raise ValueError("Rules file is empty or contains only comments")
-        return RulesConfig(**data)
+        with open(rules_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
     except yaml.YAMLError as e:
-        raise ValueError(f"Invalid YAML in rules file: {e}") from e
+        raise ValueError(f"Invalid YAML in rules file: {rules_path}") from e
+
+    if data is None:
+        raise ValueError("Rules file is empty or contains only comments")
+
+    try:
+        return RulesConfig(**data)
     except ValidationError as e:
-        # Re-raise Pydantic's error for clear, specific feedback
-        raise ValueError(f"Invalid rules structure: {e}") from e
+        raise ValueError(f"Invalid rules configuration in {rules_path}: {e}") from e

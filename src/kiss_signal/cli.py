@@ -211,6 +211,7 @@ def main(
     """
     KISS Signal CLI.
     """
+    # This prevents the main callback from running for --help or completion scripts
     if ctx.resilient_parsing:
         return
 

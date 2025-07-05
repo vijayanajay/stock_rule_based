@@ -12,7 +12,7 @@ import pandas as pd
 import logging # Import logging
 
 from src.kiss_signal import reporter
-from src.kiss_signal.config import Config
+from kiss_signal.config import Config
 
 
 @pytest.fixture
@@ -50,10 +50,10 @@ def sample_config(tmp_path: Path):
         historical_data_years=3,
         cache_dir=str(tmp_path / "test_cache/"),
         cache_refresh_days=7,
-        hold_period=20,
+        hold_period=20, # Add missing fields
+        database_path=str(tmp_path / "test.db"),
         min_trades_threshold=10,
         edge_score_weights={'win_pct': 0.6, 'sharpe': 0.4},
-        database_path=str(tmp_path / "test.db"),
         reports_output_dir=str(tmp_path / "test_reports/"),
         edge_score_threshold=0.50
     )
@@ -101,11 +101,11 @@ def mock_price_data() -> pd.DataFrame:
 
 class TestFetchBestStrategies:
     """Test _fetch_best_strategies private function."""
-    
+
     def test_fetch_strategies_success(self, tmp_path, sample_strategies):
         """Test successful strategy fetching."""
         db_path = tmp_path / "test.db"
-        
+
         # Create test database
         with sqlite3.connect(db_path) as conn:
             conn.execute("""
@@ -120,11 +120,11 @@ class TestFetchBestStrategies:
                     run_timestamp TEXT
                 )
             """)
-            
+
             # Insert test data
             for strategy in sample_strategies:
                 conn.execute("""
-                    INSERT INTO strategies 
+                    INSERT INTO strategies
                     (symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return, run_timestamp)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -137,19 +137,19 @@ class TestFetchBestStrategies:
                     strategy['avg_return'],
                     'test_timestamp'
                 ))
-        
+
         # Test fetch
         result = reporter._fetch_best_strategies(db_path, 'test_timestamp', 0.50)
-        
+
         assert len(result) == 2
         # The query orders by symbol, so INFY comes before RELIANCE
         assert result[0]['symbol'] == 'INFY'
         assert result[1]['symbol'] == 'RELIANCE'
-    
+
     def test_fetch_strategies_threshold_filtering(self, tmp_path, sample_strategies):
         """Test threshold filtering."""
         db_path = tmp_path / "test.db"
-        
+
         # Create test database with one strategy below threshold
         with sqlite3.connect(db_path) as conn:
             conn.execute("""
@@ -164,10 +164,10 @@ class TestFetchBestStrategies:
                     run_timestamp TEXT
                 )
             """)
-            
+
             for strategy in sample_strategies:
                 conn.execute("""
-                    INSERT INTO strategies 
+                    INSERT INTO strategies
                     (symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return, run_timestamp)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -180,38 +180,32 @@ class TestFetchBestStrategies:
                     strategy['avg_return'],
                     'test_timestamp'
                 ))
-        
+
         # Test with higher threshold
         result = reporter._fetch_best_strategies(db_path, 'test_timestamp', 0.60)
-        
+
         assert len(result) == 1
         assert result[0]['symbol'] == 'RELIANCE'
-    
+
     def test_fetch_strategies_no_results(self, tmp_path):
         """Test when no strategies are found."""
         db_path = tmp_path / "test.db"
-        
+
         with sqlite3.connect(db_path) as conn:
             conn.execute("""
                 CREATE TABLE strategies (
-                    symbol TEXT,
-                    rule_stack TEXT,
-                    edge_score REAL,
-                    win_pct REAL,
-                    sharpe REAL,
-                    total_trades INTEGER,
-                    avg_return REAL,
-                    run_timestamp TEXT
+                    symbol TEXT, rule_stack TEXT, edge_score REAL, win_pct REAL,
+                    sharpe REAL, total_trades INTEGER, avg_return REAL, run_timestamp TEXT
                 )
             """)
-        
+
         result = reporter._fetch_best_strategies(db_path, 'nonexistent_timestamp', 0.50)
         assert len(result) == 0
-    
+
     def test_fetch_strategies_database_error(self, tmp_path):
         """Test database error handling."""
-        db_path = tmp_path / "nonexistent.db"
-        
+        db_path = tmp_path / "nonexistent.db"  # File that cannot be opened as sqlite db
+
         result = reporter._fetch_best_strategies(db_path, 'test_timestamp', 0.50)
         assert len(result) == 0
 
@@ -219,13 +213,13 @@ class TestFetchBestStrategies:
     def test_fetch_strategies_generic_exception(self, mock_connect, tmp_path):
         """Test generic exception handling during strategy fetching."""
         db_path = tmp_path / "test.db"
-        db_path.touch() # Ensure file exists
+        db_path.touch()  # Ensure file exists
 
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_conn.execute.return_value = mock_cursor
         mock_cursor.fetchall.side_effect = Exception("Generic fetch error")
-        mock_connect.return_value.__enter__.return_value = mock_conn # For context manager
+        mock_connect.return_value.__enter__.return_value = mock_conn  # For context manager
 
         result = reporter._fetch_best_strategies(db_path, 'test_timestamp', 0.50)
         assert len(result) == 0

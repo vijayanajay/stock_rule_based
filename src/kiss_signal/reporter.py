@@ -84,15 +84,14 @@ def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict
         if not rule_stack_defs or price_data.empty:
             return pd.Series(False, index=price_data.index)
 
-        # Start with a Series of all True, then AND with each rule's signals
-        combined_signals = pd.Series(True, index=price_data.index)
-        for rule_def in rule_stack_defs:
-            rule_type = rule_def['type']
-            rule_params = rule_def.get('params', {})
-            rule_func = getattr(rules, rule_type)
-            
-            # AND the signals together
-            combined_signals &= rule_func(price_data, **rule_params)
+        # Start with the first rule's signals, then AND subsequent rules
+        first_rule = rule_stack_defs[0]
+        rule_func = getattr(rules, first_rule['type'])
+        combined_signals = rule_func(price_data, **first_rule.get('params', {}))
+
+        for rule_def in rule_stack_defs[1:]:
+            rule_func = getattr(rules, rule_def['type'])
+            combined_signals &= rule_func(price_data, **rule_def.get('params', {}))
 
         return combined_signals.fillna(False)
     except Exception as e:

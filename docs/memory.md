@@ -232,3 +232,11 @@
     -   CLI tests must precisely mirror valid user invocation patterns.
     -   Tests should be self-contained and not rely on implicit filesystem state.
     -   Use framework-provided fixtures (like `tmp_path`) for resource management over manual implementations to avoid platform-specific issues like file locking.
+
+## Test Harness Integrity: Configuration and Fixture Desynchronization (2025-07-22)
+- **Issue**: A large number of test failures were caused by a structural desynchronization between the application's `Config` Pydantic model and the test fixtures that create `config.yaml` files or instantiate `Config` objects. The `Config` model was updated with new required fields (`reports_output_dir`, `edge_score_threshold`), but several test cases were not updated, leading to widespread `ValidationError` during test setup. Additionally, some CLI tests used incorrect argument ordering for Typer, and help-text tests were not resilient.
+- **Fix**:
+    1.  **Fixtures Updated**: All inline test configurations (`sample_config_dict` in `test_cli_advanced.py`) were updated to provide all required fields for the `Config` model, resolving the `ValidationError`.
+    2.  **Correct CLI Invocation**: A CLI test was corrected to place global options (like `--verbose`) before the command, aligning with Typer's expected syntax and preventing a `UsageError`.
+    3.  **Resilient Help Test**: The CLI help test was modified to test the main application's help text (`--help`) instead of a subcommand's, making it more robust and less dependent on a fully configured test environment.
+- **Lesson**: The test harness is a critical part of the application's structure. Any change to a core data contract like a configuration model must be propagated to all test fixtures immediately. Fixtures must be self-contained and reflect valid user invocation patterns to be reliable. An incomplete fixture is a bug in the test suite.
