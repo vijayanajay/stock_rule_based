@@ -352,7 +352,13 @@ def analyze_rule_performance(db_path: Path) -> List[Dict[str, Any]]:
         for strategy in strategies:
             try:
                 rules_in_stack = json.loads(strategy['rule_stack'])
+                if not isinstance(rules_in_stack, list): # Check if it's a list
+                    logger.debug(f"Skipping malformed rule_stack (not a list) for strategy on symbol {strategy['symbol']}")
+                    continue
                 for rule_def in rules_in_stack:
+                    if not isinstance(rule_def, dict): # Check if rule_def is a dict
+                        logger.debug(f"Skipping malformed rule_def (not a dict) in rule_stack for symbol {strategy['symbol']}")
+                        continue
                     rule_name = rule_def.get('name')
                     if not rule_name:
                         continue

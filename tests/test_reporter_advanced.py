@@ -7,6 +7,7 @@ from unittest.mock import patch
 from pathlib import Path
 from datetime import date, timedelta
 import sqlite3
+import logging # Import logging
 import pandas as pd
 
 from src.kiss_signal import reporter, persistence
@@ -59,6 +60,15 @@ def populated_db(tmp_path: Path) -> Path:
             "rule_stack": '[{"name": "rule_C", "type": "t3"}]',
             "edge_score": 0.5, "win_pct": 0.4, "sharpe": 0.8, "total_trades": 20, "avg_return": 0.01
         },
+        # Malformed JSON strategies
+        {
+            "symbol": "BADJSON1", "run_timestamp": "run1", "rule_stack": "{not_json",
+            "edge_score": 0.1, "win_pct": 0.1, "sharpe": 0.1, "total_trades": 1, "avg_return": 0.01
+        },
+        {
+            "symbol": "BADJSON2", "run_timestamp": "run1", "rule_stack": '"a string not a list of dicts"',
+            "edge_score": 0.1, "win_pct": 0.1, "sharpe": 0.1, "total_trades": 1, "avg_return": 0.01
+        },
     ]
 
     with sqlite3.connect(db_path) as conn:
@@ -73,12 +83,11 @@ def populated_db(tmp_path: Path) -> Path:
 class TestIdentifyNewSignalsEdgeCases:
     """Edge case tests for _identify_new_signals."""
 
-    @patch('src.kiss_signal.reporter.data.get_price_data', side_effect=Exception("Data load failed"))
-    def test_identify_signals_data_load_failure(self, mock_get_price_data, tmp_path, reporter_config_obj_fixture):
-        """Test signal identification when data loading fails."""
-        # db_path = tmp_path / "test.db" # Using path from fixture
+    @patch('src.kiss_signal.reporter.data.get_price_data')
+    def test_identify_signals_data_load_failure_or_empty(self, mock_get_price_data, tmp_path, reporter_config_obj_fixture):
+        """Test signal identification when data loading fails or returns empty DataFrame."""
         db_path = Path(reporter_config_obj_fixture.database_path)
-        db_path.parent.mkdir(parents=True, exist_ok=True) # Ensure parent dir exists
+        db_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sqlite3.connect(db_path) as conn:
             conn.execute("""
@@ -91,9 +100,20 @@ class TestIdentifyNewSignalsEdgeCases:
                 "INSERT INTO strategies (symbol, rule_stack, edge_score, run_timestamp, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 ('RELIANCE', '[{"type": "sma_crossover"}]', 0.7, 'test_run', 0.5, 1.0, 10, 0.01)
             )
-    
-        result = reporter._identify_new_signals(db_path, 'test_run', reporter_config_obj_fixture)
-        assert len(result) == 0
+
+        # Test 1: get_price_data raises Exception
+        mock_get_price_data.side_effect = Exception("Data load failed")
+        result_failure = reporter._identify_new_signals(db_path, 'test_run', reporter_config_obj_fixture)
+        assert len(result_failure) == 0
+        mock_get_price_data.assert_called_once() # Should be called once for RELIANCE
+        mock_get_price_data.reset_mock()
+
+        # Test 2: get_price_data returns empty DataFrame
+        mock_get_price_data.side_effect = None # Clear previous side_effect
+        mock_get_price_data.return_value = pd.DataFrame()
+        result_empty_df = reporter._identify_new_signals(db_path, 'test_run', reporter_config_obj_fixture)
+        assert len(result_empty_df) == 0
+        mock_get_price_data.assert_called_once() # Should be called once for RELIANCE
 
     def test_identify_signals_json_decode_error(self, tmp_path, reporter_config_obj_fixture):
         """Test signal identification when rule_stack is invalid JSON."""
@@ -374,6 +394,54 @@ class TestGenerateDailyReport:
         )
         assert report_path is None
 
+    @patch('src.kiss_signal.reporter.persistence.add_new_positions_from_signals')
+    @patch('src.kiss_signal.reporter.persistence.close_positions_batch')
+    @patch('src.kiss_signal.reporter._identify_new_signals')
+    @patch('src.kiss_signal.reporter.data.get_price_data')
+    def test_generate_report_error_processing_position(
+        self, mock_get_data, mock_identify_signals, mock_close_batch, mock_add_new, tmp_path, sample_config, caplog
+    ):
+        """Test report generation when processing an open position fails."""
+        db_path = Path(sample_config.database_path)
+        persistence.create_database(db_path)
+        today = sample_config.freeze_date or date.today()
+
+        # Setup one open position
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                "INSERT INTO positions (symbol, entry_date, entry_price, status, rule_stack_used) VALUES (?, ?, ?, ?, ?)",
+                ('ERROR_SYM', (today - timedelta(days=5)).isoformat(), 100.0, 'OPEN', '[]')
+            )
+            conn.commit()
+
+        mock_identify_signals.return_value = [] # No new signals for simplicity
+
+        # First call to get_price_data (for ERROR_SYM) raises an error
+        # Second call (for ^NSEI for ERROR_SYM) should also be mocked or it might proceed
+        mock_get_data.side_effect = [
+            Exception("Failed to get price for ERROR_SYM"), # For ERROR_SYM itself
+            pd.DataFrame({'close': [22000.0, 22100.0]}, index=pd.to_datetime([today - timedelta(days=5), today])) # For ^NSEI
+        ]
+
+        with caplog.at_level(logging.WARNING):
+            report_path = reporter.generate_daily_report(
+                db_path, "test_run", sample_config, rules_config={}
+            )
+
+        assert report_path is not None # Report should still be generated
+        assert report_path.exists()
+
+        # Check that the error was logged
+        assert "Could not process position for ERROR_SYM" in caplog.text
+
+        # Check that the position was added to hold (with N/A values)
+        report_content = report_path.read_text()
+        assert "ERROR_SYM" in report_content
+        assert "N/A" in report_content # Expecting N/A for current price/return
+
+        mock_close_batch.assert_not_called() # No positions should be identified for closure based on this error
+        mock_add_new.assert_not_called() # Since new_signals is [], this shouldn't be called
+
 
 class TestRulePerformanceAnalysis:
     """Tests for rule performance analysis functionality."""
@@ -408,3 +476,14 @@ class TestRulePerformanceAnalysis:
         assert "| Rule Name | Frequency | Avg Edge Score | Avg Win % | Avg Sharpe | Top Symbols |" in md_content
         assert "|:---|---:|---:|---:|---:|:---|" in md_content
         assert "| rule_B | 2 | 0.85 | 75.0% | 1.65 | RELIANCE |" in md_content
+
+    @patch('sqlite3.connect')
+    def test_analyze_rule_performance_db_error(self, mock_connect, populated_db):
+        """Test database error during rule performance analysis."""
+        # populated_db fixture creates the db, but we mock connect to fail on this specific call
+        mock_conn_instance = mock_connect.return_value.__enter__.return_value
+        mock_conn_instance.execute.side_effect = sqlite3.Error("DB query failed")
+
+        result = reporter.analyze_rule_performance(populated_db) # populated_db path is still used by mock_connect
+        assert result == []
+        mock_connect.assert_called_once_with(str(populated_db))

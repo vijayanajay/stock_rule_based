@@ -7,7 +7,9 @@ from unittest.mock import Mock, patch
 from pathlib import Path
 from datetime import date, timedelta
 import sqlite3
+from typing import Dict, Any, List # Import Dict, Any, List
 import pandas as pd
+import logging # Import logging
 
 from src.kiss_signal import reporter
 from src.kiss_signal.config import Config
@@ -395,3 +397,90 @@ class TestIdentifyNewSignalsWithWindow:
             dates_found = {r['date'] for r in result}
             assert signal_date_1.strftime('%Y-%m-%d') in dates_found
             assert signal_date_2.strftime('%Y-%m-%d') in dates_found
+
+
+class TestCheckExitConditions:
+    """Tests for the _check_exit_conditions helper function."""
+
+    @pytest.fixture
+    def sample_position(self) -> Dict[str, Any]:
+        return {'symbol': 'TEST', 'entry_price': 100.0, 'entry_date': '2024-01-01'}
+
+    @pytest.fixture
+    def sample_price_data_for_exit(self) -> pd.DataFrame:
+        # Create 30 days of data for testing exit conditions
+        dates = pd.date_range(start='2024-01-01', periods=30, freq='D')
+        return pd.DataFrame({
+            'open': [100 + i for i in range(30)],
+            'high': [105 + i for i in range(30)],
+            'low': [95 + i for i in range(30)],
+            'close': [102 + i for i in range(30)], # Ends at 131
+            'volume': [1000] * 30
+        }, index=dates)
+
+    def test_stop_loss_triggered(self, sample_position, sample_price_data_for_exit):
+        sell_conditions = [{'type': 'stop_loss_pct', 'params': {'percentage': 0.10}}] # 10% SL
+        # Current low is 95 (day 1), entry 100. SL price = 90.
+        # Modify price data so current_low triggers SL
+        current_low_price = 89.0
+        reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, current_low_price, 110, sell_conditions, 5, 20)
+        assert reason == "Stop-loss at -10.0%"
+
+    def test_take_profit_triggered(self, sample_position, sample_price_data_for_exit):
+        sell_conditions = [{'type': 'take_profit_pct', 'params': {'percentage': 0.15}}] # 15% TP
+        # Entry 100. TP price = 115.
+        current_high_price = 116.0
+        reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, 98, current_high_price, sell_conditions, 5, 20)
+        assert reason == "Take-profit at +15.0%"
+
+    @patch('src.kiss_signal.rules.sma_cross_under') # Assuming sma_cross_under is a valid exit rule type
+    def test_indicator_exit_triggered(self, mock_sma_cross_under, sample_position, sample_price_data_for_exit):
+        sell_conditions = [{'name': 'sma_sell', 'type': 'sma_cross_under', 'params': {'fast': 5, 'slow': 10}}]
+        # Mock the rule to return a signal on the last day
+        mock_sma_cross_under.return_value = pd.Series([False] * (len(sample_price_data_for_exit)-1) + [True], index=sample_price_data_for_exit.index)
+
+        reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, 100, 102, sell_conditions, 5, 20)
+        assert reason == "Rule: sma_sell"
+        mock_sma_cross_under.assert_called_once_with(sample_price_data_for_exit, fast=5, slow=10)
+
+    @patch('src.kiss_signal.rules.sma_cross_under', side_effect=Exception("Rule calc error"))
+    def test_indicator_exit_rule_error(self, mock_sma_cross_under, sample_position, sample_price_data_for_exit, caplog):
+        sell_conditions = [{'name': 'sma_sell_err', 'type': 'sma_cross_under', 'params': {}}]
+        with caplog.at_level(logging.WARNING):
+            reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, 100, 102, sell_conditions, 5, 20)
+        assert reason is None # Should not exit due to rule error, might hit time-based later
+        assert "Error checking exit rule sma_cross_under" in caplog.text
+
+    def test_time_based_exit_triggered(self, sample_position, sample_price_data_for_exit):
+        sell_conditions = [] # No other exit conditions
+        reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, 100, 102, sell_conditions, 20, 20) # days_held == hold_period
+        assert reason == "Exit: End of 20-day holding period."
+
+    def test_no_exit_condition_met(self, sample_position, sample_price_data_for_exit):
+        sell_conditions = [
+            {'type': 'stop_loss_pct', 'params': {'percentage': 0.10}}, # SL @ 90
+            {'type': 'take_profit_pct', 'params': {'percentage': 0.15}}  # TP @ 115
+        ]
+        # Current low 95 (no SL), current high 110 (no TP), days_held 5 (no time exit)
+        reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, 95, 110, sell_conditions, 5, 20)
+        assert reason is None
+
+    def test_exit_priority_sl_over_tp(self, sample_position, sample_price_data_for_exit):
+        """SL is checked before TP, so it should trigger if both conditions met by current_low/high"""
+        sell_conditions = [
+            {'type': 'stop_loss_pct', 'params': {'percentage': 0.10}}, # SL @ 90
+            {'type': 'take_profit_pct', 'params': {'percentage': 0.05}}  # TP @ 105
+        ]
+        # SL met (low 89 < 90), TP also met (high 106 > 105)
+        reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, 89, 106, sell_conditions, 5, 20)
+        assert reason == "Stop-loss at -10.0%" # SL has priority in loop
+
+    def test_exit_priority_indicator_over_time(self, sample_position, sample_price_data_for_exit):
+        """Indicator exit should trigger before time-based if both conditions met."""
+        with patch('src.kiss_signal.rules.sma_cross_under') as mock_sma_cross_under:
+            sell_conditions = [{'name': 'sma_sell_prio', 'type': 'sma_cross_under', 'params': {}}]
+            mock_sma_cross_under.return_value = pd.Series([False] * (len(sample_price_data_for_exit)-1) + [True], index=sample_price_data_for_exit.index)
+
+            # days_held equals hold_period, so time exit would trigger if indicator didn't
+            reason = reporter._check_exit_conditions(sample_position, sample_price_data_for_exit, 100, 102, sell_conditions, 20, 20)
+            assert reason == "Rule: sma_sell_prio"
