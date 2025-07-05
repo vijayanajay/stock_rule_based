@@ -219,29 +219,16 @@
     4.  The corresponding test file, `test_reporter_position_management.py`, was updated to import and test the `position_manager` module directly.
 - **Lesson**: Code should be organized by responsibility. Separating concerns into distinct modules (e.g., reporting vs. position management) improves modularity, testability, and maintainability. When tests for a specific piece of functionality break, it often signals a deeper structural issue that should be addressed through refactoring rather than a simple patch.
 
-### CLI Invocation Contract Violation (Recurring) (2025-07-19)
-- **Issue**: A test expecting an application error (exit code 1) failed with a framework `UsageError` (exit code 2), a recurring pattern of test harness desynchronization.
-- **Root Cause**: The test in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order, placing global options (`--config`, `--rules`) *after* the `run` command. The correct syntax requires all global options to precede the command.
-- **Fix**: Reordered the arguments in the `runner.invoke` call to `["--verbose", "--config", "cfg.yml", "--rules", "rules.yml", "run"]`.
-- **Lesson**: This is a repeat of a previously logged issue. The structural lesson is that the test suite's contract with the CLI must be rigorously maintained. Any test that fails with a `UsageError` is an immediate signal of a flawed test, not a flawed application. This pattern must be watched for in all new CLI tests.
-
-## Incomplete Refactoring and Dangling Dependencies (2025-07-19)
-- **Issue**: Multiple test suites failed to collect due to an `ImportError`. The `reporter.py` module attempted to import a `position_manager` module that did not exist in the project structure.
-- **Root Cause**: This was a structural flaw caused by an incomplete refactoring. The import statement was added in anticipation of a new module, but the module itself was either never created or was subsequently removed, leaving a dangling dependency in the module graph.
-- **Fix**: The unused and invalid import statement was removed from `reporter.py`.
-    - **Lesson**: Refactoring is not complete until all related dependencies, imports, and documentation are updated or removed. A dangling import is a structural bug that breaks module integrity and can halt the entire test suite. Always verify the full dependency chain after refactoring code across modules.
- 
-## Test Harness Desynchronization: Flawed Invocations and Implementation Drift (2025-07-22)
-- **Issue**: Multiple test failures were caused by a structural drift between the test suite and the application's contracts.
-    1.  **Flawed CLI Invocation**: A test in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order (global options after command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1). This is a recurring pattern of test-framework contract violation.
+## Test Harness Integrity: Flawed Invocations and Resource Leaks (2025-07-22)
+- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic itself.
+    1.  **Flawed CLI Invocation**: A test in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order (global options after the command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
     2.  **Non-Resilient Test Setup**: A help-text test in `test_cli_basic.py` failed because it was not self-contained and relied on filesystem state, causing the non-resilient part of the CLI callback to fail on config loading.
-    3.  **Implementation Drift**: A test in `test_reporter_advanced.py` failed because the implementation's output for a time-based exit reason (`"Time limit: 25 days"`) did not match the format specified in the PRD (`"Exit: End of 20-day holding period."`). The test was correctly trying to enforce the spec, but the code had drifted.
+    3.  **Resource Leaks in Fixtures**: The `test_persistence.py` suite had 17 teardown errors due to a `PermissionError` on Windows. The test fixture for creating temporary database files was not robust, leading to file handles being held open and preventing cleanup.
 - **Fix**:
     1.  Corrected the CLI test invocation in `test_cli_advanced.py` to place global options before the command.
     2.  Simplified the help test in `test_cli_basic.py` to test the main application's help text, which is more robust and does not depend on the filesystem.
-    3.  Modified the `reporter.py` implementation to generate the exit reason string according to the PRD's format, using the configured `hold_period`.
-    4.  Updated the assertion in `test_reporter_advanced.py` to match the corrected, PRD-aligned output string.
-- **Lesson**: The test suite is a first-class consumer of the application's API and specifications. It must be rigorously maintained.
-    - CLI tests must mirror valid user invocation patterns.
-    - Tests must be self-contained and not rely on implicit filesystem state. Using `runner.isolated_filesystem()` or mocking is preferred.
-    - Tests should enforce product specifications (like report formats from a PRD). A failure in such a test often indicates implementation drift that needs correction, not a faulty test.
+    3.  Replaced the brittle `tempfile`-based fixture in `test_persistence.py` with pytest's standard `tmp_path` fixture, which guarantees proper resource management and cleanup.
+- **Lesson**: A project's test harness is part of its core structure and must be as robust as the application code.
+    -   CLI tests must precisely mirror valid user invocation patterns.
+    -   Tests should be self-contained and not rely on implicit filesystem state.
+    -   Use framework-provided fixtures (like `tmp_path`) for resource management over manual implementations to avoid platform-specific issues like file locking.

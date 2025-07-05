@@ -8,25 +8,17 @@ import tempfile
 from pathlib import Path
 from typing import List, Dict, Any
 from unittest.mock import patch # Import patch
+import typing
 
 from kiss_signal.persistence import create_database, save_strategies_batch, add_new_positions_from_signals
 from kiss_signal.persistence import get_open_positions, close_positions_batch # Import missing functions
 
 
 @pytest.fixture
-def temp_db_path() -> Path:
+def temp_db_path(tmp_path: Path) -> typing.Generator[Path, None, None]:
     """Provide a temporary database file path."""
-    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-        # Ensure the file is closed before returning the path so it can be deleted/reopened
-        pass
-    db_path = Path(f.name)
-    # Ensure it's cleaned up if it exists from a previous failed run before a test uses it
-    if db_path.exists():
-        db_path.unlink()
+    db_path = tmp_path / "test.db"
     yield db_path
-    # Clean up after the test
-    if db_path.exists():
-        db_path.unlink()
 
 
 @pytest.fixture
