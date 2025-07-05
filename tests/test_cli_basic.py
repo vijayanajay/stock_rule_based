@@ -76,20 +76,49 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
             index=pd.to_datetime(pd.date_range(start='2023-01-01', periods=101))
         )
         mock_bt_instance = mock_backtester.return_value
-        mock_bt_instance.find_optimal_strategies.return_value = []
+        mock_bt_instance.find_optimal_strategies.return_value = [] # Ensure no results
+
+        # Mock persistence methods that would be called if results were present
+        mock_save_batch = patch("kiss_signal.cli.persistence.save_strategies_batch").start()
+        mock_create_db = patch("kiss_signal.cli.persistence.create_database").start()
+
+
+        # Test getattr default for hold_period and min_trades_threshold
+        # Create a config copy and remove these keys
+        config_for_default_test = sample_config.copy()
+        if "hold_period" in config_for_default_test:
+            del config_for_default_test["hold_period"]
+        if "min_trades_threshold" in config_for_default_test:
+            del config_for_default_test["min_trades_threshold"]
+
+        # Write this modified config to a new temp file or overwrite if appropriate for the test
+        config_path_for_default = Path("config_default_bt_params.yaml")
+        config_path_for_default.write_text(yaml.dump(config_for_default_test))
 
         result = runner.invoke(
-            app, ["--config", str(config_path), "--rules", str(rules_path), "run"]
+            app, ["--config", str(config_path_for_default), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
         assert "Analysis complete." in result.stdout
         assert "No valid strategies found" in result.stdout
+        # Check that Backtester was initialized with default values
+        mock_backtester.assert_called_with(hold_period=20, min_trades_threshold=10)
+
+        # Verify that save_results was effectively skipped
+        mock_create_db.assert_not_called()
+        mock_save_batch.assert_not_called()
+        patch.stopall() # Stop patches started in this test
 
 
+@patch("kiss_signal.cli.performance_monitor.get_summary")
 @patch("kiss_signal.cli.backtester.Backtester")
 @patch("kiss_signal.cli.data")
-def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
+def test_run_command_verbose(mock_data, mock_backtester, mock_get_summary, sample_config: Dict[str, Any]) -> None:
     """Test run command with verbose flag and isolated filesystem."""
+    mock_get_summary.return_value = {
+        "total_duration": 12.34,
+        "slowest_function": "test_func (5.67s)"
+    }
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
@@ -120,6 +149,10 @@ def test_run_command_verbose(mock_data, mock_backtester, sample_config: Dict[str
             app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
+        assert "Performance Summary:" in result.stdout
+        assert "Total Duration: 12.34s" in result.stdout
+        assert "Slowest Function: test_func (5.67s)" in result.stdout
+        mock_get_summary.assert_called_once()
 
 
 @patch("kiss_signal.cli.backtester.Backtester")
@@ -145,16 +178,17 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
         rules_path.write_text(VALID_RULES_YAML)
 
         result = runner.invoke(
-            app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "2025-01-01"]
+            app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "2025-01-01"]
         )
         assert result.exit_code == 0, result.stdout
         assert "skipping data refresh (freeze mode)" in result.stdout.lower()
+        assert "Freeze mode active: 2025-01-01" in result.stdout # Check for verbose log
         mock_data.refresh_market_data.assert_not_called()
 
 
 @patch("kiss_signal.cli.backtester.Backtester")
 @patch("kiss_signal.cli.data")
-def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
+def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None: # Removed mock_get_summary from params
     """Test a successful run command execution with mocks."""
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
@@ -259,3 +293,60 @@ def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
         )
         assert result.exit_code == 1
         assert "Rules file not found" in result.stdout
+
+
+@patch("kiss_signal.cli.backtester.Backtester") # Mock backtester to prevent actual runs
+@patch("kiss_signal.cli.data") # Mock data module
+def test_run_command_insufficient_data_handling(mock_data, mock_bt, sample_config, tmp_path):
+    """Test that CLI handles insufficient data for symbols gracefully."""
+    with runner.isolated_filesystem() as fs:
+        data_dir = Path(fs) / "data"
+        data_dir.mkdir()
+        cache_dir = data_dir / "cache"
+        cache_dir.mkdir()
+        universe_path = data_dir / "nifty_large_mid.csv"
+        # Universe with two symbols
+        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\nINFY,Infosys,IT\n")
+
+        sample_config["universe_path"] = str(universe_path)
+        sample_config["cache_dir"] = str(cache_dir)
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
+
+        config_dir = Path("config")
+        config_dir.mkdir(exist_ok=True)
+        rules_path = config_dir / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+
+        # Mock load_universe to return the two symbols
+        mock_data.load_universe.return_value = ["RELIANCE", "INFY"]
+
+        # Mock get_price_data:
+        # - RELIANCE: returns None (simulating no data)
+        # - INFY: returns short DataFrame (less than 100 rows)
+        short_df = pd.DataFrame(
+            {'close': range(50)},
+            index=pd.to_datetime(pd.date_range(start='2023-01-01', periods=50))
+        )
+        mock_data.get_price_data.side_effect = [None, short_df]
+
+        # Mock the backtester instance's find_optimal_strategies to return empty list
+        # as it shouldn't be called if data is insufficient.
+        mock_bt_instance = mock_bt.return_value
+        mock_bt_instance.find_optimal_strategies.return_value = []
+
+        result = runner.invoke(
+            app, ["--config", str(Path(fs) / "config.yaml"), "--rules", str(Path(fs) / "config" / "rules.yaml"), "run"] # Temporarily remove --verbose
+        )
+
+        assert result.exit_code == 0, result.stdout
+
+        # Check that warnings for insufficient data were logged
+        assert "Insufficient data for RELIANCE, skipping" in result.stdout
+        assert "Insufficient data for INFY, skipping" in result.stdout
+
+        # Ensure find_optimal_strategies was not called for these symbols
+        mock_bt_instance.find_optimal_strategies.assert_not_called()
+
+        # Ensure it still says "No valid strategies found" if all were skipped
+        assert "No valid strategies found" in result.stdout

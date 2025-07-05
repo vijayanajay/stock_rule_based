@@ -7,15 +7,26 @@ import json
 import tempfile
 from pathlib import Path
 from typing import List, Dict, Any
+from unittest.mock import patch # Import patch
 
 from kiss_signal.persistence import create_database, save_strategies_batch, add_new_positions_from_signals
+from kiss_signal.persistence import get_open_positions, close_positions_batch # Import missing functions
 
 
 @pytest.fixture
 def temp_db_path() -> Path:
     """Provide a temporary database file path."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-        return Path(f.name)
+        # Ensure the file is closed before returning the path so it can be deleted/reopened
+        pass
+    db_path = Path(f.name)
+    # Ensure it's cleaned up if it exists from a previous failed run before a test uses it
+    if db_path.exists():
+        db_path.unlink()
+    yield db_path
+    # Clean up after the test
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.fixture
@@ -48,8 +59,7 @@ class TestCreateDatabase:
     
     def test_create_database_success(self, temp_db_path: Path) -> None:
         """Test successful database creation with schema."""
-        # Remove the temp file to test creation
-        temp_db_path.unlink()
+        # temp_db_path fixture ensures it's clean
         
         create_database(temp_db_path)
         
@@ -81,6 +91,17 @@ class TestCreateDatabase:
         create_database(temp_db_path)  # Should not fail
         
         assert temp_db_path.exists()
+
+    def test_create_database_failure(self, temp_db_path: Path):
+        """Test database creation failure."""
+        # temp_db_path fixture ensures it's clean
+
+        with patch('sqlite3.connect', side_effect=sqlite3.Error("Test DB error")) as mock_connect:
+            with pytest.raises(sqlite3.Error, match="Test DB error"):
+                create_database(temp_db_path)
+
+        mock_connect.assert_called_once_with(str(temp_db_path))
+        assert not temp_db_path.exists() # Should not have been created
 
 
 class TestSaveStrategiesBatch:
@@ -176,11 +197,157 @@ class TestSaveStrategiesBatch:
     
     def test_save_strategies_batch_database_not_exists(self, sample_strategies: List[Dict[str, Any]]) -> None:
         """Test handling of non-existent database file."""
-        non_existent_path = Path("/tmp/non_existent.db")
-        
+        # Use a path that is guaranteed not to exist and won't be created by fixtures
+        non_existent_path = Path(tempfile.gettempdir()) / "definitely_not_existent_kiss_signal.db"
+        if non_existent_path.exists():
+            non_existent_path.unlink() # Ensure it's gone
+
         result = save_strategies_batch(non_existent_path, sample_strategies, "2025-06-24T10:00:00")
         
         assert result is False
+
+    def test_save_strategies_batch_insert_error(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]):
+        """Test transaction rollback on SQLite error during INSERT in save_strategies_batch."""
+        create_database(temp_db_path)
+
+        with patch('sqlite3.connect') as mock_connect:
+            mock_conn_instance = mock_connect.return_value
+            mock_cursor_instance = mock_conn_instance.cursor.return_value
+
+            # Make the INSERT execute call fail for the first strategy
+            # Order of execute calls in save_strategies_batch:
+            # 1. BEGIN TRANSACTION
+            # 2. INSERT (first strategy) - this will fail
+            # 3. COMMIT (will not be reached)
+            # In except block:
+            # 4. ROLLBACK
+            mock_cursor_instance.execute.side_effect = [
+                None,  # For BEGIN TRANSACTION
+                sqlite3.Error("Simulated insert error"), # For the first INSERT
+                None,  # For ROLLBACK (it might be called by the finally block's conn.close() if not explicitly rolled back)
+            ]
+
+            result = save_strategies_batch(temp_db_path, sample_strategies, "2025-07-15T10:00:00")
+
+        assert result is False
+        # Verify no data was saved due to rollback
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM strategies")
+            count = cursor.fetchone()[0]
+            assert count == 0
+
+
+class TestGetOpenPositions:
+    """Tests for fetching open positions."""
+
+    def test_get_open_positions_success(self, temp_db_path: Path):
+        """Test successfully fetching open positions."""
+        create_database(temp_db_path)
+        signals = [
+            {'ticker': 'RELIANCE', 'date': '2025-01-01', 'entry_price': 100.0, 'rule_stack_used': json.dumps(['rule1'])},
+            {'ticker': 'INFY', 'date': '2025-01-02', 'entry_price': 1500.0, 'rule_stack_used': json.dumps(['rule2'])}
+        ]
+        add_new_positions_from_signals(temp_db_path, signals)
+
+        # Manually close one position to test filtering
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            conn.execute("UPDATE positions SET status = 'CLOSED' WHERE symbol = 'INFY'")
+            conn.commit()
+
+        open_positions = get_open_positions(temp_db_path)
+        assert len(open_positions) == 1
+        assert open_positions[0]['symbol'] == 'RELIANCE'
+        assert open_positions[0]['entry_price'] == 100.0
+        assert json.loads(open_positions[0]['rule_stack_used']) == ['rule1']
+
+    def test_get_open_positions_empty(self, temp_db_path: Path):
+        """Test fetching when no open positions exist."""
+        create_database(temp_db_path)
+        open_positions = get_open_positions(temp_db_path)
+        assert len(open_positions) == 0
+
+    def test_get_open_positions_db_error(self, temp_db_path: Path):
+        """Test DB error handling when fetching open positions."""
+        # temp_db_path exists but sqlite3.connect will be patched
+        with patch('sqlite3.connect', side_effect=sqlite3.Error("Fetch failed")):
+            open_positions = get_open_positions(temp_db_path)
+        assert open_positions == []
+
+
+class TestClosePositionsBatch:
+    """Tests for closing positions in batch."""
+
+    def test_close_positions_batch_success(self, temp_db_path: Path):
+        """Test successfully closing positions."""
+        create_database(temp_db_path)
+        signals = [
+            {'ticker': 'RELIANCE', 'date': '2025-01-01', 'entry_price': 100.0, 'rule_stack_used': '["ruleA"]'},
+            {'ticker': 'INFY', 'date': '2025-01-02', 'entry_price': 1500.0, 'rule_stack_used': '["ruleB"]'}
+        ]
+        add_new_positions_from_signals(temp_db_path, signals)
+
+        open_pos = get_open_positions(temp_db_path)
+        assert len(open_pos) == 2
+
+        positions_to_close = [
+            {'id': open_pos[0]['id'], 'exit_date': '2025-01-10', 'exit_price': 110.0, 'final_return_pct': 10.0, 'exit_reason': 'TP'},
+            {'id': open_pos[1]['id'], 'exit_date': '2025-01-11', 'exit_price': 1400.0, 'final_return_pct': -6.67, 'exit_reason': 'SL'}
+        ]
+        close_positions_batch(temp_db_path, positions_to_close)
+
+        remaining_open_pos = get_open_positions(temp_db_path)
+        assert len(remaining_open_pos) == 0
+
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            closed = conn.execute("SELECT * FROM positions WHERE status = 'CLOSED' ORDER BY symbol").fetchall()
+            assert len(closed) == 2
+            assert closed[0]['symbol'] == 'INFY'
+            assert closed[0]['exit_price'] == 1400.0
+            assert closed[1]['symbol'] == 'RELIANCE'
+            assert closed[1]['exit_price'] == 110.0
+
+    def test_close_positions_batch_empty_list(self, temp_db_path: Path):
+        """Test closing positions with an empty list."""
+        create_database(temp_db_path)
+        # Add some open positions first
+        signals = [{'ticker': 'RELIANCE', 'date': '2025-01-01', 'entry_price': 100.0, 'rule_stack_used': '[]'}]
+        add_new_positions_from_signals(temp_db_path, signals)
+
+        close_positions_batch(temp_db_path, []) # Call with empty list
+
+        open_pos = get_open_positions(temp_db_path)
+        assert len(open_pos) == 1 # Position should remain open
+
+    def test_close_positions_batch_db_error(self, temp_db_path: Path):
+        """Test DB error handling when closing positions."""
+        create_database(temp_db_path)
+        signals = [{'ticker': 'RELIANCE', 'date': '2025-01-01', 'entry_price': 100.0, 'rule_stack_used': '[]'}]
+        add_new_positions_from_signals(temp_db_path, signals)
+        open_pos = get_open_positions(temp_db_path)
+
+        positions_to_close = [{'id': open_pos[0]['id'], 'exit_date': '2025-01-10', 'exit_price': 110.0}]
+
+        with patch('sqlite3.connect') as mock_connect:
+            mock_conn_instance = mock_connect.return_value
+            mock_cursor_instance = mock_conn_instance.cursor.return_value
+
+            # Setup side effects for execute on the mock cursor
+            # 1. BEGIN TRANSACTION
+            # 2. UPDATE positions (this one fails)
+            # 3. ROLLBACK
+            mock_cursor_instance.execute.side_effect = [
+                None,  # For BEGIN TRANSACTION
+                sqlite3.Error("Update failed"), # For UPDATE
+                None   # For ROLLBACK
+            ]
+            close_positions_batch(temp_db_path, positions_to_close)
+
+        # Verify position is still open (rollback occurred)
+        final_open_pos = get_open_positions(temp_db_path)
+        assert len(final_open_pos) == 1
+        assert final_open_pos[0]['id'] == open_pos[0]['id']
 
 
 class TestAddPositions:
@@ -203,6 +370,50 @@ class TestAddPositions:
             cursor.execute("SELECT COUNT(*) FROM positions WHERE symbol = 'RELIANCE'")
             count = cursor.fetchone()[0]
             assert count == 1 # Should still be 1, not 2
+
+    def test_add_new_positions_empty_list(self, temp_db_path: Path):
+        """Test adding new positions with an empty signal list."""
+        create_database(temp_db_path)
+        add_new_positions_from_signals(temp_db_path, [])
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM positions")
+            assert cursor.fetchone()[0] == 0
+
+    def test_add_new_positions_db_error(self, temp_db_path: Path):
+        """Test DB error handling when adding new positions."""
+        create_database(temp_db_path)
+        signals = [{'ticker': 'RELIANCE', 'date': '2025-01-01', 'entry_price': 100.0, 'rule_stack_used': '[]'}]
+
+        with patch('sqlite3.connect') as mock_connect:
+            mock_conn_instance = mock_connect.return_value
+            mock_cursor_instance = mock_conn_instance.cursor.return_value
+
+            # Setup side effects for execute on the mock cursor
+            # 1. BEGIN TRANSACTION (called by the context manager implicitly sometimes, or explicitly)
+            # 2. SELECT symbol FROM positions WHERE status = 'OPEN'
+            # 3. INSERT INTO positions (this one fails)
+            # 4. ROLLBACK
+            execute_effects = [
+                None,  # For BEGIN TRANSACTION (if explicit, or first call in with block)
+                mock_cursor_instance,  # For SELECT open symbols (to allow .fetchall())
+                sqlite3.Error("Insert failed"), # For INSERT
+                None   # For ROLLBACK
+            ]
+             # If the "BEGIN TRANSACTION" is implicit due to "with sqlite3.connect(...)"
+             # then the first execute call we care about is the SELECT.
+             # The code uses "with sqlite3.connect(...) as conn: cursor = conn.cursor(); cursor.execute("BEGIN TRANSACTION")"
+             # So, the explicit "BEGIN TRANSACTION" is the first.
+
+            mock_cursor_instance.execute.side_effect = execute_effects
+            mock_cursor_instance.fetchall.return_value = [] # For the SELECT open symbols query
+
+            add_new_positions_from_signals(temp_db_path, signals)
+
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM positions")
+            assert cursor.fetchone()[0] == 0 # No data should be inserted
     
     def test_save_strategies_multiple_batches(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]) -> None:
         """Test saving multiple batches to same database."""
@@ -234,8 +445,7 @@ class TestIntegration:
     
     def test_create_and_save_workflow(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]) -> None:
         """Test complete workflow: create database then save strategies."""
-        # Remove temp file to test full creation
-        temp_db_path.unlink()
+        # temp_db_path fixture ensures it's clean
         
         # Create database
         create_database(temp_db_path)
