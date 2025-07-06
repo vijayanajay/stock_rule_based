@@ -8,7 +8,7 @@ SBIN,State Bank of India,Banking
 WIPRO,Wipro,IT
 HCLTECH,HCL Technologies,IT
 TECHM,Tech Mahindra,IT
-LTI,LTIMindtree,IT
+LTIM,LTIMindtree,IT
 BHARTIARTL,Bharti Airtel,Telecom
 KOTAKBANK,Kotak Mahindra Bank,Banking
 AXISBANK,Axis Bank,Banking
@@ -42,10 +42,9 @@ BPCL,Bharat Petroleum Corporation,Energy
 GRASIM,Grasim Industries,Cement
 ADANIPORTS,Adani Ports and SEZ,Infrastructure
 LTTS,L&T Technology Services,IT
-MINDTREE,Mindtree,IT
 MPHASIS,Mphasis,IT
 PERSISTENT,Persistent Systems,IT
-ZOMATO,Zomato,Consumer Services
+ETERNAL,Zomato,Consumer Services
 SUNPHARMA,Sun Pharmaceutical Industries,Pharma
 DRREDDY,Dr. Reddy's Laboratories,Pharma
 CIPLA,Cipla,Pharma
@@ -72,7 +71,7 @@ DMART,Avenue Supermarts (DMart),Retail
 JUBLFOOD,Jubilant FoodWorks,Food Services
 PIDILITIND,Pidilite Industries,Chemicals
 UPL,UPL,Agrochemicals
-AARTI,Aarti Industries,Chemicals
+AARTIIND,Aarti Industries,Chemicals
 BALKRISIND,Balrampur Chini Mills,Sugar
 MOTHERSON,Motherson Sumi Systems,Auto Components
 BOSCHLTD,Bosch,Auto Components
@@ -83,8 +82,8 @@ IDFCFIRSTB,IDFC First Bank,Banking
 CANBK,Canara Bank,Banking
 PNB,Punjab National Bank,Banking
 BANKBARODA,Bank of Baroda,Banking
-GMRINFRA,GMR Infrastructure,Infrastructure
-L&TFH,L&T Finance Holdings,NBFC
+GMRAIRPORT,GMR Infrastructure,Infrastructure
+LTF,L&T Finance Holdings,NBFC
 CHOLAFIN,Cholamandalam Investment and Finance,NBFC
 PFC,Power Finance Corporation,NBFC
 RECLTD,REC,NBFC

@@ -1,3 +1,14 @@
+# Story 015: Implement Dynamic Exit Conditions
+# Status: ✅ Completed
+# Completion Date: 2025-07-06
+
+# Executive Summary
+# Story 015 is fully implemented, tested, and architecturally sound. All acceptance criteria are met, and the system now supports dynamic, rule-based exit conditions (stop-loss, take-profit, indicator-based exits) with correct separation of backtesting and live logic, persistence, and comprehensive tests.
+
+# See below for detailed review and evidence.
+
+# ---
+
 # Story 015: Implement Dynamic Exit Conditions & Basic Risk Management
 
 **Status:** InProgress
@@ -20,43 +31,43 @@ This moves the system from a simple signal generator to a basic, but complete, t
 ## Acceptance Criteria
 
 ### AC-1: Configuration Schema
-- [ ] **GIVEN** a `rules.yaml` file, **WHEN** it contains a `sell_conditions` block with a list of rule definitions, **THEN** `load_rules` in `config.py` parses it successfully into the `RulesConfig.sell_conditions` attribute.
-- [ ] **GIVEN** a `rules.yaml` file, **WHEN** the `sell_conditions` block is absent, **THEN** `load_rules` successfully creates a `RulesConfig` object with `sell_conditions` as an empty list.
-- [ ] The `RulesConfig` Pydantic model in `src/kiss_signal/config.py` is updated to include `sell_conditions: List[RuleDef] = Field(default_factory=list)`.
+- [x] **GIVEN** a `rules.yaml` file, **WHEN** it contains a `sell_conditions` block with a list of rule definitions, **THEN** `load_rules` in `config.py` parses it successfully into the `RulesConfig.sell_conditions` attribute.
+- [x] **GIVEN** a `rules.yaml` file, **WHEN** the `sell_conditions` block is absent, **THEN** `load_rules` successfully creates a `RulesConfig` object with `sell_conditions` as an empty list.
+- [x] The `RulesConfig` Pydantic model in `src/kiss_signal/config.py` is updated to include `sell_conditions: List[RuleDef] = Field(default_factory=list)`.
 
 ### AC-2: New Rule Implementations
-- [ ] A new rule function `sma_cross_under(price_data, fast_period, slow_period)` is implemented in `rules.py` and added to `__all__`.
+- [x] A new rule function `sma_cross_under(price_data, fast_period, slow_period)` is implemented in `rules.py` and added to `__all__`.
     - It MUST return `True` on the day the `fast_period` SMA crosses *below* the `slow_period` SMA.
-- [ ] A placeholder rule `stop_loss_pct(price_data, percentage)` is added to `rules.py`.
+- [x] A placeholder rule `stop_loss_pct(price_data, percentage)` is added to `rules.py`.
     - It MUST perform parameter validation (e.g., `percentage > 0`).
     - It MUST return a `pd.Series` of all `False` values, as its logic is special-cased by the backtester and reporter.
-- [ ] A placeholder rule `take_profit_pct(price_data, percentage)` is added to `rules.py` with the same behavior as `stop_loss_pct`.
+- [x] A placeholder rule `take_profit_pct(price_data, percentage)` is added to `rules.py` with the same behavior as `stop_loss_pct`.
 
 ### AC-3: Backtester Simulation Logic
-- [ ] The `find_optimal_strategies` function in `backtester.py` MUST parse the `rules_config.sell_conditions`.
-- [ ] For any `stop_loss_pct` or `take_profit_pct` rules, their `percentage` parameter MUST be extracted and passed to `vectorbt.Portfolio.from_signals` via the `sl_stop` and `tp_stop` arguments respectively.
+- [x] The `find_optimal_strategies` function in `backtester.py` MUST parse the `rules_config.sell_conditions`.
+- [x] For any `stop_loss_pct` or `take_profit_pct` rules, their `percentage` parameter MUST be extracted and passed to `vectorbt.Portfolio.from_signals` via the `sl_stop` and `tp_stop` arguments respectively.
     - If multiple stop-loss/take-profit rules are defined, a warning is logged and only the *first* one found is used.
-- [ ] For all other rules in `sell_conditions` (e.g., `sma_cross_under`), a boolean `exit_signals` Series MUST be generated.
-- [ ] All indicator-based `exit_signals` MUST be combined with a logical `OR`.
-- [ ] The final exit signal passed to `vectorbt` MUST be a logical `OR` of the combined indicator exits and the existing time-based `hold_period` exit. This ensures the *first* exit condition to be met (indicator or time) triggers a trade closure.
+- [x] For all other rules in `sell_conditions` (e.g., `sma_cross_under`), a boolean `exit_signals` Series MUST be generated.
+- [x] All indicator-based `exit_signals` MUST be combined with a logical `OR`.
+- [x] The final exit signal passed to `vectorbt` MUST be a logical `OR` of the combined indicator exits and the existing time-based `hold_period` exit. This ensures the *first* exit condition to be met (indicator or time) triggers a trade closure.
 
 ### AC-4: Live Position Management
-- [ ] The `generate_daily_report` function in `reporter.py` MUST check exit conditions for each open position.
-- [ ] The check priority MUST be: 1. Stop-loss, 2. Take-profit, 3. Indicator-based exits, 4. Time-based exit.
-- [ ] **Stop-loss check:** **GIVEN** an open position, **WHEN** the day's `low` price drops below `entry_price * (1 - stop_loss_percentage)`, **THEN** the position is marked for closure.
-- [ ] **Indicator-based check:** **GIVEN** an open position, **WHEN** any of the `sell_conditions` rules (like `sma_cross_under`) returns `True` for the current day, **THEN** the position is marked for closure.
-- [ ] The `exit_reason` string MUST be specific (e.g., "Stop-loss at -5.0%", "Rule: sma_cross_under", "Time limit: 20 days").
-- [ ] The "POSITIONS TO SELL" table in the daily report MUST display this new `exit_reason`.
+- [x] The `generate_daily_report` function in `reporter.py` MUST check exit conditions for each open position.
+- [x] The check priority MUST be: 1. Stop-loss, 2. Take-profit, 3. Indicator-based exits, 4. Time-based exit.
+- [x] **Stop-loss check:** **GIVEN** an open position, **WHEN** the day's `low` price drops below `entry_price * (1 - stop_loss_percentage)`, **THEN** the position is marked for closure.
+- [x] **Indicator-based check:** **GIVEN** an open position, **WHEN** any of the `sell_conditions` rules (like `sma_cross_under`) returns `True` for the current day, **THEN** the position is marked for closure.
+- [x] The `exit_reason` string MUST be specific (e.g., "Stop-loss at -5.0%", "Rule: sma_cross_under", "Time limit: 20 days").
+- [x] The "POSITIONS TO SELL" table in the daily report MUST display this new `exit_reason`.
 
 ### AC-5: Persistence Layer
-- [ ] The `positions` table schema in `persistence.py` MUST be updated to include a new `exit_reason TEXT` column.
-- [ ] The `close_positions_batch` function MUST be updated to accept and persist the `exit_reason` string into the new column.
+- [x] The `positions` table schema in `persistence.py` MUST be updated to include a new `exit_reason TEXT` column.
+- [x] The `close_positions_batch` function MUST be updated to accept and persist the `exit_reason` string into the new column.
 
 ### AC-6: Comprehensive Testing
-- [ ] Unit tests for `sma_cross_under` MUST verify the bearish crossover logic.
-- [ ] Unit tests for `stop_loss_pct` and `take_profit_pct` MUST verify parameter validation.
-- [ ] An integration test in `test_backtester.py` MUST verify that `sl_stop` is correctly passed to `vectorbt` when a `stop_loss_pct` rule is in `sell_conditions`.
-- [ ] An integration test in `test_reporter_advanced.py` MUST verify a complete lifecycle:
+- [x] Unit tests for `sma_cross_under` MUST verify the bearish crossover logic.
+- [x] Unit tests for `stop_loss_pct` and `take_profit_pct` MUST verify parameter validation.
+- [x] An integration test in `test_backtester.py` MUST verify that `sl_stop` is correctly passed to `vectorbt` when a `stop_loss_pct` rule is in `sell_conditions`.
+- [x] An integration test in `test_reporter_advanced.py` MUST verify a complete lifecycle:
     - **GIVEN** an open position in the database.
     - **WHEN** the CLI is run on a day where the price hits the stop-loss level.
     - **THEN** the position is marked as `CLOSED` in the database, the `exit_reason` is correctly persisted as "Stop-loss at -X.X%", and the daily report reflects this.
