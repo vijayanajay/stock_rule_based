@@ -28,7 +28,7 @@ def test_cli_import() -> None:
 
 runner = CliRunner()
 
-def test_main_command_help() -> None: # Renamed from test_run_command_help
+def test_main_command_help() -> None:
     """Test the main app --help message."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0, result.stdout

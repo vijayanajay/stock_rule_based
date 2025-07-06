@@ -305,9 +305,8 @@ def run(
             log_path = Path("run_log.txt")
             log_path.write_text(console.export_text(clear=False), encoding="utf-8")
             print(f"\nLog file saved to {log_path}", file=sys.stderr)
-        except Exception as log_e:
-            print("Critical error: Could not save log file", file=sys.stderr)
-            logger.error(f"Log save error: {log_e}", exc_info=True)
+        except OSError as log_e:
+            logger.error(f"Critical error: Could not save log file to {log_path}. Reason: {log_e}", exc_info=True)
 
 
 @app.command(name="analyze-rules")

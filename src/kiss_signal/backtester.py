@@ -198,16 +198,10 @@ class Backtester:
         Raises:
             ValueError: If rule definition is invalid or rule not found
         """
-        # Handle both RuleDef objects and dictionaries for backward compatibility
-        if hasattr(rule_def, 'type'):
-            # RuleDef object
-            rule_type = rule_def.type
-            rule_params = rule_def.params
-        else:
-            # Dictionary format (legacy)
-            rule_type = rule_def.get('type')
-            rule_params = rule_def.get('params', {})
-        
+        # Enforce Pydantic model contract
+        rule_type = rule_def.type
+        rule_params = rule_def.params
+
         if not rule_type:
             raise ValueError(f"Rule definition missing 'type' field: {rule_def}")
 
@@ -216,7 +210,7 @@ class Backtester:
             raise ValueError(f"Rule function '{rule_type}' not found in rules module")
 
         if not rule_params:
-            raise ValueError(f"Missing parameters for rule '{rule_type}'")
+            raise ValueError(f"Missing parameters for rule '{rule_type}'") # This is the new, better message
 
         try:
             # Call the actual rule function from the rules module

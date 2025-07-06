@@ -225,7 +225,7 @@ def test_run_command_log_save_failure(mock_data, mock_backtester, mock_run_backt
             result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_dir / "rules.yaml"), "run"])
         
         assert result.exit_code == 0, result.stdout
-        assert "Critical error: Could not save log file" in result.stderr
+        assert "Critical error: Could not save log file" in result.stdout
 
 
 @patch("kiss_signal.cli.reporter.generate_daily_report", return_value=None)

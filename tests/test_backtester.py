@@ -47,57 +47,39 @@ class TestBacktester:
         edge_score = backtester.calc_edge_score(0.0, 0.0, weights)
         assert edge_score == 0.0
 
-    def test_generate_signals_empty_rule_dict(self, sample_price_data):
-        """Test signal generation with an empty rule dict."""
+    def test_generate_signals_empty_type_field(self, sample_price_data):
+        """Test signal generation with a rule having an empty 'type' field."""
+        from kiss_signal.config import RuleDef
         backtester = Backtester()
-        rule_dict = {} # Empty dictionary
+        rule_def = RuleDef(name="test_empty_type", type="", params={})
         with pytest.raises(ValueError, match="Rule definition missing 'type' field"):
-            backtester._generate_signals(rule_dict, sample_price_data)
-
-    def test_generate_signals_legacy_dict_format(self, sample_price_data):
-        """Test _generate_signals with legacy dictionary rule definition."""
-        backtester = Backtester()
-        rule_def_dict = {
-            'type': 'sma_crossover',
-            'params': {'fast_period': 5, 'slow_period': 10}
-        }
-        entry_signals = backtester._generate_signals(rule_def_dict, sample_price_data)
-        assert isinstance(entry_signals, pd.Series)
-        assert not entry_signals.empty
-        assert entry_signals.dtype == bool
-
+            backtester._generate_signals(rule_def, sample_price_data)
 
     def test_generate_signals_sma_crossover(self, sample_price_data):
         """Test signal generation with SMA crossover rule."""
+        from kiss_signal.config import RuleDef
         backtester = Backtester()
-        
-        rule_combo = {
-            'type': 'sma_crossover',
-            'params': {'fast_period': 5, 'slow_period': 10}
-        }
-        
-        entry_signals = backtester._generate_signals(rule_combo, sample_price_data)
+        rule_def = RuleDef(name="test_sma", type="sma_crossover", params={'fast_period': 5, 'slow_period': 10})
+        entry_signals = backtester._generate_signals(rule_def, sample_price_data)
         assert isinstance(entry_signals, pd.Series)
         assert len(entry_signals) == len(sample_price_data)
         assert entry_signals.dtype == bool
 
     def test_generate_signals_invalid_rule(self, sample_price_data):
         """Test signal generation with invalid rule name."""
+        from kiss_signal.config import RuleDef
         backtester = Backtester()
-        
-        rule_combo = {'type': 'nonexistent_rule', 'params': {}}
-        
+        rule_def = RuleDef(name="test_invalid", type='nonexistent_rule', params={})
         with pytest.raises(ValueError, match="Rule function 'nonexistent_rule' not found"):
-            backtester._generate_signals(rule_combo, sample_price_data)
+            backtester._generate_signals(rule_def, sample_price_data)
 
     def test_generate_signals_missing_parameters(self, sample_price_data):
         """Test signal generation with missing rule parameters."""
+        from kiss_signal.config import RuleDef
         backtester = Backtester()
-        
-        rule_combo = {'type': 'sma_crossover', 'params': {}}
-        
+        rule_def = RuleDef(name="test_missing_params", type='sma_crossover', params={})
         with pytest.raises(ValueError, match="Missing parameters for rule 'sma_crossover'"):
-            backtester._generate_signals(rule_combo, sample_price_data)
+            backtester._generate_signals(rule_def, sample_price_data)
 
     def test_find_optimal_strategies_no_trades(self, sample_price_data, sample_rules_config):
         """Test find_optimal_strategies when a rule generates no trades."""

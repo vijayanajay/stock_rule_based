@@ -292,16 +292,9 @@ def generate_daily_report(
                 pos.update({'current_price': current_price, 'return_pct': return_pct, 'nifty_return_pct': nifty_return_pct, 'days_held': days_held})
 
                 # Check for dynamic exit conditions
-                exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, rules_config.get('sell_conditions', []), days_held, config.hold_period)
-                
+                exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, rules_config.get('sell_conditions', []), days_held, config.hold_period) # type: ignore
                 if exit_reason:
-                    pos.update({
-                        'exit_date': run_date.isoformat(), 
-                        'exit_price': current_price, 
-                        'final_return_pct': return_pct, 
-                        'final_nifty_return_pct': nifty_return_pct,
-                        'exit_reason': exit_reason
-                    })
+                    pos.update({'exit_date': run_date.isoformat(), 'exit_price': current_price, 'final_return_pct': return_pct, 'final_nifty_return_pct': nifty_return_pct, 'exit_reason': exit_reason})
                     positions_to_close.append(pos)
                 else:
                     positions_to_hold.append(pos)
@@ -418,7 +411,7 @@ def format_rule_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
     return title + description + header + separator + "\n".join(rows)
 
 def _check_exit_conditions(
-    position: Dict[str, Any], 
+    position: Dict[str, Any],
     price_data: pd.DataFrame,
     current_low: float,
     current_high: float,
@@ -426,49 +419,31 @@ def _check_exit_conditions(
     days_held: int,
     hold_period: int
 ) -> Optional[str]:
-    """
-    Check exit conditions for an open position in priority order.
-    
-    Returns the exit reason string if any condition is met, None otherwise.
-    Priority: 1. Stop-loss, 2. Take-profit, 3. Indicator-based, 4. Time-based
-    """
+    """Check exit conditions for an open position in priority order."""
     entry_price = position['entry_price']
-    
-    # Process sell_conditions in order
+
     for condition in sell_conditions:
         rule_type = condition.get('type')
         params = condition.get('params', {})
-        
-        # 1. Check stop-loss percentage
+
         if rule_type == 'stop_loss_pct':
             percentage = params.get('percentage', 0)
-            stop_price = entry_price * (1 - percentage)
-            if current_low <= stop_price:
+            if current_low <= entry_price * (1 - percentage):
                 return f"Stop-loss at -{percentage:.1%}"
-        
-        # 2. Check take-profit percentage  
         elif rule_type == 'take_profit_pct':
             percentage = params.get('percentage', 0)
-            target_price = entry_price * (1 + percentage)
-            if current_high >= target_price:
+            if current_high >= entry_price * (1 + percentage):
                 return f"Take-profit at +{percentage:.1%}"
-        
-        # 3. Check indicator-based exits
         else:
             try:
                 rule_func = getattr(rules, rule_type, None)
-                if rule_func:
-                    exit_signals = rule_func(price_data, **params)
-                    # Check if exit signal triggered on the last day
-                    if not exit_signals.empty and exit_signals.iloc[-1]:
-                        return f"Rule: {condition.get('name', rule_type)}"
+                if rule_func and rule_func(price_data, **params).iloc[-1]:
+                    return f"Rule: {condition.get('name', rule_type)}"
             except Exception as e:
                 logger.warning(f"Error checking exit rule {rule_type}: {e}")
-    
-    # 4. Check time-based exit as fallback
+
     if days_held >= hold_period:
         return f"Exit: End of {hold_period}-day holding period."
-    
     return None
 
 def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:

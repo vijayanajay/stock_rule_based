@@ -1,5 +1,16 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Test Harness Integrity: Brittle Assertions and Flawed I/O Capture (2025-07-23)
+- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic.
+    1.  **Brittle Assertion (`test_generate_signals_missing_parameters`):** A test was asserting on a generic error message string. When the application was improved to raise a more specific error, the test broke, despite the application's behavior being correct.
+    2.  **Flawed I/O Capture (`test_run_command_log_save_failure`):** A test for a logging side-effect asserted on `stderr`, but the application's `RichHandler` directs `logger.error` output to `stdout`. The test was "deaf" to the correct output and failed by asserting on an empty stream.
+- **Fix**:
+    1.  **Corrected Assertion:** The brittle test was updated to assert on the new, more specific error message, making it more robust.
+    2.  **Corrected I/O Check:** The logging test was fixed to check `result.stdout` instead of `result.stderr`, aligning the test with the application's actual, observable behavior.
+- **Lesson**: The test harness is a critical part of the application's structure.
+    -   Tests should be robust against minor implementation changes (like improving an error message). Avoid asserting on exact strings where possible, or update tests when application code is improved.
+    -   Tests must correctly model the application's I/O and logging behavior. When a custom logging handler like `RichHandler` is used, standard fixtures like `caplog` may not work as expected, and asserting on the final console output (`stdout`/`stderr`) is often a more reliable pattern.
+
 ## AI Coding Pitfalls (Most Common)
 
 ### NEVER Reference Non-Existent Methods/Attributes
