@@ -28,12 +28,13 @@ def test_cli_import() -> None:
 
 runner = CliRunner()
 
-def test_run_command_help() -> None:
+def test_main_command_help() -> None: # Renamed from test_run_command_help
     """Test the main app --help message."""
     result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.stdout
     assert "run" in result.stdout
     assert "analyze-rules" in result.stdout
+    assert "analyze-strategies" in result.stdout
 
 
 def test_display_results_empty():
@@ -56,7 +57,7 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
         cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
+        cache_dir.mkdir(exist_ok=True)
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         
@@ -94,8 +95,8 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
             min_trades_threshold=sample_config["min_trades_threshold"]
         )
 
-        # Verify that save_results was effectively skipped
-        mock_create_db.assert_not_called()
+        # Verify that create_database was called, but save was skipped
+        mock_create_db.assert_called_once()
         mock_save_batch.assert_not_called()
         patch.stopall() # Stop patches started in this test
 
@@ -111,17 +112,17 @@ def test_run_command_verbose(mock_data, mock_backtester, mock_get_summary, sampl
     }
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
-        data_dir.mkdir()
+        data_dir.mkdir(exist_ok=True)
         cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
+        cache_dir.mkdir(exist_ok=True)
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-        
+
         sample_config["universe_path"] = str(universe_path)
         sample_config["cache_dir"] = str(cache_dir)
         config_path = Path("config.yaml")
         config_path.write_text(yaml.dump(sample_config))
-        
+
         config_dir = Path("config")
         config_dir.mkdir(exist_ok=True)
         rules_path = config_dir / "rules.yaml"
@@ -139,7 +140,7 @@ def test_run_command_verbose(mock_data, mock_backtester, mock_get_summary, sampl
             app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 0, result.stdout
-        assert "Performance Summary:" in result.stdout
+        assert "Performance Summary" in result.stdout
         assert "Total Duration: 12.34s" in result.stdout
         assert "Slowest Function: test_func (5.67s)" in result.stdout
         mock_get_summary.assert_called_once()
@@ -151,9 +152,9 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
     """Test run command with freeze date and isolated filesystem."""
     with runner.isolated_filesystem() as fs:
         data_dir = Path(fs) / "data"
-        data_dir.mkdir()
+        data_dir.mkdir(exist_ok=True)
         cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
+        cache_dir.mkdir(exist_ok=True)
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         
@@ -171,8 +172,8 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
             app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "2025-01-01"]
         )
         assert result.exit_code == 0, result.stdout
-        assert "skipping data refresh (freeze mode)" in result.stdout.lower()
-        assert "Freeze mode active: 2025-01-01" in result.stdout # Check for verbose log
+        assert "skipping data refresh" in result.stdout.lower()
+        assert "Freeze mode active: 2025-01-01" in result.stdout
         mock_data.refresh_market_data.assert_not_called()
 
 
@@ -184,7 +185,7 @@ def test_run_command_success(mock_data, mock_backtester, sample_config: Dict[str
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
         cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
+        cache_dir.mkdir(exist_ok=True)
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         
@@ -265,7 +266,7 @@ def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
         cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
+        cache_dir.mkdir(exist_ok=True)
         universe_path = data_dir / "nifty_large_mid.csv"
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
 
@@ -293,7 +294,7 @@ def test_run_command_insufficient_data_handling(mock_data, mock_bt, sample_confi
         data_dir = Path(fs) / "data"
         data_dir.mkdir()
         cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
+        cache_dir.mkdir(exist_ok=True)
         universe_path = data_dir / "nifty_large_mid.csv"
         # Universe with two symbols
         universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\nINFY,Infosys,IT\n")

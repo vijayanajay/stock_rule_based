@@ -487,3 +487,115 @@ class TestRulePerformanceAnalysis:
         result = reporter.analyze_rule_performance(populated_db) # populated_db path is still used by mock_connect
         assert result == []
         mock_connect.assert_called_once_with(str(populated_db))
+
+
+class TestStrategyPerformanceAnalysis:
+    """Tests for strategy performance analysis functionality."""
+
+    @pytest.fixture
+    def strategy_test_db(self, tmp_path: Path) -> Path:
+        """Creates a fresh database specifically for strategy performance tests."""
+        db_path = tmp_path / "strategy_test.db"
+        persistence.create_database(db_path)
+        return db_path
+
+    def test_analyze_strategy_performance_basic(self, strategy_test_db):
+        """Test basic strategy performance analysis functionality."""
+        # Add some strategy data with different rule stacks
+        with sqlite3.connect(str(strategy_test_db)) as conn:
+            strategies = [
+                ("RELIANCE", "run1", '[{"name": "bullish_engulfing", "type": "signal"}, {"name": "rsi_oversold", "type": "filter"}]', 0.75, 0.65, 1.2, 15, 0.08),
+                ("TCS", "run1", '[{"name": "bullish_engulfing", "type": "signal"}, {"name": "rsi_oversold", "type": "filter"}]', 0.80, 0.70, 1.4, 20, 0.12),
+                ("INFY", "run1", '[{"name": "sma_crossover", "type": "signal"}]', 0.60, 0.55, 0.9, 10, 0.05),
+                ("HDFC", "run2", '[{"name": "bullish_engulfing", "type": "signal"}, {"name": "rsi_oversold", "type": "filter"}]', 0.70, 0.60, 1.1, 12, 0.06),
+            ]
+            for strategy in strategies:
+                conn.execute(
+                    "INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    strategy
+                )
+            conn.commit()
+
+        result = reporter.analyze_strategy_performance(strategy_test_db)
+        
+        assert len(result) == 2  # Two unique strategies
+        
+        # Check the top strategy (bullish_engulfing + rsi_oversold should have better average)
+        top_strategy = result[0]
+        assert top_strategy['strategy_name'] == "bullish_engulfing + rsi_oversold"
+        assert top_strategy['frequency'] == 3
+        assert abs(top_strategy['avg_edge_score'] - 0.75) < 0.01  # (0.75 + 0.80 + 0.70) / 3
+        assert abs(top_strategy['avg_win_pct'] - 0.65) < 0.01  # (0.65 + 0.70 + 0.60) / 3
+        assert "RELIANCE" in top_strategy['top_symbols']
+
+    def test_analyze_strategy_performance_empty_db(self, tmp_path):
+        """Test strategy analysis with empty database."""
+        db_path = tmp_path / "empty.db"
+        persistence.create_database(db_path)
+        
+        result = reporter.analyze_strategy_performance(db_path)
+        assert result == []
+
+    def test_analyze_strategy_performance_malformed_json(self, strategy_test_db):
+        """Test strategy analysis handles malformed JSON in rule_stack."""
+        with sqlite3.connect(str(strategy_test_db)) as conn:
+            # Add strategy with malformed JSON
+            conn.execute(
+                "INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                ("TEST", "run1", "invalid_json", 0.5, 0.6, 0.8, 5, 0.03)
+            )
+            # Add valid strategy
+            conn.execute(
+                "INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                ("VALID", "run1", '[{"name": "test_rule", "type": "signal"}]', 0.7, 0.6, 1.0, 10, 0.05)
+            )
+            conn.commit()
+
+        result = reporter.analyze_strategy_performance(strategy_test_db)
+        
+        # Should have only the valid strategy
+        assert len(result) == 1
+        assert result[0]['strategy_name'] == "test_rule"
+
+    def test_format_strategy_analysis_as_md(self):
+        """Test strategy analysis markdown formatting."""
+        analysis_data = [
+            {
+                'strategy_name': 'bullish_engulfing + rsi_oversold',
+                'frequency': 15,
+                'avg_edge_score': 0.72,
+                'avg_win_pct': 0.685,
+                'avg_sharpe': 1.35,
+                'avg_trades': 12.3,
+                'avg_return': 0.095,
+                'top_symbols': 'RELIANCE, INFY, HDFCBANK'
+            },
+            {
+                'strategy_name': 'sma_crossover',
+                'frequency': 8,
+                'avg_edge_score': 0.55,
+                'avg_win_pct': 0.601,
+                'avg_sharpe': 0.95,
+                'avg_trades': 18.7,
+                'avg_return': 0.042,
+                'top_symbols': 'TCS, WIPRO'
+            }
+        ]
+        
+        md_content = reporter.format_strategy_analysis_as_md(analysis_data)
+        
+        assert "# Strategy Performance Report" in md_content
+        assert "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Return | Avg Trades | Top Symbols |" in md_content
+        assert "|:---|---:|---:|---:|---:|---:|---:|:---|" in md_content
+        assert "| `bullish_engulfing + rsi_oversold` | 15 | 0.72 | 68.5% | 1.35 | 9.5% | 12.3 | RELIANCE, INFY, HDFCBANK |" in md_content
+        assert "| `sma_crossover` | 8 | 0.55 | 60.1% | 0.95 | 4.2% | 18.7 | TCS, WIPRO |" in md_content
+
+    def test_format_strategy_analysis_as_md_empty(self):
+        """Test strategy analysis markdown formatting with empty data."""
+        md_content = reporter.format_strategy_analysis_as_md([])
+        
+        assert "# Strategy Performance Report" in md_content
+        assert "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Return | Avg Trades | Top Symbols |" in md_content
+        # Should not have any data rows, just header
+        lines = md_content.split('\n')
+        assert len([line for line in lines if line.startswith('|') and 'Strategy' not in line and ':---' not in line]) == 0

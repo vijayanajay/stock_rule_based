@@ -104,7 +104,8 @@ class TestSaveStrategiesBatch:
         create_database(temp_db_path)
         
         run_timestamp = "2025-06-24T10:00:00"
-        result = save_strategies_batch(temp_db_path, sample_strategies, run_timestamp)
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            result = save_strategies_batch(conn, sample_strategies, run_timestamp)
         
         assert result is True
         
@@ -131,7 +132,8 @@ class TestSaveStrategiesBatch:
         """Test handling of empty strategy list."""
         create_database(temp_db_path)
         
-        result = save_strategies_batch(temp_db_path, [], "2025-06-24T10:00:00")
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            result = save_strategies_batch(conn, [], "2025-06-24T10:00:00")
         
         assert result is True
         
@@ -155,7 +157,8 @@ class TestSaveStrategiesBatch:
             }
         ]
         
-        result = save_strategies_batch(temp_db_path, invalid_strategies, "2025-06-24T10:00:00")
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            result = save_strategies_batch(conn, invalid_strategies, "2025-06-24T10:00:00")
         
         assert result is False
         
@@ -183,45 +186,34 @@ class TestSaveStrategiesBatch:
             }
         ]
         
-        result = save_strategies_batch(temp_db_path, invalid_strategies, "2025-06-24T10:00:00")
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            result = save_strategies_batch(conn, invalid_strategies, "2025-06-24T10:00:00")
         
         assert result is False
     
-    def test_save_strategies_batch_database_not_exists(self, sample_strategies: List[Dict[str, Any]]) -> None:
-        """Test handling of non-existent database file."""
-        # Use a path that is guaranteed not to exist and won't be created by fixtures
-        non_existent_path = Path(tempfile.gettempdir()) / "definitely_not_existent_kiss_signal.db"
-        if non_existent_path.exists():
-            non_existent_path.unlink() # Ensure it's gone
-
-        result = save_strategies_batch(non_existent_path, sample_strategies, "2025-06-24T10:00:00")
-        
+    def test_save_strategies_batch_with_closed_connection(self, sample_strategies: List[Dict[str, Any]]) -> None:
+        """Test that save_strategies_batch fails with a closed connection."""
+        conn = sqlite3.connect(":memory:")
+        conn.close()
+        result = save_strategies_batch(conn, sample_strategies, "2025-06-24T10:00:00")
         assert result is False
 
     def test_save_strategies_batch_insert_error(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]):
-        """Test transaction rollback on SQLite error during INSERT in save_strategies_batch."""
+        """Test transaction rollback on unique constraint violation."""
         create_database(temp_db_path)
-
-        with patch('sqlite3.connect') as mock_connect:
-            mock_conn_instance = mock_connect.return_value
-            mock_cursor_instance = mock_conn_instance.cursor.return_value
-
-            # Make the INSERT execute call fail for the first strategy
-            # Order of execute calls in save_strategies_batch:
-            # 1. BEGIN TRANSACTION
-            # 2. INSERT (first strategy) - this will fail
-            # 3. COMMIT (will not be reached)
-            # In except block:
-            # 4. ROLLBACK
-            mock_cursor_instance.execute.side_effect = [
-                None,  # For BEGIN TRANSACTION
-                sqlite3.Error("Simulated insert error"), # For the first INSERT
-                None,  # For ROLLBACK (it might be called by the finally block's conn.close() if not explicitly rolled back)
-            ]
-
-            result = save_strategies_batch(temp_db_path, sample_strategies, "2025-07-15T10:00:00")
+        
+        # Add a duplicate strategy to the list to cause a UNIQUE constraint failure
+        strategies_with_duplicate = sample_strategies + [sample_strategies[0]]
+        
+        run_timestamp = "2025-07-15T10:00:00"
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            # The batch save should fail because of the unique constraint violation on the last item.
+            # The transaction should be rolled back, leaving the table empty.
+            result = save_strategies_batch(conn, strategies_with_duplicate, run_timestamp)
 
         assert result is False
+        
         # Verify no data was saved due to rollback
         with sqlite3.connect(str(temp_db_path)) as conn:
             cursor = conn.cursor()
@@ -411,13 +403,14 @@ class TestAddPositions:
         """Test saving multiple batches to same database."""
         create_database(temp_db_path)
         
-        # Save first batch
-        result1 = save_strategies_batch(temp_db_path, sample_strategies, "2025-06-24T10:00:00")
-        assert result1 is True
-        
-        # Save second batch with different timestamp
-        result2 = save_strategies_batch(temp_db_path, sample_strategies, "2025-06-24T11:00:00")
-        assert result2 is True
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            # Save first batch
+            result1 = save_strategies_batch(conn, sample_strategies, "2025-06-24T10:00:00")
+            assert result1 is True
+            
+            # Save second batch with different timestamp
+            result2 = save_strategies_batch(conn, sample_strategies, "2025-06-24T11:00:00")
+            assert result2 is True
         
         # Verify both batches are saved
         with sqlite3.connect(str(temp_db_path)) as conn:
@@ -443,7 +436,8 @@ class TestIntegration:
         create_database(temp_db_path)
         
         # Save strategies
-        result = save_strategies_batch(temp_db_path, sample_strategies, "2025-06-24T10:00:00")
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            result = save_strategies_batch(conn, sample_strategies, "2025-06-24T10:00:00")
         
         assert result is True
         assert temp_db_path.exists()

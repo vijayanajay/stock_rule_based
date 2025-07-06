@@ -13,9 +13,14 @@ __all__ = [
     "add_new_positions_from_signals",
     "get_open_positions",
     "close_positions_batch",
+    "get_connection",
+    "Connection",
 ]
 
 logger = logging.getLogger(__name__)
+
+# Type alias for clarity
+Connection = sqlite3.Connection
 
 # Database schema constants
 CREATE_STRATEGIES_TABLE = """
@@ -60,6 +65,19 @@ ON strategies(symbol, run_timestamp);
 CREATE_INDEX_POSITIONS = """
 CREATE INDEX IF NOT EXISTS idx_positions_status_symbol ON positions(status, symbol);
 """
+
+
+# impure
+def get_connection(db_path: Path) -> Connection:
+    """Creates and returns a new database connection with WAL mode enabled."""
+    try:
+        conn = sqlite3.connect(str(db_path), timeout=10)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        return conn
+    except sqlite3.Error as e:
+        logger.error(f"Failed to connect to database at {db_path}: {e}")
+        raise
+
 
 # impure
 def create_database(db_path: Path) -> None:
@@ -190,26 +208,22 @@ def close_positions_batch(db_path: Path, closed_positions: List[Dict[str, Any]])
             cursor.execute("ROLLBACK")
 
 # impure
-def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_timestamp: str) -> bool:
-    """Save a batch of strategy results in a single transaction.
+def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, Any]], run_timestamp: str) -> bool:
+    """Save a batch of strategy results using an existing database connection.
     
     Args:
-        db_path: Path to the SQLite database file
-        strategies: List of strategy dictionaries from backtester
-        run_timestamp: ISO 8601 timestamp string for this run
+        db_connection: An active SQLite database connection.
+        strategies: List of strategy dictionaries from backtester.
+        run_timestamp: ISO 8601 timestamp string for this run.
         
     Returns:
-        True if successful, False if failed
-        
-    Note:
-        Uses atomic transaction - all strategies saved or none.
-        rule_stack list is serialized to JSON string for storage.
+        True if successful, False if failed.
     """
     if not strategies:
         logger.info("No strategies to save - skipping batch save")
         return True
     
-    logger.info(f"Saving {len(strategies)} strategies to {db_path}")
+    logger.info(f"Saving {len(strategies)} strategies to the database.")
     
     insert_sql = """
     INSERT INTO strategies (
@@ -218,24 +232,16 @@ def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_t
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """
     
-    conn = None
     try:
-        conn = sqlite3.connect(str(db_path))
-        cursor = conn.cursor()
-        
-        # Start transaction
-        cursor.execute("BEGIN TRANSACTION")
+        cursor = db_connection.cursor()
+        cursor.execute("BEGIN")
         logger.debug("Started transaction for batch save")
         
         for strategy in strategies:
-            # Serialize rule_stack list to JSON string
-            # Convert RuleDef Pydantic models to dictionaries if needed
             rule_stack = strategy["rule_stack"]
             if rule_stack and hasattr(rule_stack[0], 'model_dump'):
-                # Pydantic models - convert to dict
                 rule_stack_json = json.dumps([rule.model_dump() for rule in rule_stack])
             else:
-                # Already dictionaries
                 rule_stack_json = json.dumps(rule_stack)
             
             cursor.execute(insert_sql, (
@@ -249,29 +255,15 @@ def save_strategies_batch(db_path: Path, strategies: List[Dict[str, Any]], run_t
                 strategy["avg_return"]
             ))
         
-        # Commit transaction
-        cursor.execute("COMMIT")
+        db_connection.commit()
         logger.info(f"Successfully saved {len(strategies)} strategies")
         return True
         
-    except sqlite3.Error as e:
-        if conn:
-            try:
-                conn.rollback()
-                logger.debug("Rolled back transaction due to error")
-            except sqlite3.Error:
-                pass  # Rollback can fail if connection is broken
+    except (sqlite3.Error, KeyError, TypeError, json.JSONDecodeError) as e:
+        try:
+            db_connection.rollback()
+            logger.debug("Rolled back transaction due to error")
+        except sqlite3.Error:
+            pass
         logger.error(f"Batch save failed: {e}")
         return False
-    except (KeyError, TypeError, json.JSONDecodeError) as e:
-        if conn:
-            try:
-                conn.rollback()
-                logger.debug("Rolled back transaction due to data error")
-            except sqlite3.Error:
-                pass
-        logger.error(f"Invalid strategy data: {e}")
-        return False
-    finally:
-        if conn:
-            conn.close()

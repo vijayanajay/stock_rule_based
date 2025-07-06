@@ -223,16 +223,16 @@
 - **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic itself.
     1.  **Flawed CLI Invocation**: A test in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order (global options after the command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
     2.  **Non-Resilient Test Setup**: A help-text test in `test_cli_basic.py` failed because it was not self-contained and relied on filesystem state, causing the non-resilient part of the CLI callback to fail on config loading.
-    3.  **Resource Leaks in Fixtures**: The `test_persistence.py` suite had 17 teardown errors due to a `PermissionError` on Windows. The test fixture for creating temporary database files was not robust, leading to file handles being held open and preventing cleanup.
+    3.  **Resource Leaks in Fixtures**: The `test_integration_cli.py` fixture used manual `tempfile` and `shutil` calls, which led to a `PermissionError` on Windows during teardown because a database file handle was not released in time.
 - **Fix**:
     1.  Corrected the CLI test invocation in `test_cli_advanced.py` to place global options before the command.
     2.  Simplified the help test in `test_cli_basic.py` to test the main application's help text, which is more robust and does not depend on the filesystem.
-    3.  Replaced the brittle `tempfile`-based fixture in `test_persistence.py` with pytest's standard `tmp_path` fixture, which guarantees proper resource management and cleanup.
+    3.  Replaced the brittle `tempfile`-based fixture in `test_integration_cli.py` with pytest's standard `tmp_path` fixture, which guarantees proper resource management and cleanup.
 - **Lesson**: A project's test harness is part of its core structure and must be as robust as the application code.
     -   CLI tests must precisely mirror valid user invocation patterns.
     -   Tests should be self-contained and not rely on implicit filesystem state.
     -   Use framework-provided fixtures (like `tmp_path`) for resource management over manual implementations to avoid platform-specific issues like file locking.
-
+ 
 ## Test Harness Integrity: Configuration and Fixture Desynchronization (2025-07-22)
 - **Issue**: A large number of test failures were caused by a structural desynchronization between the application's `Config` Pydantic model and the test fixtures that create `config.yaml` files or instantiate `Config` objects. The `Config` model was updated with new required fields (`reports_output_dir`, `edge_score_threshold`), but several test cases were not updated, leading to widespread `ValidationError` during test setup. Additionally, some CLI tests used incorrect argument ordering for Typer, and help-text tests were not resilient.
 - **Fix**:
@@ -240,3 +240,28 @@
     2.  **Correct CLI Invocation**: A CLI test was corrected to place global options (like `--verbose`) before the command, aligning with Typer's expected syntax and preventing a `UsageError`.
     3.  **Resilient Help Test**: The CLI help test was modified to test the main application's help text (`--help`) instead of a subcommand's, making it more robust and less dependent on a fully configured test environment.
 - **Lesson**: The test harness is a critical part of the application's structure. Any change to a core data contract like a configuration model must be propagated to all test fixtures immediately. Fixtures must be self-contained and reflect valid user invocation patterns to be reliable. An incomplete fixture is a bug in the test suite.
+
+## Test Harness Integrity: Flawed Invocations and Mocking (2025-07-23)
+- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic. This created significant noise and obscured the true state of the application.
+    1.  **Flawed CLI Invocation**: Tests in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order (e.g., global option `--verbose` after the command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
+    2.  **Incorrect Mocking Target**: An integration test in `test_integration_cli.py` was patching a function at its source (`kiss_signal.data.get_price_data`) instead of where it was imported and used (`kiss_signal.cli.data.get_price_data`). This caused the mock to have no effect, leading to assertion failures.
+    3.  **Incomplete Test Setup**: Other tests failed due to simple bugs like `NameError` from a missing patch decorator or `FileExistsError` from an incorrect `mkdir` call.
+- **Fix**:
+    1.  Corrected all `runner.invoke` calls to place global options before the command, aligning tests with actual user behavior.
+    2.  Updated the `@patch` decorator to target the correct namespace where the function is used.
+    3.  Fixed the basic bugs in test setup (added missing patches, corrected `mkdir` calls).
+- **Lesson**: The test suite is a first-class consumer of the application's API and must be maintained with the same discipline as production code.
+    -   CLI tests must precisely mirror valid user invocation patterns.
+    -   Mocks must target the object in the namespace where it is looked up, not necessarily where it is defined.
+    -   A failing test suite due to harness bugs is a critical issue that erodes trust and must be fixed with priority.
+
+## Test Harness Integrity: Flawed Mocking and Logging Capture (2025-07-23)
+- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic.
+    1.  **Flawed Mocking (`test_run_command_log_save_failure`):** A test designed to check failure handling for log saving was asserting a failure condition without actually inducing one. It expected an error message but didn't mock the underlying I/O call (`Path.write_text`) to raise an exception.
+    2.  **Logging Capture Conflict (`test_error_handling_integration`):** An integration test using pytest's `caplog` fixture failed to capture log messages because the application's `setup_logging` function uses `logging.basicConfig(force=True, ...)` with a `RichHandler`. This forcefully replaces the handlers `caplog` relies on, making the test "deaf" to log output.
+- **Fix**:
+    1.  **Corrected Mocking:** The flawed test was fixed by adding a patch (`@patch("pathlib.Path.write_text", side_effect=OSError(...))`) to correctly simulate the I/O failure, allowing the application's error handling path to be executed and tested.
+    2.  **Robust Output Assertion:** The logging test was fixed by removing the dependency on `caplog` and instead asserting the presence of the error message in the `runner.invoke` result's `stdout`. Since `RichHandler` prints to the console, this directly tests the observable output, making the test more robust and independent of the logging implementation details.
+- **Lesson**: The test harness is a critical part of the application's structure.
+    -   Tests for failure conditions must actively and correctly mock the failure at the right layer.
+    -   When using custom logging handlers (like `RichHandler`), be aware that they can conflict with standard testing fixtures like `caplog`. In such cases, testing the final console output is often a more reliable approach than trying to intercept log records.

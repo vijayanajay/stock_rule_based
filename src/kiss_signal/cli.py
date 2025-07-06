@@ -155,21 +155,21 @@ def _display_results(results: List[Dict[str, Any]]) -> None:
     )
 
 
-def _save_results(app_config: Config, results: List[Dict[str, Any]], run_timestamp: str) -> None:
-    """Save analysis results to the database."""
+def _save_results(
+    db_connection: persistence.Connection,
+    results: List[Dict[str, Any]],
+    run_timestamp: str,
+) -> None:
+    """Save analysis results to the database using an existing connection."""
     if not results:
         return
 
     console.print("[5/5] Saving results...", style="blue")
     try:
-        db_path = Path(app_config.database_path)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-
-        persistence.create_database(db_path)
-        success = persistence.save_strategies_batch(db_path, results, run_timestamp)
+        success = persistence.save_strategies_batch(db_connection, results, run_timestamp)
 
         if success:
-            logger.info(f"Saved {len(results)} strategies to database at {db_path}")
+            logger.info(f"Saved {len(results)} strategies to the database.")
         else:
             console.print("⚠️  Failed to save results to database.", style="yellow")
             logger.warning("Persistence failed but continuing execution.")
@@ -177,7 +177,6 @@ def _save_results(app_config: Config, results: List[Dict[str, Any]], run_timesta
     except Exception as e:
         console.print(f"⚠️  Database error: {e}", style="yellow")
         logger.error(f"Persistence error: {e}", exc_info=True)
-        # Continue execution - don't crash CLI on persistence failure
 
 
 def _generate_and_save_report(
@@ -240,29 +239,30 @@ def run(
     app_config = ctx.obj["config"]
     rules_config = ctx.obj["rules"]
     verbose = ctx.obj["verbose"]
+    db_connection = None
 
     freeze_date_obj: Optional[date] = None
     if freeze_data:
         try:
             freeze_date_obj = date.fromisoformat(freeze_data)
-            # Override config's freeze_date with CLI flag if provided
             app_config.freeze_date = freeze_date_obj
         except ValueError:
             console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
             raise typer.Exit(1)
 
     try:
+        db_path = Path(app_config.database_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        persistence.create_database(db_path)
+        db_connection = persistence.get_connection(db_path)
+
         with performance_monitor.monitor_execution("full_backtest"):
             console.print("[1/4] Configuration loaded.")
-
-            # Step 2: Refresh market data if needed
             if app_config.freeze_date:
-                if verbose:
-                    logger.info(f"Freeze mode active: {app_config.freeze_date}")
+                if verbose: logger.info(f"Freeze mode active: {app_config.freeze_date}")
                 console.print("[2/4] Skipping data refresh (freeze mode).")
             else:
-                if verbose:
-                    logger.info("Refreshing market data")
+                if verbose: logger.info("Refreshing market data")
                 console.print("[2/4] Refreshing market data...")
                 data.refresh_market_data(
                     universe_path=app_config.universe_path,
@@ -272,19 +272,16 @@ def run(
                     freeze_date=app_config.freeze_date,
                 )
 
-            # Step 3: Analyze strategies for each ticker
             console.print("[3/4] Analyzing strategies for each ticker...")
             symbols = data.load_universe(app_config.universe_path)
             all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date)
 
-            # Step 4: Display results summary and save
             console.print("[4/4] Analysis complete. Results summary:")
             run_timestamp = datetime.now().isoformat()
             _display_results(all_results)
-            _save_results(app_config, all_results, run_timestamp)
+            _save_results(db_connection, all_results, run_timestamp)
             _generate_and_save_report(app_config, rules_config, run_timestamp)
 
-        # Show performance summary if verbose
         if verbose:
             perf_summary = performance_monitor.get_summary()
             if perf_summary:
@@ -292,26 +289,18 @@ def run(
                 console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
                 console.print(f"Slowest Function: {perf_summary['slowest_function']}")
 
-    except typer.Exit:
+    except (typer.Exit, FileNotFoundError, ValueError) as e:
+        console.print(f"[red]Error: {e}[/red]")
         raise
-    except FileNotFoundError as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
-    except ValueError as e:
-        # Catches date parsing errors and config validation errors
-        console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")
         if verbose:
-            try:
-                console.print_exception()
-            except Exception as pe_e: # pe_e for print_exception_error
-                # Log this internal error to stderr, as console might be problematic
-                print(f"Error during console.print_exception(): {pe_e}", file=sys.stderr)
+            console.print_exception()
         raise typer.Exit(1)
     finally:
-        # Always save the log, even if errors occurred
+        if db_connection:
+            db_connection.close()
+            logger.info("Database connection closed.")
         try:
             log_path = Path("run_log.txt")
             log_path.write_text(console.export_text(clear=False), encoding="utf-8")
@@ -352,8 +341,42 @@ def analyze_rules(
 
     except Exception as e:
         console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
-        verbose = ctx.obj.get("verbose", False)
-        if verbose:
+        if ctx.obj and ctx.obj.get("verbose", False):
+            console.print_exception()
+        raise typer.Exit(1)
+
+
+@app.command(name="analyze-strategies")
+def analyze_strategies(
+    ctx: typer.Context,
+    output_file: Path = typer.Option(
+        "strategy_performance_report.md",
+        "--output", "-o",
+        help="Path to save the strategy performance report.",
+    ),
+) -> None:
+    """Analyze and report on the historical performance of all strategy combinations."""
+    console.print("[bold blue]Analyzing historical strategy performance...[/bold blue]")
+    app_config = ctx.obj["config"]
+    db_path = Path(app_config.database_path)
+
+    if not db_path.exists():
+        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
+        raise typer.Exit(1)
+
+    try:
+        strategy_performance = reporter.analyze_strategy_performance(db_path)
+        if not strategy_performance:
+            console.print("[yellow]No historical strategies found to analyze.[/yellow]")
+            return
+
+        report_content = reporter.format_strategy_analysis_as_md(strategy_performance)
+        output_file.write_text(report_content, encoding="utf-8")
+        console.print(f"✅ Strategy performance report saved to: [cyan]{output_file}[/cyan]")
+
+    except Exception as e:
+        console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
+        if ctx.obj and ctx.obj.get("verbose", False):
             console.print_exception()
         raise typer.Exit(1)
 

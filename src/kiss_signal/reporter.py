@@ -18,7 +18,7 @@ from collections import Counter, defaultdict
 from . import data, rules, persistence
 from .config import Config
 
-__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals"]
+__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "format_strategy_analysis_as_md"]
 
 logger = logging.getLogger(__name__)
 
@@ -470,3 +470,76 @@ def _check_exit_conditions(
         return f"Exit: End of {hold_period}-day holding period."
     
     return None
+
+def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
+    """Analyzes the entire history of strategies to rank strategy combinations."""
+    # Use a defaultdict to easily aggregate data for each unique strategy.
+    # The key will be the string representation of the rule stack.
+    stats = defaultdict(lambda: {'metrics': [], 'symbols': []})
+
+    with sqlite3.connect(str(db_path)) as conn:
+        conn.row_factory = sqlite3.Row
+        # Select all the data we need from every strategy ever saved.
+        cursor = conn.execute("SELECT symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return FROM strategies")
+        strategies = cursor.fetchall()
+
+    for strategy in strategies:
+        try:
+            rules_in_stack = json.loads(strategy['rule_stack'])
+            # Ensure we have a list of rules
+            if isinstance(rules_in_stack, list):
+                # Create a consistent, readable key for the strategy combination.
+                # e.g., "baseline_rule + rsi_filter + volume_filter"
+                strategy_key = " + ".join(r.get('name', 'N/A') for r in rules_in_stack if isinstance(r, dict))
+                if not strategy_key:
+                    continue
+            else:
+                logger.warning(f"Invalid rule_stack format for {strategy['symbol']}: expected list, got {type(rules_in_stack)}")
+                continue
+        except (json.JSONDecodeError, TypeError):
+            logger.warning(f"Malformed rule_stack JSON for {strategy['symbol']}: {strategy['rule_stack']}")
+            continue
+
+        # Append the metrics and symbol for later aggregation.
+        stats[strategy_key]['metrics'].append(dict(strategy))
+        stats[strategy_key]['symbols'].append(strategy['symbol'])
+
+    # Now, process the aggregated data to calculate averages.
+    analysis = []
+    for key, strategy_data in stats.items():
+        freq = len(strategy_data['metrics'])
+        analysis.append({
+            'strategy_name': key,
+            'frequency': freq,
+            'avg_edge_score': sum(m['edge_score'] for m in strategy_data['metrics']) / freq,
+            'avg_win_pct': sum(m['win_pct'] for m in strategy_data['metrics']) / freq,
+            'avg_sharpe': sum(m['sharpe'] for m in strategy_data['metrics']) / freq,
+            'avg_trades': sum(m['total_trades'] for m in strategy_data['metrics']) / freq,
+            'avg_return': sum(m['avg_return'] for m in strategy_data['metrics']) / freq,
+            'top_symbols': ", ".join(s for s, _ in Counter(strategy_data['symbols']).most_common(3)),
+        })
+
+    # Sort by the primary performance metric.
+    return sorted(analysis, key=lambda x: x['avg_edge_score'], reverse=True)
+
+
+def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
+    """Formats the strategy performance analysis into a markdown table."""
+    header = "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Return | Avg Trades | Top Symbols |\n"
+    separator = "|:---|---:|---:|---:|---:|---:|---:|:---|\n"
+    
+    rows = []
+    for stats in analysis:
+        row = (
+            f"| `{stats['strategy_name']}` "
+            f"| {stats['frequency']} "
+            f"| {stats['avg_edge_score']:.2f} "
+            f"| {stats['avg_win_pct']:.1%} "
+            f"| {stats['avg_sharpe']:.2f} "
+            f"| {stats['avg_return']:.1%} "
+            f"| {stats['avg_trades']:.1f} "
+            f"| {stats['top_symbols']} |"
+        )
+        rows.append(row)
+    
+    return f"# Strategy Performance Report\n\n{header}{separator}" + "\n".join(rows)
