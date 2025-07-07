@@ -163,7 +163,7 @@ class Backtester:
                     'edge_score': edge_score,
                     'win_pct': win_pct,
                     'sharpe': sharpe,
-                    'total_trades': total_trades,
+                    'total_trades': int(total_trades),
                     'avg_return': avg_return,
                 }
                 

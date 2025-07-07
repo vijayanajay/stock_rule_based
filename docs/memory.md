@@ -252,27 +252,13 @@
     3.  **Resilient Help Test**: The CLI help test was modified to test the main application's help text (`--help`) instead of a subcommand's, making it more robust and less dependent on a fully configured test environment.
 - **Lesson**: The test harness is a critical part of the application's structure. Any change to a core data contract like a configuration model must be propagated to all test fixtures immediately. Fixtures must be self-contained and reflect valid user invocation patterns to be reliable. An incomplete fixture is a bug in the test suite.
 
-## Test Harness Integrity: Flawed Invocations and Mocking (2025-07-23)
-- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic. This created significant noise and obscured the true state of the application.
-    1.  **Flawed CLI Invocation**: Tests in `test_cli_advanced.py` invoked the Typer CLI with an incorrect argument order (e.g., global option `--verbose` after the command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
-    2.  **Incorrect Mocking Target**: An integration test in `test_integration_cli.py` was patching a function at its source (`kiss_signal.data.get_price_data`) instead of where it was imported and used (`kiss_signal.cli.data.get_price_data`). This caused the mock to have no effect, leading to assertion failures.
-    3.  **Incomplete Test Setup**: Other tests failed due to simple bugs like `NameError` from a missing patch decorator or `FileExistsError` from an incorrect `mkdir` call.
+## Test Harness Integrity: Flawed Invocation and Data Structure Flaw (2025-07-23)
+- **Issue**: Multiple test failures were traced back to two distinct structural issues.
+    1.  **Flawed Invocation (`test_run_command_log_save_failure`):** A test was asserting behavior (log saving on failure) on the `run` command, but the implementation for this behavior only existed in the `analyze-strategies` command. The test was testing a non-existent contract.
+    2.  **Data Structure Initialization Flaw (`analyze_rule_performance`):** A `defaultdict` was incorrectly initialized to create a `set` (`{'metrics', 'symbols'}`) instead of a `dict` with list values (`{'metrics': [], 'symbols': []}`). This caused a `TypeError` downstream when the code attempted dictionary key access on a set.
 - **Fix**:
-    1.  Corrected all `runner.invoke` calls to place global options before the command, aligning tests with actual user behavior.
-    2.  Updated the `@patch` decorator to target the correct namespace where the function is used.
-    3.  Fixed the basic bugs in test setup (added missing patches, corrected `mkdir` calls).
-- **Lesson**: The test suite is a first-class consumer of the application's API and must be maintained with the same discipline as production code.
-    -   CLI tests must precisely mirror valid user invocation patterns.
-    -   Mocks must target the object in the namespace where it is looked up, not necessarily where it is defined.
-    -   A failing test suite due to harness bugs is a critical issue that erodes trust and must be fixed with priority.
-
-## Test Harness Integrity: Flawed Mocking and Logging Capture (2025-07-23)
-- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic.
-    1.  **Flawed Mocking (`test_run_command_log_save_failure`):** A test designed to check failure handling for log saving was asserting a failure condition without actually inducing one. It expected an error message but didn't mock the underlying I/O call (`Path.write_text`) to raise an exception.
-    2.  **Logging Capture Conflict (`test_error_handling_integration`):** An integration test using pytest's `caplog` fixture failed to capture log messages because the application's `setup_logging` function uses `logging.basicConfig(force=True, ...)` with a `RichHandler`. This forcefully replaces the handlers `caplog` relies on, making the test "deaf" to log output.
-- **Fix**:
-    1.  **Corrected Mocking:** The flawed test was fixed by adding a patch (`@patch("pathlib.Path.write_text", side_effect=OSError(...))`) to correctly simulate the I/O failure, allowing the application's error handling path to be executed and tested.
-    2.  **Robust Output Assertion:** The logging test was fixed by removing the dependency on `caplog` and instead asserting the presence of the error message in the `runner.invoke` result's `stdout`. Since `RichHandler` prints to the console, this directly tests the observable output, making the test more robust and independent of the logging implementation details.
-- **Lesson**: The test harness is a critical part of the application's structure.
-    -   Tests for failure conditions must actively and correctly mock the failure at the right layer.
-    -   When using custom logging handlers (like `RichHandler`), be aware that they can conflict with standard testing fixtures like `caplog`. In such cases, testing the final console output is often a more reliable approach than trying to intercept log records.
+    1.  The broken test was rewritten to target the correct command (`analyze-strategies`), aligning the test with the actual implementation.
+    2.  The `defaultdict` initialization was corrected to produce the expected dictionary structure.
+- **Lesson**:
+    - Test harnesses are a critical part of the application's structure and must be kept in sync with the implementation. Tests should validate the actual, observable contracts of the code they target.
+    - Data structures must be initialized correctly at their source. A subtle typo (like `{}` vs `[]` inside a `defaultdict` lambda) can create a structural flaw that propagates through the system and causes failures far from the origin point. Pay close attention to the structure of initialized objects.

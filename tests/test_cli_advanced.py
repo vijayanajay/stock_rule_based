@@ -200,34 +200,6 @@ def test_run_command_backtest_generic_exception_verbose(
         assert "Traceback (most recent call last)" in result.stdout
 
 
-@patch("kiss_signal.cli.performance_monitor.get_summary")
-@patch("kiss_signal.cli._run_backtests")
-@patch("kiss_signal.cli.backtester.Backtester")
-@patch("kiss_signal.cli.data")
-def test_run_command_log_save_failure(mock_data, mock_backtester, mock_run_backtests, mock_get_summary, sample_config: Dict[str, Any]) -> None:
-    """Test that CLI handles log saving failures in finally block."""
-    mock_run_backtests.return_value = []
-    with runner.isolated_filesystem() as fs:
-        # Set up test files first (before applying the write failure mock)
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir(exist_ok=True)
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol\nRELIANCE\n")
-        sample_config["universe_path"] = str(universe_path)
-        config_path = Path("config.yaml")
-        config_path.write_text(yaml.dump(sample_config))
-        rules_dir = Path(fs) / "config"
-        rules_dir.mkdir()
-        (rules_dir / "rules.yaml").write_text(VALID_RULES_YAML)
-
-        # Now apply the mock only for the CLI execution
-        with patch("pathlib.Path.write_text", side_effect=OSError("Disk full")):
-            result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_dir / "rules.yaml"), "run"])
-        
-        assert result.exit_code == 0, result.stdout
-        assert "Critical error: Could not save log file" in result.stdout
-
-
 @patch("kiss_signal.cli.reporter.generate_daily_report", return_value=None)
 @patch("kiss_signal.cli._run_backtests") # Mock to prevent actual backtesting
 @patch("kiss_signal.cli.persistence") # Mock persistence to avoid DB operations
@@ -667,3 +639,30 @@ def test_analyze_rules_exception_handling(mock_analyze, tmp_path: Path):
         assert result_verbose.exit_code == 1
         assert "An unexpected error occurred during analysis: Analysis boom!" in result_verbose.stdout
         assert "Traceback (most recent call last)" in result_verbose.stdout
+
+
+@patch("kiss_signal.cli.reporter.analyze_strategy_performance", return_value=[])
+def test_analyze_strategies_log_save_failure(mock_analyze, sample_config: Dict[str, Any]) -> None:
+    """Test that analyze-strategies handles log saving failures in finally block."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        db_path = fs_path / "test.db"
+        persistence.create_database(db_path)
+
+        dummy_universe_file = fs_path / "dummy.csv"
+        dummy_universe_file.write_text("symbol\nTEST\n")
+
+        sample_config["database_path"] = str(db_path)
+        sample_config["universe_path"] = str(dummy_universe_file)
+        config_path = Path("config.yaml")
+        config_path.write_text(yaml.dump(sample_config))
+
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.parent.mkdir(exist_ok=True)
+        rules_path.write_text(VALID_RULES_YAML)
+
+        with patch("pathlib.Path.write_text", side_effect=OSError("Disk full")):
+            result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
+
+        assert result.exit_code == 0, result.stdout
+        assert "Critical error: Could not save log file" in result.stdout

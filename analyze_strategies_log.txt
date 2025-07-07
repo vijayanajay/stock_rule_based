@@ -1,0 +1,3 @@
+[23:24:03] INFO     === KISS Signal CLI Run Started ===                                                                
+Analyzing historical strategy performance...
+✅ Strategy performance report saved to: strategy_performance_report.md

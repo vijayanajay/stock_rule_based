@@ -483,14 +483,26 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
     analysis = []
     for key, strategy_data in stats.items():
         freq = len(strategy_data['metrics'])
+
+        # Safely sum total_trades, as it might be corrupted in the DB
+        total_trades_sum = 0
+        for m in strategy_data['metrics']:
+            try:
+                total_trades_sum += int(m['total_trades'])
+            except (ValueError, TypeError):
+                logger.warning(
+                    f"Could not parse total_trades '{m['total_trades']!r}' for strategy '{key}' "
+                    f"on symbol '{m.get('symbol', 'N/A')}'. Treating as 0."
+                )
+
         analysis.append({
             'strategy_name': key,
             'frequency': freq,
-            'avg_edge_score': sum(m['edge_score'] for m in strategy_data['metrics']) / freq,
-            'avg_win_pct': sum(m['win_pct'] for m in strategy_data['metrics']) / freq,
-            'avg_sharpe': sum(m['sharpe'] for m in strategy_data['metrics']) / freq,
-            'avg_trades': sum(m['total_trades'] for m in strategy_data['metrics']) / freq,
-            'avg_return': sum(m['avg_return'] for m in strategy_data['metrics']) / freq,
+            'avg_edge_score': sum(float(m['edge_score']) for m in strategy_data['metrics']) / freq,
+            'avg_win_pct': sum(float(m['win_pct']) for m in strategy_data['metrics']) / freq,
+            'avg_sharpe': sum(float(m['sharpe']) for m in strategy_data['metrics']) / freq,
+            'avg_trades': total_trades_sum / freq if freq > 0 else 0.0,
+            'avg_return': sum(float(m['avg_return']) for m in strategy_data['metrics']) / freq,
             'top_symbols': ", ".join(s for s, _ in Counter(strategy_data['symbols']).most_common(3)),
         })
 

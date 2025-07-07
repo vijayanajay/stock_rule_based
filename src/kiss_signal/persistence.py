@@ -251,7 +251,7 @@ def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, 
                 strategy["edge_score"],
                 strategy["win_pct"],
                 strategy["sharpe"],
-                strategy["total_trades"],
+                int(strategy["total_trades"]),  # Ensure it's a standard Python int
                 strategy["avg_return"]
             ))
         

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 from unittest.mock import patch # Import patch
 import typing
+import numpy as np # Import numpy
 
 from kiss_signal.persistence import create_database, save_strategies_batch, add_new_positions_from_signals
 from kiss_signal.persistence import get_open_positions, close_positions_batch # Import missing functions
@@ -220,6 +221,37 @@ class TestSaveStrategiesBatch:
             cursor.execute("SELECT COUNT(*) FROM strategies")
             count = cursor.fetchone()[0]
             assert count == 0
+
+    def test_save_strategies_batch_with_numpy_int(self, temp_db_path: Path) -> None:
+        """Test that numpy integer types are correctly stored as standard integers."""
+        create_database(temp_db_path)
+
+        # Create a strategy where total_trades is a numpy integer type
+        numpy_strategies = [
+            {
+                "symbol": "RELIANCE",
+                "rule_stack": [{'name': 'test_rule', 'type': 'test_type', 'params': {}}],
+                "edge_score": 0.5, "win_pct": 0.5, "sharpe": 1.0,
+                "total_trades": np.int64(25),  # Use a numpy integer type
+                "avg_return": 0.01
+            }
+        ]
+
+        run_timestamp = "2025-07-23T12:00:00"
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            result = save_strategies_batch(conn, numpy_strategies, run_timestamp)
+
+        assert result is True
+
+        # Verify the data was saved and its type is INTEGER in the database
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT total_trades, typeof(total_trades) FROM strategies WHERE symbol = 'RELIANCE'")
+            row = cursor.fetchone()
+            assert row is not None
+            total_trades, type_of_trades = row
+            assert total_trades == 25
+            assert type_of_trades == 'integer'
 
 
 class TestGetOpenPositions:

@@ -162,6 +162,16 @@ INFY,Infosys Ltd,IT
         assert "No valid strategies found" not in result.stdout
         assert "Top Strategies by Edge Score" in result.stdout
         assert "Database connection closed" in result.stdout
+
+        # Also test that the analysis command runs without error on the generated DB
+        result_analyze = runner.invoke(app, [
+            "--config", str(integration_env['config_path']),
+            "--rules", str(integration_env['rules_path']),
+            "analyze-strategies",
+        ])
+
+        assert result_analyze.exit_code == 0, f"analyze-strategies failed: {result_analyze.stdout}"
+        assert "Strategy performance report saved to:" in result_analyze.stdout
     
     @patch("kiss_signal.cli.data.get_price_data", side_effect=Exception("Data fetch failed"))
     def test_error_handling_integration(self, mock_get_price_data, integration_env):

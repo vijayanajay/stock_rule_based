@@ -40,6 +40,18 @@ A streamlined tool for backtesting and generating trading signals for Indian equ
 - `--verbose, -v`: Detailed logs
 - `--quiet, -q`: Minimal output
 - `--help, -h`: Show help
+- `analyze-strategies [--output <filename>.md]`: Generate a Markdown leaderboard of all historical strategy performance (see below)
+
+## Strategy Performance Leaderboard
+
+A new command is available:
+
+```cmd
+python run.py analyze-strategies --output strategy_performance_report.md
+```
+- Analyzes all historical strategies in the database.
+- Produces a Markdown table ranking each unique strategy combination by average edge score, win %, Sharpe, and more.
+- Output file defaults to `strategy_performance_report.md` if not specified.
 
 ## Strategy: MovingAverageCrossover
 - `fast_ma`: Fast MA period (>0)

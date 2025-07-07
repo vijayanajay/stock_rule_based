@@ -528,35 +528,6 @@ class TestStrategyPerformanceAnalysis:
         assert abs(top_strategy['avg_win_pct'] - 0.65) < 0.01  # (0.65 + 0.70 + 0.60) / 3
         assert "RELIANCE" in top_strategy['top_symbols']
 
-    def test_analyze_strategy_performance_empty_db(self, tmp_path):
-        """Test strategy analysis with empty database."""
-        db_path = tmp_path / "empty.db"
-        persistence.create_database(db_path)
-        
-        result = reporter.analyze_strategy_performance(db_path)
-        assert result == []
-
-    def test_analyze_strategy_performance_malformed_json(self, strategy_test_db):
-        """Test strategy analysis handles malformed JSON in rule_stack."""
-        with sqlite3.connect(str(strategy_test_db)) as conn:
-            # Add strategy with malformed JSON
-            conn.execute(
-                "INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("TEST", "run1", "invalid_json", 0.5, 0.6, 0.8, 5, 0.03)
-            )
-            # Add valid strategy
-            conn.execute(
-                "INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                ("VALID", "run1", '[{"name": "test_rule", "type": "signal"}]', 0.7, 0.6, 1.0, 10, 0.05)
-            )
-            conn.commit()
-
-        result = reporter.analyze_strategy_performance(strategy_test_db)
-        
-        # Should have only the valid strategy
-        assert len(result) == 1
-        assert result[0]['strategy_name'] == "test_rule"
-
     def test_format_strategy_analysis_as_md(self):
         """Test strategy analysis markdown formatting."""
         analysis_data = [

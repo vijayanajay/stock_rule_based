@@ -301,12 +301,6 @@ def run(
         if db_connection:
             db_connection.close()
             logger.info("Database connection closed.")
-        try:
-            log_path = Path("run_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            print(f"\nLog file saved to {log_path}", file=sys.stderr)
-        except OSError as log_e:
-            logger.error(f"Critical error: Could not save log file to {log_path}. Reason: {log_e}", exc_info=True)
 
 
 @app.command(name="analyze-rules")
@@ -378,6 +372,14 @@ def analyze_strategies(
         if ctx.obj and ctx.obj.get("verbose", False):
             console.print_exception()
         raise typer.Exit(1)
+    finally:
+        # Always try to save the log, similar to the 'run' command
+        try:
+            log_path = Path("analyze_strategies_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            print(f"\nLog file saved to {log_path}", file=sys.stderr)
+        except OSError as log_e:
+            logger.error(f"Critical error: Could not save log file to {log_path}. Reason: {log_e}", exc_info=True)
 
 
 if __name__ == "__main__":
