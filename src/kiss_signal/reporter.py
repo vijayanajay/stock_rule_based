@@ -14,11 +14,12 @@ import json  # Standard library
 import sqlite3
 import pandas as pd
 from collections import Counter, defaultdict
+from io import StringIO
 
 from . import data, rules, persistence
 from .config import Config
 
-__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "format_strategy_analysis_as_md"]
+__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "format_strategy_analysis_as_csv"]
 
 logger = logging.getLogger(__name__)
 
@@ -409,6 +410,29 @@ def format_rule_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
         rows.append(row)
     
     return title + description + header + separator + "\n".join(rows)
+
+def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]]) -> str:
+    """Formats the strategy performance analysis into a CSV string."""
+    if not analysis:
+        return ""
+
+    df = pd.DataFrame(analysis)
+
+    # Rename columns for clarity in CSV
+    df = df.rename(columns={
+        'strategy_name': 'strategy_rule_stack',
+        'frequency': 'frequency',
+        'avg_edge_score': 'avg_edge_score',
+        'avg_win_pct': 'avg_win_pct',
+        'avg_sharpe': 'avg_sharpe',
+        'avg_return': 'avg_return',
+        'avg_trades': 'avg_trades',
+        'top_symbols': 'top_symbols'
+    })
+
+    output = StringIO()
+    df.to_csv(output, index=False, float_format='%.4f')
+    return output.getvalue()
 
 def _check_exit_conditions(
     position: Dict[str, Any],

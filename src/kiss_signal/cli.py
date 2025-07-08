@@ -343,9 +343,9 @@ def analyze_rules(
 def analyze_strategies(
     ctx: typer.Context,
     output_file: Path = typer.Option(
-        "strategy_performance_report.md",
+        "strategy_performance_report.csv",
         "--output", "-o",
-        help="Path to save the strategy performance report.",
+        help="Path to save the strategy performance report as a CSV file.",
     ),
 ) -> None:
     """Analyze and report on the historical performance of all strategy combinations."""
@@ -363,7 +363,7 @@ def analyze_strategies(
             console.print("[yellow]No historical strategies found to analyze.[/yellow]")
             return
 
-        report_content = reporter.format_strategy_analysis_as_md(strategy_performance)
+        report_content = reporter.format_strategy_analysis_as_csv(strategy_performance)
         output_file.write_text(report_content, encoding="utf-8")
         console.print(f"✅ Strategy performance report saved to: [cyan]{output_file}[/cyan]")
 

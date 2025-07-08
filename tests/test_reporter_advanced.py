@@ -9,6 +9,7 @@ from datetime import date, timedelta
 import sqlite3
 import logging # Import logging
 import pandas as pd
+from io import StringIO
 
 from src.kiss_signal import reporter, persistence
 from kiss_signal.config import Config
@@ -537,8 +538,8 @@ class TestStrategyPerformanceAnalysis:
                 'avg_edge_score': 0.72,
                 'avg_win_pct': 0.685,
                 'avg_sharpe': 1.35,
-                'avg_trades': 12.3,
                 'avg_return': 0.095,
+                'avg_trades': 12.3,
                 'top_symbols': 'RELIANCE, INFY, HDFCBANK'
             },
             {
@@ -547,26 +548,57 @@ class TestStrategyPerformanceAnalysis:
                 'avg_edge_score': 0.55,
                 'avg_win_pct': 0.601,
                 'avg_sharpe': 0.95,
-                'avg_trades': 18.7,
                 'avg_return': 0.042,
+                'avg_trades': 18.7,
                 'top_symbols': 'TCS, WIPRO'
             }
         ]
         
         md_content = reporter.format_strategy_analysis_as_md(analysis_data)
-        
+
         assert "# Strategy Performance Report" in md_content
         assert "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Return | Avg Trades | Top Symbols |" in md_content
         assert "|:---|---:|---:|---:|---:|---:|---:|:---|" in md_content
         assert "| `bullish_engulfing + rsi_oversold` | 15 | 0.72 | 68.5% | 1.35 | 9.5% | 12.3 | RELIANCE, INFY, HDFCBANK |" in md_content
         assert "| `sma_crossover` | 8 | 0.55 | 60.1% | 0.95 | 4.2% | 18.7 | TCS, WIPRO |" in md_content
 
-    def test_format_strategy_analysis_as_md_empty(self):
-        """Test strategy analysis markdown formatting with empty data."""
-        md_content = reporter.format_strategy_analysis_as_md([])
-        
-        assert "# Strategy Performance Report" in md_content
-        assert "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Return | Avg Trades | Top Symbols |" in md_content
-        # Should not have any data rows, just header
-        lines = md_content.split('\n')
-        assert len([line for line in lines if line.startswith('|') and 'Strategy' not in line and ':---' not in line]) == 0
+    def test_format_strategy_analysis_as_csv(self):
+        """Test strategy analysis CSV formatting."""
+        analysis_data = [
+            {
+                'strategy_name': 'bullish_engulfing + rsi_oversold',
+                'frequency': 15,
+                'avg_edge_score': 0.72,
+                'avg_win_pct': 0.685,
+                'avg_sharpe': 1.35,
+                'avg_return': 0.095,
+                'avg_trades': 12.3,
+                'top_symbols': 'RELIANCE, INFY, HDFCBANK'
+            },
+            {
+                'strategy_name': 'sma_crossover',
+                'frequency': 8,
+                'avg_edge_score': 0.55,
+                'avg_win_pct': 0.601,
+                'avg_sharpe': 0.95,
+                'avg_return': 0.042,
+                'avg_trades': 18.7,
+                'top_symbols': 'TCS, WIPRO'
+            }
+        ]
+        csv_content = reporter.format_strategy_analysis_as_csv(analysis_data)
+        # Use pandas to read it back and verify
+        df = pd.read_csv(StringIO(csv_content))
+        assert len(df) == 2
+        assert list(df.columns) == [
+            'strategy_rule_stack', 'frequency', 'avg_edge_score', 'avg_win_pct',
+            'avg_sharpe', 'avg_return', 'avg_trades', 'top_symbols'
+        ]
+        assert df.iloc[0]['strategy_rule_stack'] == 'bullish_engulfing + rsi_oversold'
+        assert df.iloc[0]['frequency'] == 15
+        assert df.iloc[0]['avg_edge_score'] == 0.7200
+
+    def test_format_strategy_analysis_as_csv_empty(self):
+        """Test strategy analysis CSV formatting with empty data."""
+        csv_content = reporter.format_strategy_analysis_as_csv([])
+        assert csv_content == ""

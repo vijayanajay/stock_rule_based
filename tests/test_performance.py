@@ -37,16 +37,20 @@ def test_performance_monitor_decorator():
 def test_get_summary():
     """Test the get_summary method."""
     monitor = PerformanceMonitor()
-    with monitor.monitor_execution("fast_op"):
-        time.sleep(0.01)
-    with monitor.monitor_execution("slow_op"):
-        time.sleep(0.02)
+    # Mock time.time to return predictable, increasing values to make test deterministic.
+    # The time.sleep calls are no longer needed as we control time directly.
+    # Provide enough values for both the monitor and the internal logger calls.
+    with patch('time.time', side_effect=[1000.0, 1000.01, 1000.02, 1000.04, 1000.06, 1000.07]):
+        with monitor.monitor_execution("fast_op"):
+            time.sleep(0.01) # sleep is fine here as we mock time.time
+        with monitor.monitor_execution("slow_op"):
+            time.sleep(0.02)
 
     summary = monitor.get_summary()
 
     assert summary['total_functions'] == 2
-    # Allow for system scheduling and Python timing imprecision
-    assert 0.03 <= summary['total_duration'] <= 0.1, f"Duration {summary['total_duration']} not in expected range"
+    # fast_op duration = 1000.01 - 1000.0 = 0.01. slow_op = 1000.06 - 1000.04 = 0.02
+    assert summary['total_duration'] == pytest.approx(0.03, abs=1e-3)
     assert summary['slowest_function'] == "slow_op"
 
 

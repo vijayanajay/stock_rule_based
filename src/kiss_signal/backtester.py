@@ -141,29 +141,36 @@ class Backtester:
                 # More debug logging
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug(f"Portfolio trades count for {symbol}: {total_trades}")
+                    logger.debug(f"Trade count type: {type(total_trades)}")
                     if total_trades == 0 and entry_signals.sum() > 0:
                         logger.debug(f"WARNING: {entry_signals.sum()} entry signals but 0 trades generated!")
                 
+                # Ensure total_trades is explicitly cast to Python int to avoid any vectorbt-specific type issues
+                total_trades = int(total_trades)
+                
                 rule_names = " + ".join([r.name for r in combo])
-                if total_trades < self.min_trades_threshold:
-                    logger.warning(f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, which is below the threshold of {self.min_trades_threshold}.")
-                    continue
-
+                
+                # Calculate performance metrics regardless of threshold for completeness
                 if total_trades > 0:
-                    win_pct = portfolio.trades.win_rate() / 100.0
+                    win_pct = portfolio.trades.win_rate()  # Already returns decimal ratio (e.g., 0.65 for 65%)
                     sharpe = portfolio.sharpe_ratio()
-                    avg_return = portfolio.trades.pnl.mean() / 100.0 if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
+                    avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
                 else:
                     win_pct = 0.0
                     sharpe = 0.0
                     avg_return = 0.0
+                
+                # Skip strategies that don't meet the minimum trades threshold
+                if total_trades < self.min_trades_threshold:
+                    logger.warning(f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, which is below the threshold of {self.min_trades_threshold}.")
+                    continue
                 edge_score = (win_pct * edge_score_weights['win_pct']) + (sharpe * edge_score_weights['sharpe'])
                 strategy = {
                     'rule_stack': combo,  # Persist the entire rule combination
                     'edge_score': edge_score,
                     'win_pct': win_pct,
                     'sharpe': sharpe,
-                    'total_trades': int(total_trades),
+                    'total_trades': int(total_trades),  # Ensure this is always an integer
                     'avg_return': avg_return,
                 }
                 

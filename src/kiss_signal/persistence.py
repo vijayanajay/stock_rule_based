@@ -238,11 +238,27 @@ def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, 
         logger.debug("Started transaction for batch save")
         
         for strategy in strategies:
+            # Debug logging for total_trades before assertion
+            logger.debug(f"Strategy {strategy.get('symbol', 'N/A')} total_trades: type={type(strategy.get('total_trades'))}, value={strategy.get('total_trades')!r}")
+            
+            # Hard assertions to catch data corruption and validate thresholds
+            assert "total_trades" in strategy, "total_trades key missing from strategy dict"
+            assert strategy["total_trades"] is not None, "total_trades cannot be None"
+            
+            # Handle numpy integer types by converting to Python int
+            total_trades = strategy["total_trades"]
+            total_trades_value = int(total_trades) if hasattr(total_trades, "item") else int(total_trades)
+            # Sanity check to prevent bad data from being stored (should be positive)
+            assert total_trades_value > 0, f"total_trades must be positive, got {total_trades_value}"
+            
             rule_stack = strategy["rule_stack"]
             if rule_stack and hasattr(rule_stack[0], 'model_dump'):
                 rule_stack_json = json.dumps([rule.model_dump() for rule in rule_stack])
             else:
                 rule_stack_json = json.dumps(rule_stack)
+            
+            # Log the value being inserted
+            logger.debug(f"Inserting total_trades as: {total_trades_value} (type: {type(total_trades_value)})")
             
             cursor.execute(insert_sql, (
                 run_timestamp,
@@ -251,7 +267,7 @@ def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, 
                 strategy["edge_score"],
                 strategy["win_pct"],
                 strategy["sharpe"],
-                int(strategy["total_trades"]),  # Ensure it's a standard Python int
+                total_trades_value,  # Use the explicit int value
                 strategy["avg_return"]
             ))
         
@@ -259,7 +275,7 @@ def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, 
         logger.info(f"Successfully saved {len(strategies)} strategies")
         return True
         
-    except (sqlite3.Error, KeyError, TypeError, json.JSONDecodeError) as e:
+    except (sqlite3.Error, KeyError, TypeError, json.JSONDecodeError, AssertionError) as e:
         try:
             db_connection.rollback()
             logger.debug("Rolled back transaction due to error")

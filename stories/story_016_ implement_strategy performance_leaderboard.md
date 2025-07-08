@@ -8,7 +8,7 @@
 **Created:** 2025-07-23
 
 ## User Story
-As a trader, I want to generate a single Markdown report that analyzes and ranks the historical performance of **every strategy combination** I've ever tested, so I can quickly identify which strategies have a real, persistent edge and which ones are underperforming or too restrictive.
+As a trader, I want to generate a single CSV report that analyzes and ranks the historical performance of **every strategy combination** I've ever tested, so I can quickly identify which strategies have a real, persistent edge and which ones are underperforming or too restrictive.
 
 ## Context & Rationale
 The system is excellent at finding the *optimal* strategy for a given stock on a given day. However, it lacks a "memory" or a high-level "boardroom view" of which strategy *archetypes* are consistently effective over time and across the entire stock universe. This report provides that memory.
@@ -24,7 +24,7 @@ This story directly addresses the user need to "determine if the strategies are 
 
 ### AC-1: New CLI Command
 - [ ] A new command `analyze-strategies` is added to the CLI.
-- [ ] The command accepts an optional `--output <filename>.md` argument, defaulting to `strategy_performance_report.md`.
+- [ ] The command accepts an optional `--output <filename>.csv` argument, defaulting to `strategy_performance_report.csv`.
 - [ ] The command operates on the existing database specified in `config.yaml`.
 
 ### AC-2: Strategy Performance Aggregation
@@ -39,10 +39,10 @@ This story directly addresses the user need to "determine if the strategies are 
     - **Avg. Trades:** The average number of trades generated during its backtests.
     - **Top Symbols:** A comma-separated string of the top 3 symbols where this strategy was most frequently optimal.
 
-### AC-3: Clear Markdown Report
-- [ ] The command generates a clean, readable Markdown file with the analysis results.
-- [ ] The report contains a Markdown table sorted by **Avg. Edge Score** in descending order.
-- [ ] The table columns are: `Strategy (Rule Stack)`, `Frequency`, `Avg Edge Score`, `Avg Win %`, `Avg Sharpe`, `Avg Trades`, `Top Symbols`.
+### AC-3: Clear CSV Report
+- [ ] The command generates a clean, readable CSV file with the analysis results.
+- [ ] The report contains a CSV table sorted by **Avg. Edge Score** in descending order.
+- [ ] The table columns are: `strategy_rule_stack`, `frequency`, `avg_edge_score`, `avg_win_pct`, `avg_sharpe`, `avg_return`, `avg_trades`, `top_symbols`.
 
 ### AC-4: Code Quality and Compliance
 - [ ] The implementation adds **no new external dependencies** (H-10).
@@ -65,9 +65,9 @@ A new command will be added to orchestrate the analysis. It's a simple wrapper a
 def analyze_strategies(
     ctx: typer.Context,
     output_file: Path = typer.Option(
-        "strategy_performance_report.md",
+        "strategy_performance_report.csv",
         "--output", "-o",
-        help="Path to save the strategy performance report.",
+        help="Path to save the strategy performance report as a CSV file.",
     ),
 ) -> None:
     """Analyze and report on the historical performance of all strategy combinations."""
@@ -85,7 +85,7 @@ def analyze_strategies(
             return
 
         # Formatting call
-        report_content = reporter.format_strategy_analysis_as_md(strategy_performance)
+        report_content = reporter.format_strategy_analysis_as_csv(strategy_performance)
         output_file.write_text(report_content, encoding="utf-8")
         console.print(f"✅ Strategy performance report saved to: [cyan]{output_file}[/cyan]")
 
@@ -146,38 +146,34 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
     return sorted(analysis, key=lambda x: x['avg_edge_score'], reverse=True)
 
 # pure
-def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
-    """Formats the strategy performance analysis into a markdown table."""
-    header = "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Trades | Top Symbols |\n"
-    separator = "|:---|---:|---:|---:|---:|---:|:---|\n"
-    
-    rows = []
-    for stats in analysis:
-        row = (
-            f"| `{stats['strategy_name']}` "
-            f"| {stats['frequency']} "
-            f"| {stats['avg_edge_score']:.2f} "
-            f"| {stats['avg_win_pct']:.1%} "
-            f"| {stats['avg_sharpe']:.2f} "
-            f"| {stats['avg_trades']:.1f} "
-            f"| {stats['top_symbols']} |"
-        )
-        rows.append(row)
-    
-    return f"# Strategy Performance Report\n\n{header}{separator}" + "\n".join(rows)
+def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]]) -> str:
+    """Formats the strategy performance analysis into a CSV string."""
+    if not analysis:
+        return ""
 
+    df = pd.DataFrame(analysis)
+    df = df.rename(columns={
+        'strategy_name': 'strategy_rule_stack',
+        'frequency': 'frequency',
+        'avg_edge_score': 'avg_edge_score',
+        'avg_win_pct': 'avg_win_pct',
+        'avg_sharpe': 'avg_sharpe',
+        'avg_return': 'avg_return',
+        'avg_trades': 'avg_trades',
+        'top_symbols': 'top_symbols'
+    })
+    output = StringIO()
+    df.to_csv(output, index=False, float_format='%.4f')
+    return output.getvalue()
 ```
 
-### 3. Sample Markdown Output (`strategy_performance_report.md`)
+### 3. Sample CSV Output (`strategy_performance_report.csv`)
 
-```markdown
-# Strategy Performance Report
-
-| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Trades | Top Symbols |
-|:---|---:|---:|---:|---:|---:|:---|
-| `bullish_engulfing_reversal + filter_with_rsi_oversold` | 15 | 0.72 | 68.5% | 1.35 | 12.3 | RELIANCE, INFY, HDFCBANK |
-| `sma_10_20_crossover + confirm_with_macd_momentum` | 28 | 0.65 | 61.2% | 1.10 | 25.1 | TCS, WIPRO, SBIN |
-| `bollinger_breakout` | 5 | 0.51 | 55.0% | 0.85 | 8.5 | TATAMOTORS, LT, AXISBANK |
+```csv
+strategy_rule_stack,frequency,avg_edge_score,avg_win_pct,avg_sharpe,avg_return,avg_trades,top_symbols
+bullish_engulfing_reversal + filter_with_rsi_oversold,15,0.72,0.685,1.35,0.095,12.3,"RELIANCE, INFY, HDFCBANK"
+sma_10_20_crossover + confirm_with_macd_momentum,28,0.65,0.612,1.10,0.081,25.1,"TCS, WIPRO, SBIN"
+bollinger_breakout,5,0.51,0.550,0.85,0.042,8.5,"TATAMOTORS, LT, AXISBANK"
 ```
 
 ## Architectural Considerations
@@ -192,7 +188,7 @@ def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
 
 ## Definition of Done
 - [ ] All acceptance criteria are met and tested.
-- [ ] The `analyze-strategies` command is functional and generates a correct Markdown file.
+- [ ] The `analyze-strategies` command is functional and generates a correct CSV file.
 - [ ] The analysis logic correctly queries, groups, and aggregates performance data from the database.
 - [ ] The generated report is sorted and formatted as specified.
 - [ ] The feature is covered by unit tests (for the aggregation logic) and an integration test (for the CLI command).
@@ -211,35 +207,9 @@ def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
   - [ ] Implement the final processing loop to calculate averages and identify top symbols.
   - [ ] Ensure the final list is sorted by `avg_edge_score`.
 
-- **Task 3: Implement `format_strategy_analysis_as_md` in `reporter.py`**
-  - [ ] Create the function to generate the Markdown table from the analysis data.
+- **Task 3: Implement `format_strategy_analysis_as_csv` in `reporter.py`**
+  - [ ] Create the function to generate the CSV table from the analysis data.
   - [ ] Ensure correct formatting for numbers, percentages, and text alignment.
 
 - **Task 4: Add Comprehensive Tests**
-  - [ ] In `tests/test_reporter_advanced.py`, add tests for `analyze_strategy_performance` using a pre-populated in-memory DB with various strategy combinations.
-  - [ ] Add a test for `format_strategy_analysis_as_md` to check for correct output against a golden string.
-  - [ ] In `tests/test_cli_advanced.py`, add an integration test for the `analyze-strategies` command, mocking the reporter functions.
-
-- **Task 5: Update `DEVELOPMENT_ROADMAP.md`**
-  - [ ] Mark Story 16 as complete.
-  - [ ] Update the "Current Story" to the next in the pipeline.
-
-  ## Next Set of Stories Planned
-
-### Story 17: Implement Detailed Strategy Drill-Down Report
-*   **Priority:** High
-*   **Points:** 6
-*   **Goal:** To allow a user to drill down into a single strategy's performance from the leaderboard. This report will show detailed per-stock metrics, a trade log, and an equity curve to explain *why* a strategy is performing well or poorly.
-*   **Rationale:** The leaderboard (Story 16) identifies *what* works. This story explains *how* and *where* it works. It's the logical next step in analysis, providing the deeper insights needed to refine or trust a strategy. It directly addresses the "last successful exit" and "stats of successful strategies per stock" user requests.
-
-### Story 18: Enhance Reports with ASCII Sparkline Visualizations
-*   **Priority:** Medium
-*   **Points:** 2
-*   **Goal:** To add simple, dependency-free ASCII sparklines (e.g., `  ▂▄▆█▇`) to the report tables to provide an instant visual summary of performance trends over time.
-*   **Rationale:** This is a classic KISS/Kailash Nadh feature: a tiny amount of code that dramatically improves the report's "glance value" and helps spot edge decay without needing complex charting libraries.
-
-### Story 19: Implement Volatility-Adjusted Position Sizing (ATR)
-*   **Priority:** High
-*   **Points:** 8
-*   **Goal:** To introduce professional risk management by sizing positions based on the stock's Average True Range (ATR). This normalizes risk across all trades, so the portfolio is not overly exposed to a single, volatile stock.
-*   **Rationale:** This is a foundational step in moving from a pure signal generator to a robust trading *system*. Equal risk per trade is a cornerstone of professional portfolio management.
+  - [ ] In `tests/test_reporter_advanced.py`, add tests for `analyze_strategy_performance` using a pre-populated in-memory DB with

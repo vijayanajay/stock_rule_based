@@ -50,42 +50,43 @@ INFY,Infosys Ltd,IT
         for symbol in ['RELIANCE', 'INFY']:
             n_total = len(sample_dates)
 
-            # Create multiple cycles to generate crossover signals
-            cycles = 6  # More cycles = more crossovers
+            # Create many cycles to generate crossover signals, ensuring enough trades
+            cycles = 40  # Even more cycles = more crossovers to meet threshold of 10
             cycle_length = n_total // cycles
             close_prices = []
 
             for cycle in range(cycles):
                 start_idx, end_idx = cycle * cycle_length, min((cycle + 1) * cycle_length, n_total)
                 cycle_size = end_idx - start_idx
-
+                if cycle_size <= 0: continue
                 # Alternate between uptrends and downtrends
                 trend_prices = np.linspace(100, 130, cycle_size) if cycle % 2 == 0 else np.linspace(130, 100, cycle_size)
                 noise = np.random.normal(loc=0, scale=1.5, size=cycle_size)
                 close_prices.extend(trend_prices + noise)
 
+            # Pad the remaining days to match n_total, fixing the IndexError
             remaining = n_total - len(close_prices)
             if remaining > 0:
                 last_price = close_prices[-1] if close_prices else 100
                 close_prices.extend([last_price + np.random.normal(0, 1.5) for _ in range(remaining)])
-            
+
             prices = []
             for i, date_val in enumerate(sample_dates):
                 close = close_prices[i]
-                open_price = close * np.random.uniform(0.99, 1.01)
+                open_price = close + np.random.normal(0, 1.5)
                 prices.append({
-                    'date': date_val, 'open': open_price, 'high': max(open_price, close) * np.random.uniform(1.0, 1.02),
+                    'date': date_val.strftime('%Y-%m-%d'), 'open': open_price,
+                    'high': max(open_price, close) * np.random.uniform(1.0, 1.02),
                     'low': min(open_price, close) * np.random.uniform(0.98, 1.0), 'close': close,
                     'volume': 1000000 + (i % 100) * 10000
                 })
-            
             cache_file = cache_dir / f"{symbol}.NS.csv"
             pd.DataFrame(prices).to_csv(cache_file, index=False)
         
         # Create config.yaml
         config_content = {
             'universe_path': str(universe_path), 'historical_data_years': 2, 'cache_dir': str(cache_dir),
-            'cache_refresh_days': 7, 'hold_period': 20, 'min_trades_threshold': 2,
+            'cache_refresh_days': 7, 'hold_period': 20, 'min_trades_threshold': 10,
             'edge_score_weights': {'win_pct': 0.6, 'sharpe': 0.4},
             "database_path": str(tmp_path / "integration.db"),
             "reports_output_dir": str(tmp_path / "reports/"), "edge_score_threshold": 0.5
@@ -114,7 +115,7 @@ INFY,Infosys Ltd,IT
         # Verify config structure
         assert config.universe_path == str(integration_env['universe_path'])
         assert config.hold_period == 20
-        assert config.min_trades_threshold == 2
+        assert config.min_trades_threshold == 10
         # Verify rules structure
         assert hasattr(rules, 'baseline') and isinstance(rules.baseline, RuleDef)
         assert hasattr(rules, 'layers') and isinstance(rules.layers, list)

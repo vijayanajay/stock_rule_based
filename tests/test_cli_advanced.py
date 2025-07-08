@@ -181,20 +181,19 @@ def test_run_command_backtest_generic_exception_verbose(
     mock_data, mock_run_backtests, sample_config: Dict[str, Any]
 ) -> None:
     """Test that a generic exception during backtesting is handled with verbose output."""
-    with runner.isolated_filesystem() as fs:
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir(exist_ok=True)
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol\nRELIANCE\n")
+    with runner.isolated_filesystem() as fs_path:
+        data_dir = Path(fs_path) / "data"; data_dir.mkdir()
+        universe_path = data_dir / "nifty_large_mid.csv"; universe_path.write_text("symbol\nRELIANCE\n")
         sample_config["universe_path"] = str(universe_path)
         config_path = Path("config.yaml")
         config_path.write_text(yaml.dump(sample_config))
-        rules_path = Path(fs) / "config"
-        rules_path.mkdir()
-        (rules_path / "rules.yaml").write_text(VALID_RULES_YAML)
-
-        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path / "rules.yaml"), "run"])
-
+        rules_path = Path(fs_path) / "config" / "rules.yaml"
+        rules_path.parent.mkdir()
+        rules_path.write_text(VALID_RULES_YAML)
+    
+        # Global options like --verbose must come BEFORE the command
+        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
+    
         assert result.exit_code == 1, result.stdout
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
@@ -384,8 +383,8 @@ def test_analyze_rules_exception_handling(mock_get_connection, mock_analyze, tmp
 
 
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance")
-@patch("kiss_signal.cli.reporter.format_strategy_analysis_as_md")
-def test_analyze_strategies_command_success(mock_format_md, mock_analyze, sample_config):
+@patch("kiss_signal.cli.reporter.format_strategy_analysis_as_csv")
+def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, sample_config):
     """Test analyze-strategies command with successful execution."""
     with runner.isolated_filesystem() as fs:
         fs_path = Path(fs)
@@ -393,16 +392,17 @@ def test_analyze_strategies_command_success(mock_format_md, mock_analyze, sample
         # Setup mock data
         mock_analyze.return_value = [
             {
-                'strategy_name': 'bullish_engulfing + rsi_oversold',
-                'frequency': 15,
-                'avg_edge_score': 0.72,
-                'avg_win_pct': 0.685,
-                'avg_sharpe': 1.35,
-                'avg_trades': 12.3,
+                'strategy_name': 'test',
+                'frequency': 1,
+                'avg_edge_score': 0.5,
+                'avg_win_pct': 0.6,
+                'avg_sharpe': 1.0,
+                'avg_return': 0.1,
+                'avg_trades': 10,
                 'top_symbols': 'RELIANCE, INFY, HDFCBANK'
             }
         ]
-        mock_format_md.return_value = "# Strategy Performance Report\n\n| Strategy | Freq |\n|:---|---:|\n| test | 1 |"
+        mock_format_csv.return_value = "strategy_rule_stack,frequency\ntest,1"
         
         # Setup config and database
         config_path = fs_path / "config.yaml"
@@ -436,16 +436,14 @@ def test_analyze_strategies_command_success(mock_format_md, mock_analyze, sample
         assert result.exit_code == 0
         assert "Analyzing historical strategy performance" in result.stdout
         assert "Strategy performance report saved to:" in result.stdout
-        assert "strategy_performance_report.md" in result.stdout
-        
+        assert "strategy_performance_report.csv" in result.stdout
         # Check that file was created
-        output_file = fs_path / "strategy_performance_report.md"
+        output_file = fs_path / "strategy_performance_report.csv"
         assert output_file.exists()
-        assert "# Strategy Performance Report" in output_file.read_text()
-        
+        assert "strategy_rule_stack,frequency" in output_file.read_text()
         # Verify mocks were called
         mock_analyze.assert_called_once_with(db_path)
-        mock_format_md.assert_called_once()
+        mock_format_csv.assert_called_once()
 
 
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance")
@@ -482,7 +480,7 @@ def test_analyze_strategies_command_custom_output(mock_get_connection, mock_anal
         rules_path.parent.mkdir(exist_ok=True)
         rules_path.write_text(VALID_RULES_YAML)
         
-        custom_output = "my_strategy_report.md"
+        custom_output = "my_strategy_report.csv"
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--output", custom_output])
         
         assert result.exit_code == 0, result.stdout
