@@ -417,21 +417,18 @@ def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]]) -> str:
         return ""
 
     df = pd.DataFrame(analysis)
+    # Rename for clarity in the report
+    df = df.rename(columns={"strategy_name": "strategy_rule_stack"})
 
-    # Rename columns for clarity in CSV
-    df = df.rename(columns={
-        'strategy_name': 'strategy_rule_stack',
-        'frequency': 'frequency',
-        'avg_edge_score': 'avg_edge_score',
-        'avg_win_pct': 'avg_win_pct',
-        'avg_sharpe': 'avg_sharpe',
-        'avg_return': 'avg_return',
-        'avg_trades': 'avg_trades',
-        'top_symbols': 'top_symbols'
-    })
+    # Select and order columns for the final report
+    report_cols = [
+        "strategy_rule_stack", "frequency", "avg_edge_score", "avg_win_pct",
+        "avg_sharpe", "avg_return", "avg_trades", "top_symbols"
+    ]
+    df = df[report_cols]
 
     output = StringIO()
-    df.to_csv(output, index=False, float_format='%.4f')
+    df.to_csv(output, index=False, float_format="%.4f")
     return output.getvalue()
 
 def _check_exit_conditions(
@@ -472,71 +469,50 @@ def _check_exit_conditions(
 
 def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
     """Analyzes the entire history of strategies to rank strategy combinations."""
-    # Use a defaultdict to easily aggregate data for each unique strategy.
-    # The key will be the string representation of the rule stack.
-    stats = defaultdict(lambda: {'metrics': [], 'symbols': []})
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            df = pd.read_sql_query("SELECT * FROM strategies", conn)
+    except (sqlite3.Error, pd.errors.DatabaseError) as e:
+        logger.error(f"Failed to read strategies from database: {e}")
+        return []
 
-    with sqlite3.connect(str(db_path)) as conn:
-        conn.row_factory = sqlite3.Row
-        # Select all the data we need from every strategy ever saved.
-        cursor = conn.execute("SELECT symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return FROM strategies")
-        strategies = cursor.fetchall()
+    if df.empty:
+        return []
 
-    for strategy in strategies:
+    def get_strategy_name(rule_stack_json: str) -> str:
         try:
-            rules_in_stack = json.loads(strategy['rule_stack'])
-            # Ensure we have a list of rules
-            if isinstance(rules_in_stack, list):
-                # Create a consistent, readable key for the strategy combination.
-                # e.g., "baseline_rule + rsi_filter + volume_filter"
-                strategy_key = " + ".join(r.get('name', 'N/A') for r in rules_in_stack if isinstance(r, dict))
-                if not strategy_key:
-                    continue
-            else:
-                logger.warning(f"Invalid rule_stack format for {strategy['symbol']}: expected list, got {type(rules_in_stack)}")
-                continue
+            rules = json.loads(rule_stack_json)
+            return " + ".join(r.get("name", "N/A") for r in rules if isinstance(r, dict))
         except (json.JSONDecodeError, TypeError):
-            logger.warning(f"Malformed rule_stack JSON for {strategy['symbol']}: {strategy['rule_stack']}")
-            continue
+            return "Unknown Strategy"
 
-        # Append the metrics and symbol for later aggregation.
-        stats[strategy_key]['metrics'].append(dict(strategy))
-        stats[strategy_key]['symbols'].append(strategy['symbol'])
+    df["strategy_name"] = df["rule_stack"].apply(get_strategy_name)
 
-    # Now, process the aggregated data to calculate averages.
-    analysis = []
-    for key, strategy_data in stats.items():
-        freq = len(strategy_data['metrics'])
+    agg_metrics = {
+        "avg_edge_score": ("edge_score", "mean"),
+        "avg_win_pct": ("win_pct", "mean"),
+        "avg_sharpe": ("sharpe", "mean"),
+        "avg_trades": ("total_trades", "mean"),
+        "avg_return": ("avg_return", "mean"),
+        "frequency": ("symbol", "count"),
+    }
 
-        # Safely sum total_trades, as it might be corrupted in the DB
-        total_trades_sum = 0
-        for m in strategy_data['metrics']:
-            try:
-                total_trades_sum += int(m['total_trades'])
-            except (ValueError, TypeError):
-                logger.warning(
-                    f"Could not parse total_trades '{m['total_trades']!r}' for strategy '{key}' "
-                    f"on symbol '{m.get('symbol', 'N/A')}'. Treating as 0."
-                )
+    grouped = df.groupby("strategy_name").agg(**agg_metrics)
 
-        analysis.append({
-            'strategy_name': key,
-            'frequency': freq,
-            'avg_edge_score': sum(float(m['edge_score']) for m in strategy_data['metrics']) / freq,
-            'avg_win_pct': sum(float(m['win_pct']) for m in strategy_data['metrics']) / freq,
-            'avg_sharpe': sum(float(m['sharpe']) for m in strategy_data['metrics']) / freq,
-            'avg_trades': total_trades_sum / freq if freq > 0 else 0.0,
-            'avg_return': sum(float(m['avg_return']) for m in strategy_data['metrics']) / freq,
-            'top_symbols': ", ".join(s for s, _ in Counter(strategy_data['symbols']).most_common(3)),
-        })
+    # Aggregate top symbols separately
+    top_symbols = df.groupby("strategy_name")["symbol"].apply(
+        lambda s: ", ".join(s.value_counts().nlargest(3).index)
+    ).rename("top_symbols")
 
-    # Sort by the primary performance metric.
-    return sorted(analysis, key=lambda x: x['avg_edge_score'], reverse=True)
+    analysis_df = grouped.join(top_symbols).reset_index()
+    analysis_df = analysis_df.sort_values("avg_edge_score", ascending=False)
+
+    return analysis_df.to_dict("records")
 
 
 def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
     """Formats the strategy performance analysis into a markdown table."""
-    header = "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Return | Avg Trades | Top Symbols |\n"
+    header = "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg PnL/Trade | Avg Trades | Top Symbols |\n"
     separator = "|:---|---:|---:|---:|---:|---:|---:|:---|\n"
     
     rows = []
@@ -547,7 +523,7 @@ def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
             f"| {stats['avg_edge_score']:.2f} "
             f"| {stats['avg_win_pct']:.1%} "
             f"| {stats['avg_sharpe']:.2f} "
-            f"| {stats['avg_return']:.1%} "
+            f"| {stats['avg_return']:.2f} "  # PnL in currency units
             f"| {stats['avg_trades']:.1f} "
             f"| {stats['top_symbols']} |"
         )

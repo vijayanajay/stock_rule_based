@@ -367,19 +367,76 @@ def analyze_strategies(
         output_file.write_text(report_content, encoding="utf-8")
         console.print(f"✅ Strategy performance report saved to: [cyan]{output_file}[/cyan]")
 
+        # Save log before completing
+        try:
+            log_path = Path("analyze_strategies_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            logger.info(f"Log file saved to {log_path}")
+        except OSError as log_e:
+            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
+            logger.error(error_msg, exc_info=True)
+            console.print(f"[red]{error_msg}[/red]")
+
     except Exception as e:
         console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
         if ctx.obj and ctx.obj.get("verbose", False):
             console.print_exception()
-        raise typer.Exit(1)
-    finally:
-        # Always try to save the log, similar to the 'run' command
+        # Save log before exiting
         try:
             log_path = Path("analyze_strategies_log.txt")
             log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            print(f"\nLog file saved to {log_path}", file=sys.stderr)
+            logger.info(f"Log file saved to {log_path}")
         except OSError as log_e:
-            logger.error(f"Critical error: Could not save log file to {log_path}. Reason: {log_e}", exc_info=True)
+            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
+            logger.error(error_msg, exc_info=True)
+            console.print(f"[red]{error_msg}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command(name="clear-and-recalculate")
+def clear_and_recalculate(
+    ctx: typer.Context,
+    force: bool = typer.Option(False, "--force", help="Skip confirmation prompt"),
+    freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data at this date (YYYY-MM-DD format)"),
+) -> None:
+    """Clear all strategies from database and recalculate them with current parameters."""
+    app_config = ctx.obj["config"]
+    rules_config = ctx.obj["rules"]
+    db_path = Path(app_config.database_path)
+
+    if not db_path.exists():
+        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
+        raise typer.Exit(1)
+
+    if not force and not typer.confirm(f"⚠️ This will permanently delete all strategies from {db_path}. Continue?"):
+        console.print("[blue]Operation cancelled.[/blue]")
+        raise typer.Exit(0)
+
+    try:
+        with persistence.get_connection(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM strategies")
+            deleted_count = cursor.rowcount
+            conn.commit()
+            console.print(f"✅ Deleted {deleted_count} strategy records.")
+
+            # Reuse the existing backtesting logic from the `run` command
+            console.print("[bold blue]Starting fresh backtesting run...[/bold blue]")
+            symbols = data.load_universe(app_config.universe_path)
+            freeze_date_obj = date.fromisoformat(freeze_data) if freeze_data else None
+            all_results = _run_backtests(app_config, rules_config, symbols, freeze_date_obj)
+
+            console.print("[bold blue]Saving new strategies...[/bold blue]")
+            run_timestamp = datetime.now().isoformat()
+            _save_results(conn, all_results, run_timestamp)
+
+            console.print(f"✅ [bold green]Recalculation complete! Found {len(all_results)} new strategies.[/bold green]")
+
+    except Exception as e:
+        console.print(f"[red]An unexpected error occurred: {e}[/red]")
+        if ctx.obj.get("verbose"):
+            console.print_exception()
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

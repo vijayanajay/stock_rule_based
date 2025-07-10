@@ -557,10 +557,10 @@ class TestStrategyPerformanceAnalysis:
         md_content = reporter.format_strategy_analysis_as_md(analysis_data)
 
         assert "# Strategy Performance Report" in md_content
-        assert "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg Return | Avg Trades | Top Symbols |" in md_content
+        assert "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg PnL/Trade | Avg Trades | Top Symbols |" in md_content
         assert "|:---|---:|---:|---:|---:|---:|---:|:---|" in md_content
-        assert "| `bullish_engulfing + rsi_oversold` | 15 | 0.72 | 68.5% | 1.35 | 9.5% | 12.3 | RELIANCE, INFY, HDFCBANK |" in md_content
-        assert "| `sma_crossover` | 8 | 0.55 | 60.1% | 0.95 | 4.2% | 18.7 | TCS, WIPRO |" in md_content
+        assert "| `bullish_engulfing + rsi_oversold` | 15 | 0.72 | 68.5% | 1.35 | 0.10 | 12.3 | RELIANCE, INFY, HDFCBANK |" in md_content
+        assert "| `sma_crossover` | 8 | 0.55 | 60.1% | 0.95 | 0.04 | 18.7 | TCS, WIPRO |" in md_content
 
     def test_format_strategy_analysis_as_csv(self):
         """Test strategy analysis CSV formatting."""

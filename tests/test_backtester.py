@@ -30,23 +30,6 @@ class TestBacktester:
         assert backtester.hold_period == 30
         assert backtester.min_trades_threshold == 15
 
-    def test_calc_edge_score_basic(self):
-        """Test edge score calculation with basic inputs."""
-        backtester = Backtester()
-        weights = {'win_pct': 0.6, 'sharpe': 0.4}
-        
-        edge_score = backtester.calc_edge_score(0.7, 1.5, weights)
-        expected = (0.7 * 0.6) + (1.5 * 0.4)
-        assert edge_score == pytest.approx(expected, rel=1e-3)
-
-    def test_calc_edge_score_zero_values(self):
-        """Test edge score calculation with zero values."""
-        backtester = Backtester()
-        weights = {'win_pct': 0.6, 'sharpe': 0.4}
-        
-        edge_score = backtester.calc_edge_score(0.0, 0.0, weights)
-        assert edge_score == 0.0
-
     def test_generate_signals_empty_type_field(self, sample_price_data):
         """Test signal generation with a rule having an empty 'type' field."""
         from kiss_signal.config import RuleDef

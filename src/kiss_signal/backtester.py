@@ -4,6 +4,7 @@ This module handles backtesting of rule combinations and edge score calculation.
 """
 
 import logging
+from datetime import date
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -11,7 +12,7 @@ import pandas as pd
 import vectorbt as vbt
 
 from . import rules
-from .config import RulesConfig
+from .config import RulesConfig, EdgeScoreWeights
 from .performance import performance_monitor
 
 __all__ = ["Backtester"]
@@ -42,8 +43,8 @@ class Backtester:
         price_data: pd.DataFrame,
         rules_config: RulesConfig,
         symbol: str = "",  # Added symbol for logging
-        freeze_date: Any = None,  # Accept date or None
-        edge_score_weights: Optional[Dict[str, float]] = None
+        freeze_date: Optional[date] = None,
+        edge_score_weights: Optional[EdgeScoreWeights] = None
     ) -> Any:
         """Find optimal rule combinations through backtesting.
         
@@ -52,7 +53,7 @@ class Backtester:
             price_data: OHLCV price data for backtesting
             symbol: The stock symbol being tested, for logging purposes.
             freeze_date: Optional cutoff date for data (for deterministic testing)
-            edge_score_weights: Optional custom weights for edge score calculation
+            edge_score_weights: Optional EdgeScoreWeights model for edge score calculation
             
         Returns:
             List of strategies with edge scores and performance metrics, ranked by edge score
@@ -87,7 +88,7 @@ class Backtester:
                 logger.debug(f"Forward-filled NaN values after frequency adjustment for {symbol}")
 
         if edge_score_weights is None:
-            edge_score_weights = {'win_pct': 0.6, 'sharpe': 0.4}
+            edge_score_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
         
         logger.info(f"Backtesting {len(combinations_to_test)} rule combinations for {symbol}")
         strategies = []
@@ -155,6 +156,21 @@ class Backtester:
                     win_pct = portfolio.trades.win_rate()  # Already returns decimal ratio (e.g., 0.65 for 65%)
                     sharpe = portfolio.sharpe_ratio()
                     avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
+                    
+                    # Debug logging for suspiciously low win rates
+                    if win_pct < 0.2:  # Less than 20% win rate is suspicious
+                        logger.warning(f"Low win rate detected for {symbol}: {win_pct:.1%} with {total_trades} trades")
+                        logger.warning(f"Rule combination: {rule_names}")
+                        logger.warning(f"Average PnL: {avg_return:.2f}, Sharpe: {sharpe:.2f}")
+                        
+                        # Additional debug info
+                        if logger.isEnabledFor(logging.DEBUG):
+                            winning_trades = portfolio.trades.count_winning()
+                            losing_trades = portfolio.trades.count_losing()
+                            avg_win = portfolio.trades.pnl[portfolio.trades.pnl > 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl > 0]) > 0 else 0
+                            avg_loss = portfolio.trades.pnl[portfolio.trades.pnl < 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl < 0]) > 0 else 0
+                            logger.debug(f"Winning trades: {winning_trades}, Losing trades: {losing_trades}")
+                            logger.debug(f"Average win: {avg_win:.2f}, Average loss: {avg_loss:.2f}")
                 else:
                     win_pct = 0.0
                     sharpe = 0.0
@@ -164,7 +180,7 @@ class Backtester:
                 if total_trades < self.min_trades_threshold:
                     logger.warning(f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, which is below the threshold of {self.min_trades_threshold}.")
                     continue
-                edge_score = (win_pct * edge_score_weights['win_pct']) + (sharpe * edge_score_weights['sharpe'])
+                edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
                 strategy = {
                     'rule_stack': combo,  # Persist the entire rule combination
                     'edge_score': edge_score,
@@ -180,20 +196,6 @@ class Backtester:
                 continue
         strategies.sort(key=lambda x: x['edge_score'], reverse=True)
         return strategies
-
-    def calc_edge_score(self, win_pct: float, sharpe: float, weights: Dict[str, float]) -> float:
-        """Calculate edge score using weighted metrics.
-        
-        Args:
-            win_pct: Win percentage (0.0 to 1.0)
-            sharpe: Sharpe ratio
-            weights: EdgeScoreWeights dict
-            
-        Returns:
-            Calculated edge score
-        """
-        edge_score = (win_pct * weights['win_pct']) + (sharpe * weights['sharpe'])
-        return edge_score
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
         """Generate exit signals based on holding period after entry signals."""

@@ -1,6 +1,6 @@
-# Signal CLI – Simple Signal Generation for NSE Equities
+# KISS Signal CLI – Keep-It-Simple Signal Generation for NSE Equities
 
-A streamlined tool for backtesting and generating trading signals for Indian equities. Provides robust data acquisition, signal generation, backtesting, and reporting via a simple CLI.
+A streamlined tool for backtesting and generating trading signals for Indian equities. Provides robust data acquisition, rule-based signal generation, backtesting, and reporting via a simple CLI.
 
 ## Quick Start
 
@@ -9,83 +9,196 @@ A streamlined tool for backtesting and generating trading signals for Indian equ
     pip install -r requirements.txt
     ```
 
-2. **Run the app:**
+2. **Run the analysis:**
     ```cmd
-    quickedge run
-    # or
     python run.py run
     ```
 
-3. **Example config:**
-    ```yaml
-    ticker: AAPL
-    start_date: 2022-01-01
-    end_date: 2022-12-31
-    strategy_type: MovingAverageCrossover
-    strategy_params:
-      fast_ma: 10
-      slow_ma: 30
-    ```
-
-4. **Analyze:**
+3. **View results:**
     ```cmd
-    python run.py analyze my_strategy.yaml
-    python run.py analyze my_strategy.yaml --report --verbose
+    python run.py analyze-strategies
     ```
 
-## CLI Options
-- `--report`: Generate PDF report
-- `--validate-only`: Only validate config
-- `--output-dir DIR`: Output directory
+## CLI Commands
+
+### Main Commands
+- `run`: Run the full backtesting pipeline
+- `analyze-strategies`: Generate CSV report of strategy performance
+- `analyze-rules`: Generate markdown report of individual rule performance
+- `clear-and-recalculate`: Clear database and recalculate all strategies
+
+### Options
 - `--verbose, -v`: Detailed logs
-- `--quiet, -q`: Minimal output
 - `--help, -h`: Show help
-- `analyze-strategies [--output <filename>.md]`: Generate a Markdown leaderboard of all historical strategy performance (see below)
+- `--config`: Path to config file (default: config.yaml)
+- `--rules`: Path to rules config file (default: config/rules.yaml)
+- `--freeze-date`: Use historical date for testing (YYYY-MM-DD)
+- `--force`: Skip confirmation prompts
 
-## Strategy Performance Leaderboard
+## Strategy Performance Analysis
 
-A new command is available:
+The CLI provides detailed analysis of strategy performance:
 
+### Strategy Performance Report
 ```cmd
-python run.py analyze-strategies --output strategy_performance_report.md
+python run.py analyze-strategies --output strategy_performance_report.csv
 ```
-- Analyzes all historical strategies in the database.
-- Produces a Markdown table ranking each unique strategy combination by average edge score, win %, Sharpe, and more.
-- Output file defaults to `strategy_performance_report.md` if not specified.
+Generates a CSV report with the following metrics:
+- **strategy_rule_stack**: The combination of rules (e.g., "bullish_engulfing_reversal + filter_with_rsi_oversold")
+- **frequency**: Number of symbols where this strategy was optimal
+- **avg_edge_score**: Average edge score (weighted combination of win rate and Sharpe ratio)
+- **avg_win_pct**: Average win percentage (decimal, e.g., 0.65 = 65%)
+- **avg_sharpe**: Average Sharpe ratio
+- **avg_pnl_per_trade**: Average profit/loss per trade in currency units
+- **avg_return_pct**: Average return percentage per trade
+- **avg_trades**: Average number of trades per symbol
+- **top_symbols**: Most frequently appearing symbols for this strategy
 
-## Strategy: MovingAverageCrossover
-- `fast_ma`: Fast MA period (>0)
-- `slow_ma`: Slow MA period (>fast_ma)
-- Entry: fast MA crosses above slow MA
-- Exit: fast MA crosses below slow MA
+### Individual Rule Performance
+```cmd
+python run.py analyze-rules --output rule_performance_analysis.md
+```
+Analyzes performance of individual rules across all strategies.
 
-## Output
-- Console: summary stats, trade analysis, risk metrics
-- PDF/CSV: in `reports/` directory
+### Database Management
+```cmd
+python run.py clear-and-recalculate --force
+```
+Clears all existing strategies from the database and recalculates them with current parameters. Useful when:
+- Rule parameters have been modified
+- Strategy logic has been updated
+- You want to test different configurations
+
+## Technical Analysis Rules
+
+The system supports various technical analysis rules:
+
+### Entry Rules
+- **engulfing_pattern**: Bullish engulfing candlestick pattern
+- **sma_crossover**: Simple moving average crossover
+- **rsi_oversold**: RSI-based oversold signals
+- **volume_spike**: Volume spike detection
+- **hammer_pattern**: Hammer candlestick pattern
+- **macd_crossover**: MACD signal line crossover
+
+### Filter Rules
+- **price_above_sma**: Price above moving average filter
+- **rsi_oversold**: RSI momentum confirmation
+- **volume_spike**: Volume confirmation
+
+### Exit Rules
+- **stop_loss_pct**: Percentage-based stop loss
+- **take_profit_pct**: Percentage-based take profit
+- **sma_cross_under**: Moving average exit signal
+
+## Configuration
+
+### Main Configuration (config.yaml)
+```yaml
+database_path: "data/kiss_signal.db"
+cache_dir: "data"
+cache_refresh_days: 1
+historical_data_years: 2
+edge_score_threshold: 0.1
+hold_period: 20
+min_trades_threshold: 10
+initial_capital: 100000.0
+symbols_path: "data/nifty_large_mid.csv"
+rules_config_path: "config/rules.yaml"
+```
+
+### Rules Configuration (config/rules.yaml)
+Defines the baseline rule and filter layers:
+```yaml
+baseline:
+  name: "bullish_engulfing_reversal"
+  type: "engulfing_pattern"
+  params:
+    min_body_ratio: 1.2
+
+layers:
+  - name: "filter_with_rsi_oversold"
+    type: "rsi_oversold"
+    params:
+      period: 14
+      oversold_threshold: 30.0
+```
 
 ## Data & Caching
-- Auto-fetches/caches Yahoo Finance data in `data/cache/`
-- Use `from meqsap.data import clear_cache` to clear cache
+- Auto-fetches NSE data from Yahoo Finance
+- Caches data in `data/` directory
+- Refresh controlled by `cache_refresh_days` setting
+- Supports freeze dates for deterministic testing
 
 ## Troubleshooting
-- **slow_ma > fast_ma**: Fix config
-- **Insufficient data**: Extend date range or reduce MA
-- **No data**: Check ticker
-- **Import errors**: Run from project root
 
-For help: `python run.py --help`
+### Common Issues
+- **Low win rates (< 5%)**: Check rule parameters, consider loosening filters
+- **No strategies found**: Lower `edge_score_threshold` or `min_trades_threshold`
+- **Database errors**: Delete `data/kiss_signal.db` and run `clear-and-recalculate`
+- **Data issues**: Check symbol file and internet connection
+
+### Performance Issues
+- **Slow backtesting**: Reduce `historical_data_years` or number of symbols
+- **Memory usage**: Process symbols in batches (modify CLI if needed)
+
+### Debugging
+- Use `--verbose` flag for detailed logs
+- Check `analyze_strategies_log.txt` for strategy analysis execution details
+- Check `clear_and_recalculate_log.md` for database recalculation details
+- Monitor database size growth in `data/kiss_signal.db`
 
 ## Development
+
+### Requirements
 - Python 3.9+
-- Install dev deps: `pip install -e .[dev]`
-- Run tests: `pytest`
-- Code: type hints, Pydantic, docstrings
+- Required packages: pandas, numpy, vectorbt, typer, rich, pydantic, yfinance
+
+### Setup
+```bash
+pip install -e .
+```
+
+### Testing
+```bash
+pytest tests/
+mypy src/
+```
+
+### Code Quality
+- Type hints required for all functions
+- Pydantic models for configuration
+- Comprehensive docstrings
+- Follow KISS principles (Keep-It-Simple)
 
 ## Project Structure
-- `src/` – main code
-- `tests/` – tests
-- `docs/` – docs
-- `run.py` – entry point
+```
+src/kiss_signal/
+├── __init__.py
+├── cli.py              # CLI entry point
+├── config.py           # Configuration management
+├── data.py             # Data acquisition
+├── backtester.py       # Backtesting engine
+├── rules.py            # Technical analysis rules
+├── persistence.py      # Database operations
+├── reporter.py         # Report generation
+└── performance.py      # Performance monitoring
+
+config/
+├── rules.yaml          # Rules configuration
+tests/                  # Test suite
+data/                   # Data cache and database
+```
+
+## Architecture
+
+The system follows a modular monolith pattern:
+- **CLI Layer**: User interface and command orchestration
+- **Data Layer**: Market data acquisition and caching
+- **Rules Layer**: Technical analysis implementations
+- **Backtesting Layer**: Strategy evaluation using vectorbt
+- **Persistence Layer**: SQLite database operations
+- **Reporting Layer**: Analysis and report generation
 
 ## License
 MIT License
