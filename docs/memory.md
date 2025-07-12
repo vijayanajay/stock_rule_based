@@ -1,18 +1,15 @@
 # KISS Signal CLI - Memory & Learning Log
 
-## Test Harness Integrity: Flaky Tests and Flawed Invocations (2025-07-24)
+## Test Harness Integrity: Flawed Invocation and Non-Resilient Setup (2025-07-24)
 - **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic.
     1.  **Flawed CLI Invocation (`test_run_command_backtest_generic_exception_verbose`):** A test invoked the Typer CLI with an incorrect argument order (global options after the command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
     2.  **Non-Resilient Test Setup (`test_run_command_help`):** A help-text test for a subcommand failed because it was not self-contained and relied on filesystem state, causing the non-resilient part of the main CLI callback to fail on config loading.
-    3.  **Non-Deterministic Test (`test_get_summary`):** A performance test relied on the non-deterministic timing of `time.sleep()`, making it flaky and unreliable.
 - **Fix**:
     1.  Corrected the CLI test invocation to place global options before the command, aligning the test with actual user behavior.
     2.  Simplified the help test to target the main application's help text (`--help`), which is more robust and does not depend on a fully configured test environment.
-    3.  Replaced the `time.sleep()`-based test with a deterministic one using `unittest.mock.patch` on `time.time()` to control the flow of time precisely.
 - **Lesson**: A project's test harness is part of its core structure and must be as robust as the application code.
     -   CLI tests must precisely mirror valid user invocation patterns.
     -   Tests should be self-contained and not rely on implicit filesystem state.
-    -   Tests must be deterministic. Avoid relying on system-dependent behaviors like `time.sleep()` for assertions; use mocking to control the environment and remove flakiness.
 
 ## Test Harness Integrity: Brittle Assertions and Flawed I/O Capture (2025-07-23)
 - **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic.
@@ -24,6 +21,11 @@
 - **Lesson**: The test harness is a critical part of the application's structure.
     -   Tests should be robust against minor implementation changes (like improving an error message). Avoid asserting on exact strings where possible, or update tests when application code is improved.
     -   Tests must correctly model the application's I/O and logging behavior. When a custom logging handler like `RichHandler` is used, standard fixtures like `caplog` may not work as expected, and asserting on the final console output (`stdout`/`stderr`) is often a more reliable pattern.
+
+## Test Harness Integrity: Non-Deterministic Tests (2025-07-24)
+- **Issue**: A performance test (`test_get_summary`) relied on the non-deterministic timing of `time.sleep()`, making it flaky and unreliable. The test would pass or fail based on system load.
+- **Fix**: Replaced the `time.sleep()`-based test with a deterministic one using `unittest.mock.patch` on `time.time()` to control the flow of time precisely. By providing a `side_effect` list of timestamps, the test's duration calculations became independent of actual wall-clock time.
+- **Lesson**: Tests must be deterministic. Avoid relying on system-dependent behaviors like `time.sleep()` for assertions. Use mocking to control the environment and remove flakiness.
 
 ## AI Coding Pitfalls (Most Common)
 
@@ -299,3 +301,19 @@
     -   Persistence layers should validate data integrity (non-null, correct types) but not duplicate business logic that exists elsewhere.
     -   Hardcoded thresholds in infrastructure code create configuration validation gaps where different parts of the system have different rules.
     -   When a test worked before and suddenly fails, look for changes in infrastructure code (like persistence) that may have introduced new constraints.
+
+## Installed Package vs Development Source Import Conflict (2025-07-13)
+- **Issue**: All tests failed during collection with `ImportError` for `RuleDef`, `RulesConfig`, `volume_spike`, and missing `performance` module. The error messages showed imports resolving to `D:\Code\stock_rule_based\venv\Lib\site-packages\kiss_signal\` instead of the current development source.
+- **Root Cause**: An outdated installed version of `kiss_signal` package (dated June 28th) was present in site-packages and taking precedence over the current development source code in Python's import resolution.
+- **Symptoms**: 
+    - Tests couldn't import current classes/functions that exist in development source
+    - Python was finding old installed package first due to import path priority
+    - 5 test files completely failed to collect with ImportError
+- **Fix**:
+    1. **Removed conflicting package**: `pip uninstall kiss_signal -y` 
+    2. **Fixed import path priority**: Added `src/` directory to Python path in `conftest.py`
+    3. **Result**: 227 tests collected successfully, 225 passed (vs 0 collected before)
+- **Lesson**: When developing a package locally, ensure no conflicting installed versions exist in the environment. Python's import resolution follows `sys.path` order, so installed packages can shadow development source code. Always check for installed versions when encountering mysterious import failures that claim classes/modules don't exist despite being visible in the source code.
+    - **Prevention**: Use virtual environments properly and avoid installing the package being developed unless using editable mode (`pip install -e .`)
+    - **Detection Pattern**: Import errors showing site-packages paths instead of local source paths
+    - **Quick Check**: `pip list | grep package_name` and `dir venv\Lib\site-packages\` to identify conflicts

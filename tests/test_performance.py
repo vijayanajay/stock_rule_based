@@ -37,14 +37,11 @@ def test_performance_monitor_decorator():
 def test_get_summary():
     """Test the get_summary method."""
     monitor = PerformanceMonitor()
-    # Mock time.time to return predictable, increasing values to make test deterministic.
-    # The time.sleep calls are no longer needed as we control time directly.
-    # Provide enough values for both the monitor and the internal logger calls.
     with patch('time.time', side_effect=[1000.0, 1000.01, 1000.02, 1000.04, 1000.06, 1000.07]):
         with monitor.monitor_execution("fast_op"):
-            time.sleep(0.01) # sleep is fine here as we mock time.time
+            time.sleep(0.01)  # sleep is fine here as we mock time.time
         with monitor.monitor_execution("slow_op"):
-            time.sleep(0.02)
+            time.sleep(0.02)  # sleep is fine here as we mock time.time
 
     summary = monitor.get_summary()
 

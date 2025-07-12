@@ -289,13 +289,41 @@ def run(
                 console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
                 console.print(f"Slowest Function: {perf_summary['slowest_function']}")
 
+        # Save log after successful completion
+        try:
+            log_path = Path("run_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            logger.info(f"Log file saved to {log_path}")
+        except OSError as log_e:
+            error_msg = f"Critical error: Could not save log file to run_log.txt. Reason: {log_e}"
+            logger.error(error_msg, exc_info=True)
+            console.print(f"[red]{error_msg}[/red]")
+
     except (typer.Exit, FileNotFoundError, ValueError) as e:
         console.print(f"[red]Error: {e}[/red]")
+        # Save log before exiting on error
+        try:
+            log_path = Path("run_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            logger.info(f"Log file saved to {log_path}")
+        except OSError as log_e:
+            error_msg = f"Critical error: Could not save log file to run_log.txt. Reason: {log_e}"
+            logger.error(error_msg, exc_info=True)
+            console.print(f"[red]{error_msg}[/red]")
         raise
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")
         if verbose:
             console.print_exception()
+        # Save log before exiting on error
+        try:
+            log_path = Path("run_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            logger.info(f"Log file saved to {log_path}")
+        except OSError as log_e:
+            error_msg = f"Critical error: Could not save log file to run_log.txt. Reason: {log_e}"
+            logger.error(error_msg, exc_info=True)
+            console.print(f"[red]{error_msg}[/red]")
         raise typer.Exit(1)
     finally:
         if db_connection:

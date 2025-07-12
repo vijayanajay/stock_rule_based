@@ -282,25 +282,55 @@ def generate_daily_report(
 
             try:
                 price_data = data.get_price_data(symbol=pos["symbol"], cache_dir=Path(config.cache_dir), start_date=entry_date, end_date=run_date, freeze_date=config.freeze_date, years=config.historical_data_years)
-                nifty_data = data.get_price_data(symbol="^NSEI", cache_dir=Path(config.cache_dir), start_date=entry_date, end_date=run_date, freeze_date=config.freeze_date, years=config.historical_data_years)
 
-                current_price = price_data['close'].iloc[-1] if not price_data.empty else pos['entry_price']
-                current_low = price_data['low'].iloc[-1] if not price_data.empty else current_price
-                current_high = price_data['high'].iloc[-1] if not price_data.empty else current_price
-                return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
-                nifty_return_pct = ((nifty_data['close'].iloc[-1] - nifty_data['close'].iloc[0]) / nifty_data['close'].iloc[0] * 100) if nifty_data is not None and not nifty_data.empty and nifty_data['close'].iloc[0] > 0 else 0.0
+                if price_data.empty:
+                    logger.warning(f"No price data available for {pos['symbol']} from {entry_date} to {run_date}")
+                    current_price = pos['entry_price']
+                    current_low = current_high = current_price
+                    return_pct = 0.0
+                    nifty_return_pct = 0.0
+                else:
+                    # Use the latest available price (which may be older than run_date)
+                    current_price = price_data['close'].iloc[-1]
+                    current_low = price_data['low'].iloc[-1]  
+                    current_high = price_data['high'].iloc[-1]
+                    return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
+                    
+                    # Log if data is stale (last date != run_date)
+                    last_data_date = price_data.index[-1].date()
+                    if last_data_date < run_date:
+                        logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date}")
+                    
+                    # Calculate NIFTY return for the same period as available stock data
+                    actual_end_date = last_data_date if last_data_date < run_date else run_date
+                    try:
+                        nifty_data = data.get_price_data(symbol="^NSEI", cache_dir=Path(config.cache_dir), start_date=entry_date, end_date=actual_end_date, freeze_date=config.freeze_date, years=config.historical_data_years)
+                        
+                        if nifty_data is None or nifty_data.empty or len(nifty_data) == 0:
+                            logger.warning(f"No NIFTY data available for period {entry_date} to {actual_end_date}")
+                            nifty_return_pct = 0.0
+                        elif nifty_data['close'].iloc[0] <= 0:
+                            logger.warning(f"Invalid NIFTY entry price for period {entry_date} to {actual_end_date}")
+                            nifty_return_pct = 0.0
+                        else:
+                            nifty_return_pct = (nifty_data['close'].iloc[-1] - nifty_data['close'].iloc[0]) / nifty_data['close'].iloc[0] * 100
+                    except Exception as e:
+                        logger.warning(f"Failed to get NIFTY data for {pos['symbol']} comparison: {e}")
+                        nifty_return_pct = 0.0
 
                 pos.update({'current_price': current_price, 'return_pct': return_pct, 'nifty_return_pct': nifty_return_pct, 'days_held': days_held})
 
                 # Check for dynamic exit conditions
-                exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, rules_config.get('sell_conditions', []), days_held, config.hold_period) # type: ignore
+                sell_conditions = getattr(rules_config, 'sell_conditions', None) if hasattr(rules_config, 'sell_conditions') else rules_config.get('sell_conditions', [])
+                exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, sell_conditions, days_held, config.hold_period)
                 if exit_reason:
                     pos.update({'exit_date': run_date.isoformat(), 'exit_price': current_price, 'final_return_pct': return_pct, 'final_nifty_return_pct': nifty_return_pct, 'exit_reason': exit_reason})
                     positions_to_close.append(pos)
                 else:
                     positions_to_hold.append(pos)
             except Exception as e:
-                logger.warning(f"Could not process position for {pos['symbol']}: {e}")
+                logger.error(f"Failed to process position for {pos['symbol']}: {e}")
+                # Fall back to N/A values when everything fails
                 pos.update({'current_price': None, 'return_pct': None, 'nifty_return_pct': None, 'days_held': days_held})
                 positions_to_hold.append(pos)
 
@@ -436,7 +466,7 @@ def _check_exit_conditions(
     price_data: pd.DataFrame,
     current_low: float,
     current_high: float,
-    sell_conditions: List[Dict[str, Any]],
+    sell_conditions: List[Any],  # Can be RuleDef objects or dicts
     days_held: int,
     hold_period: int
 ) -> Optional[str]:
@@ -444,22 +474,29 @@ def _check_exit_conditions(
     entry_price = position['entry_price']
 
     for condition in sell_conditions:
-        rule_type = condition.get('type')
-        params = condition.get('params', {})
+        # Handle both RuleDef objects and dictionaries
+        if hasattr(condition, 'type'):  # RuleDef object
+            rule_type = condition.type
+            params = condition.params if hasattr(condition, 'params') and condition.params else {}
+            condition_name = getattr(condition, 'name', rule_type)
+        else:  # Dictionary
+            rule_type = condition.get('type')
+            params = condition.get('params', {})
+            condition_name = condition.get('name', rule_type)
 
         if rule_type == 'stop_loss_pct':
-            percentage = params.get('percentage', 0)
+            percentage = params.get('percentage', 0) if isinstance(params, dict) else getattr(params, 'percentage', 0)
             if current_low <= entry_price * (1 - percentage):
                 return f"Stop-loss at -{percentage:.1%}"
         elif rule_type == 'take_profit_pct':
-            percentage = params.get('percentage', 0)
+            percentage = params.get('percentage', 0) if isinstance(params, dict) else getattr(params, 'percentage', 0)
             if current_high >= entry_price * (1 + percentage):
                 return f"Take-profit at +{percentage:.1%}"
         else:
             try:
                 rule_func = getattr(rules, rule_type, None)
                 if rule_func and rule_func(price_data, **params).iloc[-1]:
-                    return f"Rule: {condition.get('name', rule_type)}"
+                    return f"Rule: {condition_name}"
             except Exception as e:
                 logger.warning(f"Error checking exit rule {rule_type}: {e}")
 

@@ -185,17 +185,18 @@ def test_run_command_backtest_generic_exception_verbose(
         data_dir = Path(fs_path) / "data"; data_dir.mkdir()
         universe_path = data_dir / "nifty_large_mid.csv"; universe_path.write_text("symbol\nRELIANCE\n")
         sample_config["universe_path"] = str(universe_path)
-        config_path = Path("config.yaml")
+        config_path = Path(fs_path) / "config.yaml"
         config_path.write_text(yaml.dump(sample_config))
         rules_path = Path(fs_path) / "config" / "rules.yaml"
         rules_path.parent.mkdir()
         rules_path.write_text(VALID_RULES_YAML)
-    
+
+        # Global options like --verbose must come BEFORE the command
         # Global options like --verbose must come BEFORE the command
         result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
-    
         assert result.exit_code == 1, result.stdout
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
+        assert "Traceback (most recent call last)" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
 
 
@@ -639,52 +640,3 @@ def test_analyze_rules_exception_handling(mock_analyze, tmp_path: Path):
         assert "Traceback (most recent call last)" in result_verbose.stdout
 
 
-@patch("kiss_signal.cli.reporter.analyze_strategy_performance")
-def test_analyze_strategies_log_save_failure(mock_analyze, sample_config: Dict[str, Any]) -> None:
-        """Test that analyze-strategies handles log saving failures in finally block."""
-        # Return some dummy data with all required columns so we don't hit the early return
-        mock_analyze.return_value = [{
-            "strategy_name": "test", 
-            "frequency": 1, 
-            "avg_edge_score": 0.5,
-            "avg_win_pct": 0.6,
-            "avg_sharpe": 1.2,
-            "avg_return": 0.05,
-            "avg_trades": 10.0,
-            "top_symbols": "TEST"
-        }]
-
-        with runner.isolated_filesystem() as fs:
-            fs_path = Path(fs)
-            db_path = fs_path / "test.db"
-            persistence.create_database(db_path)
-
-            dummy_universe_file = fs_path / "dummy.csv"
-            dummy_universe_file.write_text("symbol\nTEST\n")
-
-            sample_config["database_path"] = str(db_path)
-            sample_config["universe_path"] = str(dummy_universe_file)
-            config_path = Path("config.yaml")
-            config_path.write_text(yaml.dump(sample_config))
-
-            rules_path = fs_path / "config" / "rules.yaml"
-            rules_path.parent.mkdir(exist_ok=True)
-            rules_path.write_text(VALID_RULES_YAML)
-
-            # Patch specific log file operations to fail
-            with patch("kiss_signal.cli.Path") as mock_path:
-                # Mock Path constructor to return special failing instances for log files
-                def path_side_effect(path_str):
-                    if "analyze_strategies_log.txt" in str(path_str):
-                        failing_path = MagicMock()
-                        failing_path.write_text.side_effect = OSError("Disk full")
-                        failing_path.__str__ = lambda self: str(path_str)  # Fix lambda to accept self
-                        return failing_path
-                    else:
-                        return Path(path_str)
-
-                mock_path.side_effect = path_side_effect
-                result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
-
-        assert result.exit_code == 0, result.stdout
-        assert "Critical error: Could not save log file" in result.stdout

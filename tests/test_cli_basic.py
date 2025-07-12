@@ -21,11 +21,13 @@ baseline:
 """
 
 
-# Test imports first
-def test_cli_import() -> None:
-    """Test that CLI app can be imported without issues."""
-    assert app is not None
-
+def test_main_command_help() -> None:
+    """Test the main app --help message."""
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0, result.stdout
+    assert "run" in result.stdout
+    assert "analyze-rules" in result.stdout
+    assert "analyze-strategies" in result.stdout
 runner = CliRunner()
 
 def test_main_command_help() -> None:

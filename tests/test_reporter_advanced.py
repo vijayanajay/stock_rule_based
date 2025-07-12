@@ -433,7 +433,7 @@ class TestGenerateDailyReport:
         assert report_path.exists()
 
         # Check that the error was logged
-        assert "Could not process position for ERROR_SYM" in caplog.text
+        assert "Failed to process position for ERROR_SYM" in caplog.text
 
         # Check that the position was added to hold (with N/A values)
         report_content = report_path.read_text()
