@@ -245,8 +245,8 @@ src\kiss_signal\config.py           78      3    96%
 src\kiss_signal\data.py            177     15    92%
 src\kiss_signal\performance.py      41      0   100%
 src\kiss_signal\persistence.py     123      9    93%
-src\kiss_signal\reporter.py        288     22    92%
+src\kiss_signal\reporter.py        291     23    92%
 src\kiss_signal\rules.py           176      9    95%
 ----------------------------------------------------
-TOTAL                             1304    131    90%
-============================ 226 passed in 43.04s =============================
+TOTAL                             1307    132    90%
+============================ 226 passed in 39.48s =============================

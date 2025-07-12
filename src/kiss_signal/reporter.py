@@ -322,6 +322,9 @@ def generate_daily_report(
 
                 # Check for dynamic exit conditions
                 sell_conditions = getattr(rules_config, 'sell_conditions', None) if hasattr(rules_config, 'sell_conditions') else rules_config.get('sell_conditions', [])
+                # Ensure sell_conditions is a list
+                if sell_conditions is None:
+                    sell_conditions = []
                 exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, sell_conditions, days_held, config.hold_period)
                 if exit_reason:
                     pos.update({'exit_date': run_date.isoformat(), 'exit_price': current_price, 'final_return_pct': return_pct, 'final_nifty_return_pct': nifty_return_pct, 'exit_reason': exit_reason})
@@ -544,7 +547,9 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
     analysis_df = grouped.join(top_symbols).reset_index()
     analysis_df = analysis_df.sort_values("avg_edge_score", ascending=False)
 
-    return analysis_df.to_dict("records")
+    # Convert to list of dictionaries with explicit typing
+    result: List[Dict[str, Any]] = analysis_df.to_dict("records")
+    return result
 
 
 def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:

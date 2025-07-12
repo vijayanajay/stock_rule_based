@@ -5,7 +5,7 @@ This module handles backtesting of rule combinations and edge score calculation.
 
 import logging
 from datetime import date
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -238,7 +238,7 @@ class Backtester:
         self, 
         entry_signals: pd.Series, 
         price_data: pd.DataFrame, 
-        sell_conditions: list
+        sell_conditions: List[Any]
     ) -> tuple[pd.Series, Optional[float], Optional[float]]:
         """Generate combined exit signals from sell_conditions and time-based exits.
         

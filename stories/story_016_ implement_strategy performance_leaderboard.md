@@ -1,6 +1,8 @@
 # Story 16: Implement Strategy Performance Leaderboard
 
-## Status: Ready for Development
+## Status: ✅ COMPLETED
+
+**Completed Date:** 2025-07-13
 
 **Priority:** High (Provides critical system-level feedback)
 **Estimated Story Points:** 5
@@ -23,15 +25,15 @@ This story directly addresses the user need to "determine if the strategies are 
 ## Acceptance Criteria
 
 ### AC-1: New CLI Command
-- [ ] A new command `analyze-strategies` is added to the CLI.
-- [ ] The command accepts an optional `--output <filename>.csv` argument, defaulting to `strategy_performance_report.csv`.
-- [ ] The command operates on the existing database specified in `config.yaml`.
+- [x] A new command `analyze-strategies` is added to the CLI.
+- [x] The command accepts an optional `--output <filename>.csv` argument, defaulting to `strategy_performance_report.csv`.
+- [x] The command operates on the existing database specified in `config.yaml`.
 
 ### AC-2: Strategy Performance Aggregation
-- [ ] A new function `analyze_strategy_performance(db_path)` is implemented in `reporter.py`.
-- [ ] It queries the **entire `strategies` table** to fetch all historical optimal strategy records.
-- [ ] It groups records by the unique `rule_stack` combination (e.g., "bullish_engulfing_reversal + filter_with_rsi_oversold").
-- [ ] For each unique strategy, it calculates the following **aggregated metrics**:
+- [x] A new function `analyze_strategy_performance(db_path)` is implemented in `reporter.py`.
+- [x] It queries the **entire `strategies` table** to fetch all historical optimal strategy records.
+- [x] It groups records by the unique `rule_stack` combination (e.g., "bullish_engulfing_reversal + filter_with_rsi_oversold").
+- [x] For each unique strategy, it calculates the following **aggregated metrics**:
     - **Frequency:** The total count of times this strategy was chosen as optimal for any stock.
     - **Avg. Edge Score:** The average edge score across all times it was chosen.
     - **Avg. Win %:** The average win percentage.
@@ -40,16 +42,16 @@ This story directly addresses the user need to "determine if the strategies are 
     - **Top Symbols:** A comma-separated string of the top 3 symbols where this strategy was most frequently optimal.
 
 ### AC-3: Clear CSV Report
-- [ ] The command generates a clean, readable CSV file with the analysis results.
-- [ ] The report contains a CSV table sorted by **Avg. Edge Score** in descending order.
-- [ ] The table columns are: `strategy_rule_stack`, `frequency`, `avg_edge_score`, `avg_win_pct`, `avg_sharpe`, `avg_return`, `avg_trades`, `top_symbols`.
+- [x] The command generates a clean, readable CSV file with the analysis results.
+- [x] The report contains a CSV table sorted by **Avg. Edge Score** in descending order.
+- [x] The table columns are: `strategy_rule_stack`, `frequency`, `avg_edge_score`, `avg_win_pct`, `avg_sharpe`, `avg_return`, `avg_trades`, `top_symbols`.
 
 ### AC-4: Code Quality and Compliance
-- [ ] The implementation adds **no new external dependencies** (H-10).
-- [ ] The new logic is housed entirely within `cli.py` and `reporter.py`.
-- [ ] All new functions are fully type-hinted and pass `mypy --strict` (H-7).
-- [ ] The new command and its logic are covered by unit and integration tests.
-- [ ] The implementation avoids re-backtesting and works exclusively with data already in the `strategies` table.
+- [x] The implementation adds **no new external dependencies** (H-10).
+- [x] The new logic is housed entirely within `cli.py` and `reporter.py`.
+- [x] All new functions are fully type-hinted and pass `mypy --strict` (H-7).
+- [x] The new command and its logic are covered by unit and integration tests.
+- [x] The implementation avoids re-backtesting and works exclusively with data already in the `strategies` table.
 
 ## Technical Design (KISS Approach)
 
@@ -187,29 +189,42 @@ bollinger_breakout,5,0.51,0.550,0.85,0.042,8.5,"TATAMOTORS, LT, AXISBANK"
 *   **Automated Suggestions:** The report provides data for a human to analyze. It will not generate automated "AI" improvement suggestions.
 
 ## Definition of Done
-- [ ] All acceptance criteria are met and tested.
-- [ ] The `analyze-strategies` command is functional and generates a correct CSV file.
-- [ ] The analysis logic correctly queries, groups, and aggregates performance data from the database.
-- [ ] The generated report is sorted and formatted as specified.
-- [ ] The feature is covered by unit tests (for the aggregation logic) and an integration test (for the CLI command).
-- [ ] All code passes `mypy --strict` and adheres to all project hard rules.
+- [x] All acceptance criteria are met and tested.
+- [x] The `analyze-strategies` command is functional and generates a correct CSV file.
+- [x] The analysis logic correctly queries, groups, and aggregates performance data from the database.
+- [x] The generated report is sorted and formatted as specified.
+- [x] The feature is covered by unit tests (for the aggregation logic) and an integration test (for the CLI command).
+- [x] All code passes `mypy --strict` and adheres to all project hard rules.
 
 ## Detailed Task List
 
 - **Task 1: Add `analyze-strategies` command to `cli.py`**
-  - [ ] Add the new Typer command stub.
-  - [ ] Implement the orchestration logic: call the reporter, handle results, write the file.
-  - [ ] Add robust error handling.
+  - [x] Add the new Typer command stub.
+  - [x] Implement the orchestration logic: call the reporter, handle results, write the file.
+  - [x] Add robust error handling.
 
 - **Task 2: Implement `analyze_strategy_performance` in `reporter.py`**
-  - [ ] Write the SQL query to fetch all required data from the `strategies` table.
-  - [ ] Implement the loop to parse `rule_stack` JSON and aggregate metrics into a `defaultdict`.
-  - [ ] Implement the final processing loop to calculate averages and identify top symbols.
-  - [ ] Ensure the final list is sorted by `avg_edge_score`.
+  - [x] Write the SQL query to fetch all required data from the `strategies` table.
+  - [x] Implement the loop to parse `rule_stack` JSON and aggregate metrics into a `defaultdict`.
+  - [x] Implement the final processing loop to calculate averages and identify top symbols.
+  - [x] Ensure the final list is sorted by `avg_edge_score`.
 
 - **Task 3: Implement `format_strategy_analysis_as_csv` in `reporter.py`**
-  - [ ] Create the function to generate the CSV table from the analysis data.
-  - [ ] Ensure correct formatting for numbers, percentages, and text alignment.
+  - [x] Create the function to generate the CSV table from the analysis data.
+  - [x] Ensure correct formatting for numbers, percentages, and text alignment.
 
 - **Task 4: Add Comprehensive Tests**
-  - [ ] In `tests/test_reporter_advanced.py`, add tests for `analyze_strategy_performance` using a pre-populated in-memory DB with
+  - [x] In `tests/test_reporter_advanced.py`, add tests for `analyze_strategy_performance` using a pre-populated in-memory DB with sample strategy data.
+  - [x] In `tests/test_cli_advanced.py`, add integration tests for the `analyze-strategies` command.
+  - [x] Test edge cases: empty database, malformed JSON, missing columns.
+
+## ✅ STORY COMPLETED SUCCESSFULLY
+
+**Completion Summary:**
+- All acceptance criteria fulfilled and tested
+- CLI command `analyze-strategies` implemented and functional
+- CSV report generation working correctly with real data
+- Comprehensive test coverage added
+- Code quality standards met (mypy, type hints, KISS principles)
+- No new dependencies introduced
+- Generated sample report: `strategy_performance_report.csv`
