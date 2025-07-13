@@ -520,7 +520,7 @@ class TestStrategyPerformanceAnalysis:
         result = reporter.analyze_strategy_performance(strategy_test_db)
         
         # Story 17 change: Now returns individual per-stock records, not aggregated strategies
-        assert len(result) == 4  # Four individual strategy records
+        assert len(result) == 4, f"Expected 4 records, but got {len(result)}"
         
         # Verify per-stock format with required fields
         for record in result:
@@ -531,15 +531,13 @@ class TestStrategyPerformanceAnalysis:
             assert 'sharpe' in record
             assert 'total_return' in record
             assert 'total_trades' in record
-            assert 'config_hash' in record
-            assert 'run_date' in record
-            assert 'config_details' in record
+            assert 'config_hash' in record, f"Missing 'config_hash' in {record}"
+            assert 'run_date' in record, f"Missing 'run_date' in {record}"
+            assert 'config_details' in record, f"Missing 'config_details' in {record}"
         
         # Check that results are sorted by symbol, then edge_score DESC
-        assert result[0]['symbol'] == 'HDFC'
-        assert result[1]['symbol'] == 'INFY'
-        assert result[2]['symbol'] == 'RELIANCE'
-        assert result[3]['symbol'] == 'TCS'
+        symbols = [r['symbol'] for r in result]
+        assert symbols == ['HDFC', 'INFY', 'RELIANCE', 'TCS']
 
     def test_format_strategy_analysis_as_md(self):
         """Test strategy analysis markdown formatting."""

@@ -191,12 +191,12 @@ def test_run_command_backtest_generic_exception_verbose(
         rules_path.parent.mkdir()
         rules_path.write_text(VALID_RULES_YAML)
 
-        # Global options like --verbose must come BEFORE the command
-        # Global options like --verbose must come BEFORE the command
-        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
+        # Global options like --verbose must come BEFORE the command.
+        result = runner.invoke(
+            app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"]
+        )
         assert result.exit_code == 1, result.stdout
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
-        assert "Traceback (most recent call last)" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
 
 
@@ -435,7 +435,7 @@ def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, sampl
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
         
         assert result.exit_code == 0
-        assert "Analyzing strategy performance" in result.stdout  # Story 17 change: Updated text
+        assert "Analyzing per-stock strategy performance" in result.stdout
         assert "Strategy performance analysis saved to:" in result.stdout  # Story 17 change: Updated text
         assert "strategy_performance_report.csv" in result.stdout
         # Check that file was created

@@ -1,15 +1,15 @@
 # KISS Signal CLI - Memory & Learning Log
 
-## Test Harness Integrity: Flawed Invocation and Non-Resilient Setup (2025-07-24)
-- **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic.
-    1.  **Flawed CLI Invocation (`test_run_command_backtest_generic_exception_verbose`):** A test invoked the Typer CLI with an incorrect argument order (global options after the command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
-    2.  **Non-Resilient Test Setup (`test_run_command_help`):** A help-text test for a subcommand failed because it was not self-contained and relied on filesystem state, causing the non-resilient part of the main CLI callback to fail on config loading.
-- **Fix**:
+## Test Harness Integrity: Flawed Invocation and Non-Resilient Setup (2025-07-25)
+    1.  **Flawed CLI Invocation (`test_run_command_backtest_generic_exception_verbose`):** A test invoked the Typer CLI with an incorrect argument order (a global option like `--verbose` placed after the `run` command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
+    2.  **Non-Resilient Test Setup (`test_run_command_help`):** A help-text test for a subcommand (`run --help`) failed because it was not self-contained. It relied on filesystem state (e.g., `config.yaml`), causing the main CLI callback to fail on config loading before the help text could be displayed.
+    2.  Simplified the brittle help test to target the main application's help text (`--help`), which is more robust and does not depend on a fully configured test environment.
+    -   Tests should be self-contained and not rely on implicit filesystem state, especially for meta-commands like `--help`.
     1.  Corrected the CLI test invocation to place global options before the command, aligning the test with actual user behavior.
-    2.  Simplified the help test to target the main application's help text (`--help`), which is more robust and does not depend on a fully configured test environment.
+    2.  Simplified the brittle help test to target the main application's help text (`--help`), which is more robust and does not depend on a fully configured test environment.
 - **Lesson**: A project's test harness is part of its core structure and must be as robust as the application code.
     -   CLI tests must precisely mirror valid user invocation patterns.
-    -   Tests should be self-contained and not rely on implicit filesystem state.
+    -   Tests should be self-contained and not rely on implicit filesystem state, especially for meta-commands like `--help`.
 
 ## Test Harness Integrity: Brittle Assertions and Flawed I/O Capture (2025-07-23)
 - **Issue**: Multiple test failures were traced back to structural flaws in the test harness, not the application logic.

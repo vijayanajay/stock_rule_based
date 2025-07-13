@@ -553,16 +553,13 @@ def _check_exit_conditions(
     return None
 
 def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
-    """Analyze strategy performance aggregated by rule stack combinations.
-    
-    Groups strategies by rule_stack and calculates aggregated metrics:
-    frequency, average scores, and top performing symbols.
+    """Analyze strategy performance with comprehensive per-stock breakdown.
     
     Args:
         db_path: Path to SQLite database
         
     Returns:
-        List of aggregated strategy performance records
+        List of individual strategy performance records
     """
     try:
         with sqlite3.connect(str(db_path)) as conn:
@@ -570,76 +567,22 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
             
             cursor = conn.execute("""
                 SELECT symbol, rule_stack, edge_score, win_pct, sharpe,
-                       avg_return, total_trades, config_hash, run_timestamp,
+                       avg_return as total_return, total_trades, config_hash, run_timestamp,
                        config_snapshot
                 FROM strategies 
                 ORDER BY symbol, edge_score DESC
             """)
             
-            # Group by strategy (rule_stack)
-            strategy_groups = {}
+            results = []
             for row in cursor.fetchall():
                 try:
-                    # Parse rule stack to create human-readable strategy name
                     rules = json.loads(row['rule_stack'])
-                    if isinstance(rules, list) and rules:
-                        strategy_name = " + ".join(r.get('name', r.get('type', 'N/A')) for r in rules if isinstance(r, dict))
-                    else:
-                        strategy_name = "Unknown Strategy"
-                    
-                    if strategy_name not in strategy_groups:
-                        strategy_groups[strategy_name] = []
-                    
-                    strategy_groups[strategy_name].append({
-                        'symbol': row['symbol'],
-                        'edge_score': row['edge_score'],
-                        'win_pct': row['win_pct'],
-                        'sharpe': row['sharpe'],
-                        'avg_return': row['avg_return'],
-                        'total_trades': row['total_trades']
-                    })
-                    
+                    strategy_name = " + ".join(r.get('name', r.get('type', 'N/A')) for r in rules if isinstance(r, dict)) if isinstance(rules, list) else "Unknown Strategy"
+                    config_details = json.loads(row['config_snapshot'] or '{}')
+                    results.append(dict(row) | {'strategy_rule_stack': strategy_name, 'config_details': str(config_details), 'run_date': row['run_timestamp'][:10] if row['run_timestamp'] else 'unknown'})
                 except (json.JSONDecodeError, TypeError, KeyError) as e:
                     logger.warning(f"Skipping malformed strategy record: {e}")
                     continue
-            
-            # Calculate aggregated metrics for each strategy
-            results = []
-            for strategy_name, records in strategy_groups.items():
-                if not records:
-                    continue
-                
-                # Calculate averages
-                avg_edge_score = sum(r['edge_score'] or 0 for r in records) / len(records)
-                avg_win_pct = sum(r['win_pct'] or 0 for r in records) / len(records)
-                avg_sharpe = sum(r['sharpe'] or 0 for r in records) / len(records)
-                avg_return = sum(r['avg_return'] or 0 for r in records) / len(records)
-                avg_trades = sum(r['total_trades'] or 0 for r in records) / len(records)
-                
-                # Find top symbols by frequency
-                symbol_counts = {}
-                for r in records:
-                    symbol = r['symbol']
-                    symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
-                
-                top_symbols = sorted(symbol_counts.items(), key=lambda x: x[1], reverse=True)[:3]
-                top_symbols_str = ", ".join([f"{symbol} ({count})" for symbol, count in top_symbols])
-                
-                results.append({
-                    'strategy_rule_stack': strategy_name,
-                    'frequency': len(records),
-                    'avg_edge_score': avg_edge_score,
-                    'avg_win_pct': avg_win_pct,
-                    'avg_sharpe': avg_sharpe,
-                    'avg_return': avg_return,
-                    'avg_trades': avg_trades,
-                    'top_symbols': top_symbols_str
-                })
-            
-            # Sort by average edge score descending
-            results.sort(key=lambda x: x['avg_edge_score'], reverse=True)
-            
-            logger.info(f"Analyzed {len(results)} unique strategy combinations from {sum(len(records) for records in strategy_groups.values())} individual records")
             return results
             
     except (sqlite3.Error, pd.errors.DatabaseError) as e:

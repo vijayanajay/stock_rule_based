@@ -37,12 +37,12 @@ tests/test_cli_advanced.py::test_analyze_rules_command PASSED            [ 12%]
 tests/test_cli_advanced.py::test_analyze_rules_db_not_found PASSED       [ 12%]
 tests/test_cli_advanced.py::test_analyze_rules_no_strategies_found PASSED [ 13%]
 tests/test_cli_advanced.py::test_analyze_rules_exception_handling PASSED [ 13%]
-tests/test_cli_advanced.py::test_analyze_strategies_command_success FAILED [ 13%]
+tests/test_cli_advanced.py::test_analyze_strategies_command_success PASSED [ 13%]
 tests/test_cli_advanced.py::test_analyze_strategies_command_custom_output PASSED [ 14%]
 tests/test_cli_advanced.py::test_analyze_strategies_command_no_database PASSED [ 14%]
 tests/test_cli_advanced.py::test_analyze_strategies_command_no_data PASSED [ 15%]
 tests/test_cli_advanced.py::test_analyze_strategies_command_error_handling PASSED [ 15%]
-tests/test_cli_basic.py::test_main_command_help PASSED                   [ 16%]
+tests/test_cli_basic.py::test_run_command_help PASSED                    [ 16%]
 tests/test_cli_basic.py::test_display_results_empty PASSED               [ 16%]
 tests/test_cli_basic.py::test_run_command_basic PASSED                   [ 16%]
 tests/test_cli_basic.py::test_run_command_verbose PASSED                 [ 17%]
@@ -237,99 +237,6 @@ tests/test_rule_funcs.py::test_stop_loss_pct_validation PASSED           [ 99%]
 tests/test_rule_funcs.py::test_take_profit_pct_validation PASSED         [ 99%]
 tests/test_rule_funcs.py::test_sma_cross_under_insufficient_data PASSED  [100%]
 
-================================== FAILURES ===================================
-___________________ test_analyze_strategies_command_success ___________________
-
-mock_format_csv = <MagicMock name='format_strategy_analysis_as_csv' id='1587915187280'>
-mock_analyze = <MagicMock name='analyze_strategy_performance' id='1587915094016'>
-sample_config = {'cache_dir': 'data/test_cache', 'cache_refresh_days': 30, 'database_path': 'data/test_kiss_signal.db', 'edge_score_threshold': 0.5, ...}
-
-    @patch("kiss_signal.cli.reporter.analyze_strategy_performance")
-    @patch("kiss_signal.cli.reporter.format_strategy_analysis_as_csv")
-    def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, sample_config):
-        """Test analyze-strategies command with successful execution."""
-        with runner.isolated_filesystem() as fs:
-            fs_path = Path(fs)
-    
-            # Setup mock data - Story 17 change: Use per-stock record format
-            mock_analyze.return_value = [
-                {
-                    'symbol': 'RELIANCE',
-                    'strategy_rule_stack': 'test_strategy',
-                    'edge_score': 0.5,
-                    'win_pct': 0.6,
-                    'sharpe': 1.0,
-                    'total_return': 0.1,
-                    'total_trades': 10,
-                    'config_hash': 'test_hash',
-                    'run_date': '2025-07-13',
-                    'config_details': '{"test": true}'
-                }
-            ]
-            mock_format_csv.return_value = "symbol,strategy_rule_stack,edge_score\nRELIANCE,test_strategy,0.5000"
-    
-            # Setup config and database
-            config_path = fs_path / "config.yaml"
-            db_path = fs_path / "test.db"
-            persistence.create_database(db_path)
-    
-            dummy_universe_file = fs_path / "dummy.csv"
-            dummy_universe_file.write_text("symbol\nTEST\n")
-    
-            sample_config_dict = {
-                "database_path": str(db_path),
-                "universe_path": str(dummy_universe_file),
-                "cache_dir": "cache/",
-                "cache_refresh_days": 7,
-                "historical_data_years": 3,
-                "hold_period": 20,
-                "min_trades_threshold": 10,
-                "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
-                "reports_output_dir": "reports/",
-                "edge_score_threshold": 0.5,
-            }
-            config_path.write_text(yaml.dump(sample_config_dict))
-    
-            rules_path = fs_path / "config" / "rules.yaml"
-            rules_path.parent.mkdir(exist_ok=True)
-            rules_path.write_text(VALID_RULES_YAML)
-    
-            # Test default output file
-            result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
-    
-            assert result.exit_code == 0
-            assert "Analyzing strategy performance" in result.stdout  # Story 17 change: Updated text
-            assert "Strategy performance analysis saved to:" in result.stdout  # Story 17 change: Updated text
-            assert "strategy_performance_report.csv" in result.stdout
-            # Check that file was created
-            output_file = fs_path / "strategy_performance_report.csv"
-            assert output_file.exists()
->           assert "strategy_rule_stack,frequency" in output_file.read_text()
-E           AssertionError: assert 'strategy_rule_stack,frequency' in 'symbol,strategy_rule_stack,edge_score\nRELIANCE,test_strategy,0.5000'
-E            +  where 'symbol,strategy_rule_stack,edge_score\nRELIANCE,test_strategy,0.5000' = read_text()
-E            +    where read_text = WindowsPath('C:/Users/user/AppData/Local/Temp/tmpem352pv4/strategy_performance_report.csv').read_text
-
-tests\test_cli_advanced.py:446: AssertionError
----------------------------- Captured stdout call -----------------------------
-[11:33:07] INFO     Creating database at                                       
-                    C:\Users\user\AppData\Local\Temp\tmpem352pv4\test.db       
-           DEBUG    Enabled WAL mode for concurrent access                     
-           DEBUG    Created strategies table                                   
-           DEBUG    Created positions table                                    
-           DEBUG    Created index on strategies table                          
-           DEBUG    Created index on positions table                           
-           DEBUG    Set database version to 2                                  
-           INFO     Successfully created database at                           
-                    C:\Users\user\AppData\Local\Temp\tmpem352pv4\test.db       
------------------------------- Captured log call ------------------------------
-INFO     kiss_signal.persistence:persistence.py:115 Creating database at C:\Users\user\AppData\Local\Temp\tmpem352pv4\test.db
-DEBUG    kiss_signal.persistence:persistence.py:123 Enabled WAL mode for concurrent access
-DEBUG    kiss_signal.persistence:persistence.py:127 Created strategies table
-DEBUG    kiss_signal.persistence:persistence.py:131 Created positions table
-DEBUG    kiss_signal.persistence:persistence.py:135 Created index on strategies table
-DEBUG    kiss_signal.persistence:persistence.py:139 Created index on positions table
-DEBUG    kiss_signal.persistence:persistence.py:143 Set database version to 2
-INFO     kiss_signal.persistence:persistence.py:146 Successfully created database at C:\Users\user\AppData\Local\Temp\tmpem352pv4\test.db
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -337,15 +244,13 @@ Name                             Stmts   Miss  Cover
 ----------------------------------------------------
 src\kiss_signal\__init__.py          4      0   100%
 src\kiss_signal\backtester.py      149     14    91%
-src\kiss_signal\cli.py             308     97    69%
+src\kiss_signal\cli.py             311     98    68%
 src\kiss_signal\config.py           78      3    96%
 src\kiss_signal\data.py            177     15    92%
 src\kiss_signal\performance.py      41      0   100%
 src\kiss_signal\persistence.py     189     15    92%
-src\kiss_signal\reporter.py        296     24    92%
+src\kiss_signal\reporter.py        357     82    77%
 src\kiss_signal\rules.py           176      9    95%
 ----------------------------------------------------
-TOTAL                             1418    177    88%
-=========================== short test summary info ===========================
-FAILED tests/test_cli_advanced.py::test_analyze_strategies_command_success - ...
-======================= 1 failed, 229 passed in 45.25s ========================
+TOTAL                             1482    236    84%
+======================= 230 passed in 66.43s (0:01:06) ========================
