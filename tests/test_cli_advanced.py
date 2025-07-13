@@ -390,20 +390,20 @@ def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, sampl
     with runner.isolated_filesystem() as fs:
         fs_path = Path(fs)
         
-        # Setup mock data
+        # Setup mock data - Story 16: Use aggregated strategy format
         mock_analyze.return_value = [
             {
-                'strategy_name': 'test',
-                'frequency': 1,
+                'strategy_rule_stack': 'test_strategy',
+                'frequency': 5,
                 'avg_edge_score': 0.5,
                 'avg_win_pct': 0.6,
                 'avg_sharpe': 1.0,
                 'avg_return': 0.1,
-                'avg_trades': 10,
-                'top_symbols': 'RELIANCE, INFY, HDFCBANK'
+                'avg_trades': 10.0,
+                'top_symbols': 'RELIANCE (2), INFY (2), TCS (1)'
             }
         ]
-        mock_format_csv.return_value = "strategy_rule_stack,frequency\ntest,1"
+        mock_format_csv.return_value = "strategy_rule_stack,frequency,avg_edge_score\ntest_strategy,5,0.5000"
         
         # Setup config and database
         config_path = fs_path / "config.yaml"
@@ -435,8 +435,8 @@ def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, sampl
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
         
         assert result.exit_code == 0
-        assert "Analyzing historical strategy performance" in result.stdout
-        assert "Strategy performance report saved to:" in result.stdout
+        assert "Analyzing strategy performance" in result.stdout  # Story 17 change: Updated text
+        assert "Strategy performance analysis saved to:" in result.stdout  # Story 17 change: Updated text
         assert "strategy_performance_report.csv" in result.stdout
         # Check that file was created
         output_file = fs_path / "strategy_performance_report.csv"
@@ -455,7 +455,19 @@ def test_analyze_strategies_command_custom_output(mock_get_connection, mock_anal
     with runner.isolated_filesystem() as fs:
         fs_path = Path(fs)
         
-        mock_analyze.return_value = [{'strategy_name': 'test', 'frequency': 1, 'avg_edge_score': 0.5, 'avg_win_pct': 0.6, 'avg_sharpe': 1.0, 'avg_trades': 10, 'avg_return': 0.05, 'top_symbols': 'TEST'}]
+        # Story 17 change: Use per-stock record format instead of aggregated format
+        mock_analyze.return_value = [{
+            'symbol': 'TEST',
+            'strategy_rule_stack': 'test_strategy',
+            'edge_score': 0.5,
+            'win_pct': 0.6,
+            'sharpe': 1.0,
+            'total_return': 0.05,
+            'total_trades': 10,
+            'config_hash': 'test_hash',
+            'run_date': '2025-07-13',
+            'config_details': '{"test": true}'
+        }]
         
         config_path = fs_path / "config.yaml"
         db_path = fs_path / "test.db"; persistence.create_database(db_path)

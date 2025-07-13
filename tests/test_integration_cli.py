@@ -172,7 +172,7 @@ INFY,Infosys Ltd,IT
         ])
 
         assert result_analyze.exit_code == 0, f"analyze-strategies failed: {result_analyze.stdout}"
-        assert "Strategy performance report saved to:" in result_analyze.stdout
+        assert "Strategy performance analysis saved to:" in result_analyze.stdout  # Story 17 change: Updated text
     
     @patch("kiss_signal.cli.data.get_price_data", side_effect=Exception("Data fetch failed"))
     def test_error_handling_integration(self, mock_get_price_data, integration_env):

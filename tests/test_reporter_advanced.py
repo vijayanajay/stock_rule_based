@@ -519,15 +519,27 @@ class TestStrategyPerformanceAnalysis:
 
         result = reporter.analyze_strategy_performance(strategy_test_db)
         
-        assert len(result) == 2  # Two unique strategies
+        # Story 17 change: Now returns individual per-stock records, not aggregated strategies
+        assert len(result) == 4  # Four individual strategy records
         
-        # Check the top strategy (bullish_engulfing + rsi_oversold should have better average)
-        top_strategy = result[0]
-        assert top_strategy['strategy_name'] == "bullish_engulfing + rsi_oversold"
-        assert top_strategy['frequency'] == 3
-        assert abs(top_strategy['avg_edge_score'] - 0.75) < 0.01  # (0.75 + 0.80 + 0.70) / 3
-        assert abs(top_strategy['avg_win_pct'] - 0.65) < 0.01  # (0.65 + 0.70 + 0.60) / 3
-        assert "RELIANCE" in top_strategy['top_symbols']
+        # Verify per-stock format with required fields
+        for record in result:
+            assert 'symbol' in record
+            assert 'strategy_rule_stack' in record
+            assert 'edge_score' in record
+            assert 'win_pct' in record
+            assert 'sharpe' in record
+            assert 'total_return' in record
+            assert 'total_trades' in record
+            assert 'config_hash' in record
+            assert 'run_date' in record
+            assert 'config_details' in record
+        
+        # Check that results are sorted by symbol, then edge_score DESC
+        assert result[0]['symbol'] == 'HDFC'
+        assert result[1]['symbol'] == 'INFY'
+        assert result[2]['symbol'] == 'RELIANCE'
+        assert result[3]['symbol'] == 'TCS'
 
     def test_format_strategy_analysis_as_md(self):
         """Test strategy analysis markdown formatting."""
@@ -564,41 +576,49 @@ class TestStrategyPerformanceAnalysis:
 
     def test_format_strategy_analysis_as_csv(self):
         """Test strategy analysis CSV formatting."""
+        # Story 17 change: Use per-stock record format instead of aggregated format
         analysis_data = [
             {
-                'strategy_name': 'bullish_engulfing + rsi_oversold',
-                'frequency': 15,
-                'avg_edge_score': 0.72,
-                'avg_win_pct': 0.685,
-                'avg_sharpe': 1.35,
-                'avg_return': 0.095,
-                'avg_trades': 12.3,
-                'top_symbols': 'RELIANCE, INFY, HDFCBANK'
+                'symbol': 'RELIANCE',
+                'strategy_rule_stack': 'bullish_engulfing + rsi_oversold',
+                'edge_score': 0.75,
+                'win_pct': 0.65,
+                'sharpe': 1.2,
+                'total_return': 0.08,
+                'total_trades': 15,
+                'config_hash': 'abc123',
+                'run_date': '2025-07-13',
+                'config_details': '{"rules_hash": "def456"}'
             },
             {
-                'strategy_name': 'sma_crossover',
-                'frequency': 8,
-                'avg_edge_score': 0.55,
-                'avg_win_pct': 0.601,
-                'avg_sharpe': 0.95,
-                'avg_return': 0.042,
-                'avg_trades': 18.7,
-                'top_symbols': 'TCS, WIPRO'
+                'symbol': 'TCS',
+                'strategy_rule_stack': 'sma_crossover',
+                'edge_score': 0.60,
+                'win_pct': 0.55,
+                'sharpe': 0.9,
+                'total_return': 0.05,
+                'total_trades': 10,
+                'config_hash': 'abc123',
+                'run_date': '2025-07-13',
+                'config_details': '{"rules_hash": "def456"}'
             }
         ]
         csv_content = reporter.format_strategy_analysis_as_csv(analysis_data)
-        # Use pandas to read it back and verify
+        
+        # Use pandas to read it back and verify the new per-stock format
         df = pd.read_csv(StringIO(csv_content))
         assert len(df) == 2
         assert list(df.columns) == [
-            'strategy_rule_stack', 'frequency', 'avg_edge_score', 'avg_win_pct',
-            'avg_sharpe', 'avg_return', 'avg_trades', 'top_symbols'
+            'symbol', 'strategy_rule_stack', 'edge_score', 'win_pct', 'sharpe', 
+            'total_return', 'total_trades', 'config_hash', 'run_date', 'config_details'
         ]
+        assert df.iloc[0]['symbol'] == 'RELIANCE'
         assert df.iloc[0]['strategy_rule_stack'] == 'bullish_engulfing + rsi_oversold'
-        assert df.iloc[0]['frequency'] == 15
-        assert df.iloc[0]['avg_edge_score'] == 0.7200
+        assert df.iloc[0]['edge_score'] == 0.7500  # 4 decimal places
 
     def test_format_strategy_analysis_as_csv_empty(self):
         """Test strategy analysis CSV formatting with empty data."""
         csv_content = reporter.format_strategy_analysis_as_csv([])
-        assert csv_content == ""
+        # Story 17 change: Empty data returns header only, not empty string
+        expected_header = "symbol,strategy_rule_stack,edge_score,win_pct,sharpe,total_return,total_trades,config_hash,run_date,config_details\n"
+        assert csv_content == expected_header

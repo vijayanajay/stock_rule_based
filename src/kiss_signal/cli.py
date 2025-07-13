@@ -159,6 +159,8 @@ def _save_results(
     db_connection: persistence.Connection,
     results: List[Dict[str, Any]],
     run_timestamp: str,
+    config_snapshot: Optional[Dict[str, Any]] = None,
+    config_hash: Optional[str] = None
 ) -> None:
     """Save analysis results to the database using an existing connection."""
     if not results:
@@ -166,7 +168,9 @@ def _save_results(
 
     console.print("[5/5] Saving results...", style="blue")
     try:
-        success = persistence.save_strategies_batch(db_connection, results, run_timestamp)
+        success = persistence.save_strategies_batch(
+            db_connection, results, run_timestamp, config_snapshot, config_hash
+        )
 
         if success:
             logger.info(f"Saved {len(results)} strategies to the database.")
@@ -278,8 +282,14 @@ def run(
 
             console.print("[4/4] Analysis complete. Results summary:")
             run_timestamp = datetime.now().isoformat()
+            
+            # Generate config context for this run
+            rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
+            config_snapshot = persistence.create_config_snapshot(rules_dict, app_config, app_config.freeze_date.isoformat() if app_config.freeze_date else None)
+            config_hash = persistence.generate_config_hash(rules_dict, app_config)
+            
             _display_results(all_results)
-            _save_results(db_connection, all_results, run_timestamp)
+            _save_results(db_connection, all_results, run_timestamp, config_snapshot, config_hash)
             _generate_and_save_report(app_config, rules_config, run_timestamp)
 
         if verbose:
@@ -362,7 +372,7 @@ def analyze_rules(
 
     except Exception as e:
         console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
-        if ctx.obj and ctx.obj.get("verbose", False):
+        if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose", False):
             console.print_exception()
         raise typer.Exit(1)
 
@@ -375,9 +385,15 @@ def analyze_strategies(
         "--output", "-o",
         help="Path to save the strategy performance report as a CSV file.",
     ),
+    aggregate: bool = typer.Option(
+        False,
+        "--aggregate",
+        help="Generate aggregated strategy performance (Story 16 format) instead of per-stock records.",
+    ),
 ) -> None:
-    """Analyze and report on the historical performance of all strategy combinations."""
-    console.print("[bold blue]Analyzing historical strategy performance...[/bold blue]")
+    """Analyze and report on the comprehensive performance of all strategies."""
+    format_desc = "aggregated strategy" if aggregate else "per-stock strategy"
+    console.print(f"[bold blue]Analyzing {format_desc} performance...[/bold blue]")
     app_config = ctx.obj["config"]
     db_path = Path(app_config.database_path)
 
@@ -386,14 +402,18 @@ def analyze_strategies(
         raise typer.Exit(1)
 
     try:
-        strategy_performance = reporter.analyze_strategy_performance(db_path)
+        if aggregate:
+            strategy_performance = reporter.analyze_strategy_performance_aggregated(db_path)
+        else:
+            strategy_performance = reporter.analyze_strategy_performance(db_path)
+            
         if not strategy_performance:
             console.print("[yellow]No historical strategies found to analyze.[/yellow]")
             return
 
-        report_content = reporter.format_strategy_analysis_as_csv(strategy_performance)
+        report_content = reporter.format_strategy_analysis_as_csv(strategy_performance, aggregate=aggregate)
         output_file.write_text(report_content, encoding="utf-8")
-        console.print(f"✅ Strategy performance report saved to: [cyan]{output_file}[/cyan]")
+        console.print(f"✅ Strategy performance analysis saved to: [cyan]{output_file}[/cyan]")
 
         # Save log before completing
         try:
@@ -407,7 +427,7 @@ def analyze_strategies(
 
     except Exception as e:
         console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
-        if ctx.obj and ctx.obj.get("verbose", False):
+        if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose", False):
             console.print_exception()
         # Save log before exiting
         try:
@@ -425,9 +445,10 @@ def analyze_strategies(
 def clear_and_recalculate(
     ctx: typer.Context,
     force: bool = typer.Option(False, "--force", help="Skip confirmation prompt"),
+    preserve_all: bool = typer.Option(False, "--preserve-all", help="Skip clearing, analysis only"),
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data at this date (YYYY-MM-DD format)"),
 ) -> None:
-    """Clear all strategies from database and recalculate them with current parameters."""
+    """Intelligently clear current strategies and recalculate with preservation of historical data."""
     app_config = ctx.obj["config"]
     rules_config = ctx.obj["rules"]
     db_path = Path(app_config.database_path)
@@ -436,17 +457,49 @@ def clear_and_recalculate(
         console.print(f"[red]Error: Database file not found at {db_path}[/red]")
         raise typer.Exit(1)
 
-    if not force and not typer.confirm(f"⚠️ This will permanently delete all strategies from {db_path}. Continue?"):
-        console.print("[blue]Operation cancelled.[/blue]")
-        raise typer.Exit(0)
-
     try:
         with persistence.get_connection(db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM strategies")
-            deleted_count = cursor.rowcount
-            conn.commit()
-            console.print(f"✅ Deleted {deleted_count} strategy records.")
+            if not preserve_all:
+                # Generate current config context for intelligent clearing
+                rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
+                current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
+                active_strategies = persistence.get_active_strategy_combinations(rules_dict)
+                
+                # Count what will be preserved vs deleted
+                preserved_count = conn.execute("""
+                    SELECT COUNT(*) FROM strategies 
+                    WHERE config_hash != ? OR rule_stack NOT IN ({})
+                """.format(','.join(['?'] * len(active_strategies))), 
+                [current_config_hash] + active_strategies).fetchone()[0]
+                
+                total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
+                will_delete = total_count - preserved_count
+                
+                console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
+                console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
+                console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
+                
+                if not force and will_delete > 0:
+                    if not typer.confirm("Continue with intelligent clearing?"):
+                        console.print("[blue]Operation cancelled.[/blue]")
+                        raise typer.Exit(0)
+                
+                # Perform intelligent deletion
+                if will_delete > 0:
+                    cursor = conn.execute("""
+                        DELETE FROM strategies 
+                        WHERE config_hash = ? AND rule_stack IN ({})
+                    """.format(','.join(['?'] * len(active_strategies))),
+                    [current_config_hash] + active_strategies)
+                    
+                    deleted_count = cursor.rowcount
+                    conn.commit()
+                    console.print(f"✅ Preserved {preserved_count} historical strategies")
+                    console.print(f"✅ Cleared {deleted_count} current strategy records")
+                else:
+                    console.print("[green]No current strategies to clear - all are historical[/green]")
+            else:
+                console.print("[blue]Preserve-all mode: Skipping clearing phase[/blue]")
 
             # Reuse the existing backtesting logic from the `run` command
             console.print("[bold blue]Starting fresh backtesting run...[/bold blue]")
@@ -456,16 +509,43 @@ def clear_and_recalculate(
 
             console.print("[bold blue]Saving new strategies...[/bold blue]")
             run_timestamp = datetime.now().isoformat()
-            _save_results(conn, all_results, run_timestamp)
+            
+            # Generate config context for the new run
+            try:
+                rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
+                config_snapshot = persistence.create_config_snapshot(rules_dict, app_config, freeze_data)
+                config_hash = persistence.generate_config_hash(rules_dict, app_config)
+                
+                _save_results(conn, all_results, run_timestamp, config_snapshot, config_hash)
+            except Exception as config_error:
+                console.print(f"[red]Config processing error: {config_error}[/red]")
+                console.print(f"[red]rules_config type: {type(rules_config)}[/red]")
+                console.print(f"[red]app_config type: {type(app_config)}[/red]")
+                raise
 
             console.print(f"✅ [bold green]Recalculation complete! Found {len(all_results)} new strategies.[/bold green]")
 
+        # Save log after successful completion
+        try:
+            log_path = Path("clear_and_recalculate_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            logger.info(f"Log file saved to {log_path}")
+        except OSError as log_e:
+            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
+            logger.error(error_msg, exc_info=True)
+            console.print(f"[red]{error_msg}[/red]")
+
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")
-        if ctx.obj.get("verbose"):
+        if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose"):
             console.print_exception()
+        # Save log before exiting on error
+        try:
+            log_path = Path("clear_and_recalculate_log.txt")
+            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+            logger.info(f"Log file saved to {log_path}")
+        except OSError as log_e:
+            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
+            logger.error(error_msg, exc_info=True)
+            console.print(f"[red]{error_msg}[/red]")
         raise typer.Exit(1)
-
-
-if __name__ == "__main__":
-    app()

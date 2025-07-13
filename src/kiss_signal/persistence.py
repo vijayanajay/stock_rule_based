@@ -2,10 +2,13 @@
 """SQLite persistence layer for storing backtesting results and trading signals."""
 
 from pathlib import Path  # Standard library
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import sqlite3
 import json
 import logging
+import hashlib
+import shutil
+from datetime import datetime
 
 __all__ = [
     "create_database",
@@ -15,6 +18,10 @@ __all__ = [
     "close_positions_batch",
     "get_connection",
     "Connection",
+    "migrate_strategies_table_v2",
+    "generate_config_hash",
+    "create_config_snapshot",
+    "get_active_strategy_combinations",
 ]
 
 logger = logging.getLogger(__name__)
@@ -34,6 +41,8 @@ CREATE TABLE IF NOT EXISTS strategies (
     sharpe REAL NOT NULL,
     total_trades INTEGER NOT NULL,
     avg_return REAL NOT NULL,
+    config_snapshot TEXT,
+    config_hash TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(symbol, rule_stack, run_timestamp)
 );
@@ -69,8 +78,22 @@ CREATE INDEX IF NOT EXISTS idx_positions_status_symbol ON positions(status, symb
 
 # impure
 def get_connection(db_path: Path) -> Connection:
-    """Creates and returns a new database connection with WAL mode enabled."""
+    """Creates and returns a new database connection with WAL mode enabled.
+    
+    Automatically runs migration if needed on first connection.
+    """
     try:
+        # Check if migration is needed before connecting
+        if db_path.exists():
+            # Quick check to see if we need migration
+            conn_check = sqlite3.connect(str(db_path), timeout=10)
+            cursor = conn_check.execute("PRAGMA table_info(strategies)")
+            columns = [row[1] for row in cursor.fetchall()]
+            conn_check.close()
+            
+            if 'config_snapshot' not in columns or 'config_hash' not in columns:
+                migrate_strategies_table_v2(db_path)
+        
         conn = sqlite3.connect(str(db_path), timeout=10)
         conn.execute("PRAGMA journal_mode=WAL;")
         return conn
@@ -115,8 +138,20 @@ def create_database(db_path: Path) -> None:
             conn.execute(CREATE_INDEX_POSITIONS)
             logger.debug("Created index on positions table")
             
+            # Set schema version to 2 since we created with the new schema
+            conn.execute("PRAGMA user_version = 2;")
+            logger.debug("Set database version to 2")
+            
             conn.commit()
             logger.info(f"Successfully created database at {db_path}")
+            
+        # Migration is not needed for fresh databases since they're created with v2 schema
+        # But we still call it for existing databases that need migration
+        if db_path.exists():
+            with sqlite3.connect(str(db_path)) as conn:
+                current_version = conn.execute("PRAGMA user_version;").fetchone()[0]
+                if current_version < 2:
+                    migrate_strategies_table_v2(db_path)
             
     except (sqlite3.Error, OSError) as e:
         logger.error(f"Failed to create database at {db_path}: {e}")
@@ -208,13 +243,21 @@ def close_positions_batch(db_path: Path, closed_positions: List[Dict[str, Any]])
             cursor.execute("ROLLBACK")
 
 # impure
-def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, Any]], run_timestamp: str) -> bool:
+def save_strategies_batch(
+    db_connection: Connection, 
+    strategies: List[Dict[str, Any]], 
+    run_timestamp: str,
+    config_snapshot: Optional[Dict[str, Any]] = None,
+    config_hash: Optional[str] = None
+) -> bool:
     """Save a batch of strategy results using an existing database connection.
     
     Args:
         db_connection: An active SQLite database connection.
         strategies: List of strategy dictionaries from backtester.
         run_timestamp: ISO 8601 timestamp string for this run.
+        config_snapshot: Optional configuration snapshot for context.
+        config_hash: Optional configuration hash for grouping.
         
     Returns:
         True if successful, False if failed.
@@ -228,8 +271,8 @@ def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, 
     insert_sql = """
     INSERT INTO strategies (
         run_timestamp, symbol, rule_stack, edge_score, 
-        win_pct, sharpe, total_trades, avg_return
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        win_pct, sharpe, total_trades, avg_return, config_snapshot, config_hash
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     
     try:
@@ -268,7 +311,9 @@ def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, 
                 strategy["win_pct"],
                 strategy["sharpe"],
                 total_trades_value,  # Use the explicit int value
-                strategy["avg_return"]
+                strategy["avg_return"],
+                json.dumps(config_snapshot) if config_snapshot else '{}',
+                config_hash or 'unknown'
             ))
         
         db_connection.commit()
@@ -283,3 +328,144 @@ def save_strategies_batch(db_connection: Connection, strategies: List[Dict[str, 
             pass
         logger.error(f"Batch save failed: {e}")
         return False
+
+# impure
+def migrate_strategies_table_v2(db_path: Path) -> None:
+    """Migrates the strategies table to version 2 by adding new columns.
+    
+    Args:
+        db_path: Path to the SQLite database file
+        
+    Raises:
+        sqlite3.Error: If migration fails
+    """
+    logger.info(f"Starting migration of strategies table at {db_path}")
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            # Check current schema version
+            current_version = conn.execute("PRAGMA user_version;").fetchone()[0]
+            logger.info(f"Current database version: {current_version}")
+            
+            # If already at latest version, do nothing
+            if current_version >= 2:
+                logger.info("Database is already at the latest version. Migration not required.")
+                return
+            
+            # Begin transaction
+            conn.execute("BEGIN")
+            logger.debug("Started transaction for migration")
+            
+            # Rename existing table
+            conn.execute("ALTER TABLE strategies RENAME TO strategies_old;")
+            logger.info("Renamed old strategies table")
+            
+            # Create new strategies table
+            conn.execute(CREATE_STRATEGIES_TABLE)
+            logger.info("Created new strategies table")
+            
+            # Recreate the index
+            conn.execute(CREATE_INDEX_STRATEGIES)
+            logger.info("Created index on new strategies table")
+            
+            # Copy data from old table to new table
+            columns = ["symbol", "run_timestamp", "rule_stack", "edge_score", "win_pct", "sharpe", "total_trades", "avg_return"]
+            column_list = ", ".join(columns)
+            # Include new columns with legacy placeholders for existing data
+            new_column_list = column_list + ", config_snapshot, config_hash"
+            legacy_placeholders = "'{}', 'legacy'".format('{"legacy": true}')
+            conn.execute(f"INSERT INTO strategies ({new_column_list}) SELECT {column_list}, {legacy_placeholders} FROM strategies_old;")
+            logger.info("Copied data to new strategies table with legacy placeholders for config columns")
+            
+            # Drop old table
+            conn.execute("DROP TABLE strategies_old;")
+            logger.info("Dropped old strategies table")
+            
+            # Update schema version
+            conn.execute("PRAGMA user_version = 2;")
+            logger.info("Updated database version to 2")
+            
+            conn.commit()
+            logger.info("Migration completed successfully")
+            
+    except sqlite3.Error as e:
+        logger.error(f"Migration failed: {e}")
+        raise
+
+# impure
+def generate_config_hash(rules_config: Dict[str, Any], app_config: Any) -> str:
+    """Generate a deterministic hash for configuration context.
+    
+    Args:
+        rules_config: Rules configuration dictionary
+        app_config: Application configuration object
+        
+    Returns:
+        8-character hash string for readability
+    """
+    # Create a deterministic representation of the configuration
+    hash_content = {
+        'rules_hash': hashlib.sha256(json.dumps(rules_config, sort_keys=True).encode()).hexdigest(),
+        'universe_path': str(app_config.universe_path),
+        'historical_data_years': app_config.historical_data_years,
+        'hold_period': app_config.hold_period,
+        'min_trades_threshold': app_config.min_trades_threshold,
+        'edge_score_threshold': app_config.edge_score_threshold,
+        'edge_score_weights': {
+            'win_pct': app_config.edge_score_weights.win_pct,
+            'sharpe': app_config.edge_score_weights.sharpe
+        }
+    }
+    
+    # Generate deterministic hash
+    content_str = json.dumps(hash_content, sort_keys=True)
+    full_hash = hashlib.sha256(content_str.encode()).hexdigest()
+    return full_hash[:8]  # 8-character prefix for readability
+
+
+def create_config_snapshot(rules_config: Dict[str, Any], app_config: Any, freeze_date: Optional[str] = None) -> Dict[str, Any]:
+    """Create a configuration snapshot for historical context.
+    
+    Args:
+        rules_config: Rules configuration dictionary
+        app_config: Application configuration object
+        freeze_date: Optional freeze date for backtesting
+        
+    Returns:
+        Configuration snapshot dictionary
+    """
+    snapshot = {
+        'rules_hash': hashlib.sha256(json.dumps(rules_config, sort_keys=True).encode()).hexdigest()[:16],
+        'universe_path': str(app_config.universe_path),
+        'hold_period': app_config.hold_period,
+        'edge_score_threshold': app_config.edge_score_threshold,
+        'min_trades_threshold': app_config.min_trades_threshold,
+        'freeze_date': freeze_date,
+        'timestamp': datetime.now().isoformat()  # Use proper timestamp
+    }
+    return snapshot
+
+
+def get_active_strategy_combinations(rules_config: Dict[str, Any]) -> List[str]:
+    """Parse current rules configuration to extract all possible strategy combinations.
+    
+    Args:
+        rules_config: Rules configuration dictionary
+        
+    Returns:
+        List of JSON-serialized rule stacks that match current configuration
+    """
+    combinations = []
+    
+    # Extract buy rules from config
+    buy_rules = rules_config.get('buy_rules', [])
+    if not buy_rules:
+        return combinations
+    
+    # Generate JSON representations of current rule stacks
+    # This is a simplified approach - in reality you'd need to generate all combinations
+    # For now, we'll just return the individual rules as basic combinations
+    for rule in buy_rules:
+        rule_stack = [{'type': rule.get('type'), 'name': rule.get('name', rule.get('type')), 'params': rule.get('params', {})}]
+        combinations.append(json.dumps(rule_stack))
+    
+    return combinations

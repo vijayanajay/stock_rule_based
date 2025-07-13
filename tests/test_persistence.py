@@ -13,6 +13,7 @@ import numpy as np # Import numpy
 
 from kiss_signal.persistence import create_database, save_strategies_batch, add_new_positions_from_signals
 from kiss_signal.persistence import get_open_positions, close_positions_batch # Import missing functions
+from kiss_signal import persistence  # Import persistence module for migration functions
 
 
 @pytest.fixture
@@ -501,3 +502,139 @@ class TestIntegration:
             assert rows[1][0] == "RELIANCE"
             assert json.loads(rows[1][1]) == [{'name': 'sma_10_20_crossover', 'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}}]
             assert rows[1][2] == 0.75
+
+class TestMigrationV2:
+    """Tests for strategies table v2 migration functionality."""
+    
+    def test_migrate_strategies_table_v2_fresh_database(self, temp_db_path: Path) -> None:
+        """Test migration on a fresh database with new schema."""
+        # Create a fresh database with the new schema - migration should be called automatically
+        persistence.create_database(temp_db_path)
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            # Verify all columns exist after automatic migration
+            cursor = conn.execute("PRAGMA table_info(strategies)")
+            columns = [row[1] for row in cursor.fetchall()]
+            assert 'config_snapshot' in columns
+            assert 'config_hash' in columns
+            
+            # Check version
+            version = conn.execute("PRAGMA user_version").fetchone()[0]
+            assert version >= 2
+
+    def test_migrate_strategies_table_v2_with_existing_data(self, temp_db_path: Path) -> None:
+        """Test migration preserves existing data and adds new columns."""
+        # Create old schema manually
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            conn.execute("""
+                CREATE TABLE strategies (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    run_timestamp TEXT NOT NULL,
+                    rule_stack TEXT NOT NULL,
+                    edge_score REAL NOT NULL,
+                    win_pct REAL NOT NULL,
+                    sharpe REAL NOT NULL,
+                    total_trades INTEGER NOT NULL,
+                    avg_return REAL NOT NULL
+                )
+            """)
+            
+            # Insert test data
+            test_data = [
+                ("RELIANCE", "2025-07-13T10:00:00", '[{"name": "test_rule"}]', 0.75, 0.65, 1.2, 15, 0.08),
+                ("INFY", "2025-07-13T10:00:00", '[{"name": "another_rule"}]', 0.68, 0.60, 1.1, 12, 0.06)
+            ]
+            
+            for data in test_data:
+                conn.execute("""
+                    INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, data)
+            conn.commit()
+        
+        # Run migration
+        persistence.migrate_strategies_table_v2(temp_db_path)
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            # Verify new columns exist
+            cursor = conn.execute("PRAGMA table_info(strategies)")
+            columns = [row[1] for row in cursor.fetchall()]
+            assert 'config_snapshot' in columns
+            assert 'config_hash' in columns
+            
+            # Verify data preserved
+            cursor = conn.execute("SELECT COUNT(*) FROM strategies")
+            count = cursor.fetchone()[0]
+            assert count == 2
+            
+            # Verify legacy data marked properly
+            cursor = conn.execute("SELECT config_hash, config_snapshot FROM strategies")
+            rows = cursor.fetchall()
+            for config_hash, config_snapshot in rows:
+                assert config_hash == 'legacy'
+                assert json.loads(config_snapshot) == {"legacy": True}
+
+    def test_migrate_strategies_table_v2_idempotent(self, temp_db_path: Path) -> None:
+        """Test that migration can be run multiple times safely."""
+        persistence.create_database(temp_db_path)
+        
+        # Run migration again - should be safe
+        persistence.migrate_strategies_table_v2(temp_db_path)
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            cursor = conn.execute("PRAGMA table_info(strategies)")
+            columns = [row[1] for row in cursor.fetchall()]
+            # Should only have one instance of each column
+            assert columns.count('config_snapshot') == 1
+            assert columns.count('config_hash') == 1
+
+    def test_config_functions(self, temp_db_path: Path) -> None:
+        """Test config generation and snapshot functions."""
+        from kiss_signal.config import Config, EdgeScoreWeights
+        
+        # Create a temporary universe file for testing
+        universe_file = temp_db_path.parent / "test_universe.csv"
+        universe_file.write_text("symbol\nRELIANCE\nINFY\n")
+        
+        # Create mock config objects
+        rules_config = {
+            "buy_rules": [
+                {"type": "sma_crossover", "name": "sma_10_20_crossover", "params": {"fast": 10, "slow": 20}},
+                {"type": "rsi_oversold", "name": "rsi_oversold_30", "params": {"period": 14, "threshold": 30}}
+            ]
+        }
+        
+        app_config = Config(
+            database_path=str(temp_db_path),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports",
+            edge_score_threshold=0.5
+        )
+        
+        # Test generate_config_hash
+        hash1 = persistence.generate_config_hash(rules_config, app_config)
+        hash2 = persistence.generate_config_hash(rules_config, app_config)
+        assert hash1 == hash2  # Deterministic
+        assert len(hash1) == 8  # 8-character prefix
+        
+        # Test create_config_snapshot
+        snapshot = persistence.create_config_snapshot(rules_config, app_config, "2025-07-13")
+        assert 'rules_hash' in snapshot
+        assert 'universe_path' in snapshot
+        assert 'freeze_date' in snapshot
+        assert snapshot['freeze_date'] == "2025-07-13"
+        assert len(json.dumps(snapshot)) < 1024  # < 1KB
+        
+        # Test get_active_strategy_combinations
+        combinations = persistence.get_active_strategy_combinations(rules_config)
+        assert len(combinations) >= 2  # At least the buy rules
+        for combo in combinations:
+            parsed = json.loads(combo)
+            assert isinstance(parsed, list)

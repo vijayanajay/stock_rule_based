@@ -19,7 +19,10 @@ from io import StringIO
 from . import data, rules, persistence
 from .config import Config
 
-__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "format_strategy_analysis_as_csv"]
+# Import config functions from persistence for convenience
+from .persistence import generate_config_hash, create_config_snapshot, get_active_strategy_combinations
+
+__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot", "get_active_strategy_combinations"]
 
 logger = logging.getLogger(__name__)
 
@@ -444,24 +447,66 @@ def format_rule_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
     
     return title + description + header + separator + "\n".join(rows)
 
-def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]]) -> str:
-    """Formats the strategy performance analysis into a CSV string."""
+def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]], aggregate: bool = False) -> str:
+    """Formats the strategy performance analysis into a CSV string.
+    
+    Args:
+        analysis: List of strategy performance records (per-stock or aggregated)
+        aggregate: If True, formats aggregated data; if False, formats per-stock data
+        
+    Returns:
+        CSV string with proper formatting
+    """
     if not analysis:
-        return ""
-
-    df = pd.DataFrame(analysis)
-    # Rename for clarity in the report
-    df = df.rename(columns={"strategy_name": "strategy_rule_stack"})
-
-    # Select and order columns for the final report
-    report_cols = [
-        "strategy_rule_stack", "frequency", "avg_edge_score", "avg_win_pct",
-        "avg_sharpe", "avg_return", "avg_trades", "top_symbols"
-    ]
-    df = df[report_cols]
+        if aggregate:
+            return "strategy_rule_stack,frequency,avg_edge_score,avg_win_pct,avg_sharpe,avg_return,avg_trades,top_symbols,config_hash,run_date,config_details\n"
+        else:
+            return "symbol,strategy_rule_stack,edge_score,win_pct,sharpe,total_return,total_trades,config_hash,run_date,config_details\n"
 
     output = StringIO()
-    df.to_csv(output, index=False, float_format="%.4f")
+    
+    if aggregate:
+        # Write header for aggregated format (Story 16 + config tracking)
+        output.write("strategy_rule_stack,frequency,avg_edge_score,avg_win_pct,avg_sharpe,avg_return,avg_trades,top_symbols,config_hash,run_date,config_details\n")
+        
+        # Write data rows with proper CSV escaping
+        for record in analysis:
+            # Format numeric values to 4 decimal places
+            avg_edge_score = f"{record['avg_edge_score']:.4f}" if record['avg_edge_score'] is not None else "0.0000"
+            avg_win_pct = f"{record['avg_win_pct']:.4f}" if record['avg_win_pct'] is not None else "0.0000"
+            avg_sharpe = f"{record['avg_sharpe']:.4f}" if record['avg_sharpe'] is not None else "0.0000"
+            avg_return = f"{record['avg_return']:.4f}" if record['avg_return'] is not None else "0.0000"
+            avg_trades = f"{record['avg_trades']:.1f}" if record['avg_trades'] is not None else "0.0"
+            
+            # Escape CSV values
+            strategy_rule_stack = str(record['strategy_rule_stack']).replace('"', '""')
+            top_symbols = str(record['top_symbols']).replace('"', '""')
+            config_hash = str(record['config_hash']).replace('"', '""')
+            run_date = str(record['run_date']).replace('"', '""')
+            config_details = str(record['config_details']).replace('"', '""')
+            
+            output.write(f'"{strategy_rule_stack}",{record["frequency"]},{avg_edge_score},{avg_win_pct},{avg_sharpe},{avg_return},{avg_trades},"{top_symbols}","{config_hash}","{run_date}","{config_details}"\n')
+    else:
+        # Write header for per-stock format (Story 17)
+        output.write("symbol,strategy_rule_stack,edge_score,win_pct,sharpe,total_return,total_trades,config_hash,run_date,config_details\n")
+        
+        # Write data rows with proper CSV escaping
+        for record in analysis:
+            # Format numeric values to 4 decimal places
+            edge_score = f"{record['edge_score']:.4f}" if record['edge_score'] is not None else "0.0000"
+            win_pct = f"{record['win_pct']:.4f}" if record['win_pct'] is not None else "0.0000"
+            sharpe = f"{record['sharpe']:.4f}" if record['sharpe'] is not None else "0.0000"
+            total_return = f"{record['total_return']:.4f}" if record['total_return'] is not None else "0.0000"
+            
+            # Escape CSV values
+            symbol = str(record['symbol']).replace('"', '""')
+            strategy_rule_stack = str(record['strategy_rule_stack']).replace('"', '""')
+            config_hash = str(record['config_hash']).replace('"', '""')
+            run_date = str(record['run_date']).replace('"', '""')
+            config_details = str(record['config_details']).replace('"', '""')
+            
+            output.write(f'"{symbol}","{strategy_rule_stack}",{edge_score},{win_pct},{sharpe},{total_return},{record["total_trades"]},"{config_hash}","{run_date}","{config_details}"\n')
+    
     return output.getvalue()
 
 def _check_exit_conditions(
@@ -508,48 +553,212 @@ def _check_exit_conditions(
     return None
 
 def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
-    """Analyzes the entire history of strategies to rank strategy combinations."""
+    """Analyze strategy performance aggregated by rule stack combinations.
+    
+    Groups strategies by rule_stack and calculates aggregated metrics:
+    frequency, average scores, and top performing symbols.
+    
+    Args:
+        db_path: Path to SQLite database
+        
+    Returns:
+        List of aggregated strategy performance records
+    """
     try:
         with sqlite3.connect(str(db_path)) as conn:
-            df = pd.read_sql_query("SELECT * FROM strategies", conn)
+            conn.row_factory = sqlite3.Row
+            
+            cursor = conn.execute("""
+                SELECT symbol, rule_stack, edge_score, win_pct, sharpe,
+                       avg_return, total_trades, config_hash, run_timestamp,
+                       config_snapshot
+                FROM strategies 
+                ORDER BY symbol, edge_score DESC
+            """)
+            
+            # Group by strategy (rule_stack)
+            strategy_groups = {}
+            for row in cursor.fetchall():
+                try:
+                    # Parse rule stack to create human-readable strategy name
+                    rules = json.loads(row['rule_stack'])
+                    if isinstance(rules, list) and rules:
+                        strategy_name = " + ".join(r.get('name', r.get('type', 'N/A')) for r in rules if isinstance(r, dict))
+                    else:
+                        strategy_name = "Unknown Strategy"
+                    
+                    if strategy_name not in strategy_groups:
+                        strategy_groups[strategy_name] = []
+                    
+                    strategy_groups[strategy_name].append({
+                        'symbol': row['symbol'],
+                        'edge_score': row['edge_score'],
+                        'win_pct': row['win_pct'],
+                        'sharpe': row['sharpe'],
+                        'avg_return': row['avg_return'],
+                        'total_trades': row['total_trades']
+                    })
+                    
+                except (json.JSONDecodeError, TypeError, KeyError) as e:
+                    logger.warning(f"Skipping malformed strategy record: {e}")
+                    continue
+            
+            # Calculate aggregated metrics for each strategy
+            results = []
+            for strategy_name, records in strategy_groups.items():
+                if not records:
+                    continue
+                
+                # Calculate averages
+                avg_edge_score = sum(r['edge_score'] or 0 for r in records) / len(records)
+                avg_win_pct = sum(r['win_pct'] or 0 for r in records) / len(records)
+                avg_sharpe = sum(r['sharpe'] or 0 for r in records) / len(records)
+                avg_return = sum(r['avg_return'] or 0 for r in records) / len(records)
+                avg_trades = sum(r['total_trades'] or 0 for r in records) / len(records)
+                
+                # Find top symbols by frequency
+                symbol_counts = {}
+                for r in records:
+                    symbol = r['symbol']
+                    symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
+                
+                top_symbols = sorted(symbol_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+                top_symbols_str = ", ".join([f"{symbol} ({count})" for symbol, count in top_symbols])
+                
+                results.append({
+                    'strategy_rule_stack': strategy_name,
+                    'frequency': len(records),
+                    'avg_edge_score': avg_edge_score,
+                    'avg_win_pct': avg_win_pct,
+                    'avg_sharpe': avg_sharpe,
+                    'avg_return': avg_return,
+                    'avg_trades': avg_trades,
+                    'top_symbols': top_symbols_str
+                })
+            
+            # Sort by average edge score descending
+            results.sort(key=lambda x: x['avg_edge_score'], reverse=True)
+            
+            logger.info(f"Analyzed {len(results)} unique strategy combinations from {sum(len(records) for records in strategy_groups.values())} individual records")
+            return results
+            
     except (sqlite3.Error, pd.errors.DatabaseError) as e:
         logger.error(f"Failed to read strategies from database: {e}")
         return []
 
-    if df.empty:
+
+def analyze_strategy_performance_aggregated(db_path: Path) -> List[Dict[str, Any]]:
+    """Analyze strategy performance aggregated by rule stack combinations (Story 16 format).
+    
+    Groups strategies by rule_stack and calculates aggregated metrics:
+    frequency, average scores, and top performing symbols.
+    
+    Args:
+        db_path: Path to SQLite database
+        
+    Returns:
+        List of aggregated strategy performance records with config tracking
+    """
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            
+            cursor = conn.execute("""
+                SELECT symbol, rule_stack, edge_score, win_pct, sharpe,
+                       avg_return, total_trades, config_hash, run_timestamp,
+                       config_snapshot
+                FROM strategies 
+                ORDER BY symbol, edge_score DESC
+            """)
+            
+            # Group by strategy (rule_stack) AND config_hash for tracking
+            strategy_groups = {}
+            for row in cursor.fetchall():
+                try:
+                    # Parse rule stack to create human-readable strategy name
+                    rules = json.loads(row['rule_stack'])
+                    if isinstance(rules, list) and rules:
+                        strategy_name = " + ".join(r.get('name', r.get('type', 'N/A')) for r in rules if isinstance(r, dict))
+                    else:
+                        strategy_name = "Unknown Strategy"
+                    
+                    # Group by strategy name + config hash to track different configurations
+                    group_key = f"{strategy_name}|{row['config_hash'] or 'legacy'}"
+                    
+                    if group_key not in strategy_groups:
+                        strategy_groups[group_key] = {
+                            'strategy_name': strategy_name,
+                            'config_hash': row['config_hash'] or 'legacy',
+                            'run_date': row['run_timestamp'][:10] if row['run_timestamp'] else 'unknown',
+                            'config_snapshot': row['config_snapshot'],
+                            'records': []
+                        }
+                    
+                    strategy_groups[group_key]['records'].append({
+                        'symbol': row['symbol'],
+                        'edge_score': row['edge_score'],
+                        'win_pct': row['win_pct'],
+                        'sharpe': row['sharpe'],
+                        'avg_return': row['avg_return'],
+                        'total_trades': row['total_trades']
+                    })
+                    
+                except (json.JSONDecodeError, TypeError, KeyError) as e:
+                    logger.warning(f"Skipping malformed strategy record: {e}")
+                    continue
+            
+            # Calculate aggregated metrics for each strategy+config combination
+            results = []
+            for group_key, group_data in strategy_groups.items():
+                records = group_data['records']
+                if not records:
+                    continue
+                
+                # Calculate averages
+                avg_edge_score = sum(r['edge_score'] or 0 for r in records) / len(records)
+                avg_win_pct = sum(r['win_pct'] or 0 for r in records) / len(records)
+                avg_sharpe = sum(r['sharpe'] or 0 for r in records) / len(records)
+                avg_return = sum(r['avg_return'] or 0 for r in records) / len(records) / 100000  # Convert to percentage
+                avg_trades = sum(r['total_trades'] or 0 for r in records) / len(records)
+                
+                # Find top symbols by frequency
+                symbol_counts = {}
+                for r in records:
+                    symbol = r['symbol']
+                    symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
+                
+                top_symbols = sorted(symbol_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+                top_symbols_str = ", ".join([f"{symbol} ({count})" for symbol, count in top_symbols])
+                
+                # Parse config details
+                try:
+                    config_details = json.loads(group_data['config_snapshot'] or '{}')
+                except (json.JSONDecodeError, TypeError):
+                    config_details = {}
+                
+                results.append({
+                    'strategy_rule_stack': group_data['strategy_name'],
+                    'frequency': len(records),
+                    'avg_edge_score': avg_edge_score,
+                    'avg_win_pct': avg_win_pct,
+                    'avg_sharpe': avg_sharpe,
+                    'avg_return': avg_return,
+                    'avg_trades': avg_trades,
+                    'top_symbols': top_symbols_str,
+                    'config_hash': group_data['config_hash'],
+                    'run_date': group_data['run_date'],
+                    'config_details': str(config_details)
+                })
+            
+            # Sort by average edge score descending
+            results.sort(key=lambda x: x['avg_edge_score'], reverse=True)
+            
+            logger.info(f"Analyzed {len(results)} unique strategy+config combinations from {sum(len(group['records']) for group in strategy_groups.values())} individual records")
+            return results
+            
+    except (sqlite3.Error, pd.errors.DatabaseError) as e:
+        logger.error(f"Failed to read strategies from database: {e}")
         return []
-
-    def get_strategy_name(rule_stack_json: str) -> str:
-        try:
-            rules = json.loads(rule_stack_json)
-            return " + ".join(r.get("name", "N/A") for r in rules if isinstance(r, dict))
-        except (json.JSONDecodeError, TypeError):
-            return "Unknown Strategy"
-
-    df["strategy_name"] = df["rule_stack"].apply(get_strategy_name)
-
-    agg_metrics = {
-        "avg_edge_score": ("edge_score", "mean"),
-        "avg_win_pct": ("win_pct", "mean"),
-        "avg_sharpe": ("sharpe", "mean"),
-        "avg_trades": ("total_trades", "mean"),
-        "avg_return": ("avg_return", "mean"),
-        "frequency": ("symbol", "count"),
-    }
-
-    grouped = df.groupby("strategy_name").agg(**agg_metrics)
-
-    # Aggregate top symbols separately
-    top_symbols = df.groupby("strategy_name")["symbol"].apply(
-        lambda s: ", ".join(s.value_counts().nlargest(3).index)
-    ).rename("top_symbols")
-
-    analysis_df = grouped.join(top_symbols).reset_index()
-    analysis_df = analysis_df.sort_values("avg_edge_score", ascending=False)
-
-    # Convert to list of dictionaries with explicit typing
-    result: List[Dict[str, Any]] = analysis_df.to_dict("records")
-    return result
 
 
 def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
