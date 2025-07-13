@@ -23,6 +23,10 @@ __all__ = [
     "sma_cross_under",
     "stop_loss_pct",
     "take_profit_pct",
+    # New functions (Story 018) - ATR-based exits
+    "calculate_atr",
+    "stop_loss_atr",
+    "take_profit_atr",
 ]
 
 logger = logging.getLogger(__name__)
@@ -498,3 +502,180 @@ def take_profit_pct(price_data: pd.DataFrame, percentage: float) -> pd.Series:
     
     logger.debug(f"Take profit percentage: {percentage:.1%}")
     return pd.Series(False, index=price_data.index)
+
+# =============================================================================
+# Story 018: ATR-Based Dynamic Exit Conditions
+# =============================================================================
+
+def calculate_atr(price_data: pd.DataFrame, period: int = 14) -> pd.Series:
+    """Calculate Average True Range indicator.
+    
+    ATR measures volatility by calculating the average of true ranges over a period.
+    Uses Wilder's smoothing method (same as RSI) for consistency.
+    
+    Args:
+        price_data: DataFrame with OHLCV data (must have 'high', 'low', 'close' columns)
+        period: ATR calculation period (default 14)
+        
+    Returns:
+        Series of ATR values, aligned with price_data index
+        
+    Raises:
+        ValueError: If missing required columns or invalid parameters
+        
+    Example:
+        >>> atr = calculate_atr(price_data, period=14)
+        >>> print(f"Current ATR: {atr.iloc[-1]:.2f}")
+    """
+    if period <= 1:
+        raise ValueError(f"period ({period}) must be > 1")
+    
+    # Handle empty DataFrame
+    if len(price_data) == 0:
+        return pd.Series(dtype=float, name='atr')
+        
+    _validate_ohlcv_columns(price_data, ['high', 'low', 'close'])
+    
+    if len(price_data) < period:
+        logger.warning(f"Insufficient data for ATR: {len(price_data)} rows, need {period}")
+        return pd.Series(float('nan'), index=price_data.index)
+    
+    # Calculate True Range for each period
+    # TR = max(H-L, abs(H-C_prev), abs(L-C_prev))
+    high = price_data['high']
+    low = price_data['low']
+    close = price_data['close']
+    prev_close = close.shift(1)
+    
+    tr1 = high - low  # High - Low
+    tr2 = (high - prev_close).abs()  # abs(High - Previous Close)
+    tr3 = (low - prev_close).abs()   # abs(Low - Previous Close)
+    
+    true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    
+    # First period has no previous close, so TR = H - L only
+    true_range.iloc[0] = high.iloc[0] - low.iloc[0]
+    
+    # Apply Wilder's smoothing (same as RSI calculation)
+    # ATR = EWM with alpha = 1/period, but only start calculation after period-1 values
+    alpha = 1.0 / period
+    atr = true_range.ewm(alpha=alpha, adjust=False, min_periods=period).mean()
+    
+    logger.debug(f"Calculated ATR: {atr.count()} valid values")
+    return atr
+
+
+def stop_loss_atr(
+    price_data: pd.DataFrame, 
+    entry_price: float, 
+    period: int = 14, 
+    multiplier: float = 2.0
+) -> bool:
+    """Check if ATR-based stop loss condition is triggered.
+    
+    Stop loss triggers when current price drops below entry_price - (multiplier * current_ATR).
+    This provides volatility-adaptive risk management that adjusts to each stock's characteristics.
+    
+    Args:
+        price_data: DataFrame with OHLCV data (must have 'high', 'low', 'close' columns)
+        entry_price: Price at which position was entered
+        period: ATR calculation period (default 14)
+        multiplier: ATR multiplier for stop distance (default 2.0)
+        
+    Returns:
+        True if stop loss is triggered, False otherwise
+        
+    Raises:
+        ValueError: If invalid parameters
+        
+    Example:
+        >>> triggered = stop_loss_atr(price_data, entry_price=100.0, multiplier=2.0)
+        >>> if triggered:
+        ...     print("Stop loss triggered - exit position")
+    """
+    if period <= 1:
+        raise ValueError(f"period ({period}) must be > 1")
+    if multiplier <= 0:
+        raise ValueError(f"multiplier ({multiplier}) must be > 0")
+    if entry_price <= 0:
+        raise ValueError(f"entry_price ({entry_price}) must be > 0")
+    
+    if len(price_data) == 0:
+        return False
+        
+    # Calculate current ATR
+    atr = calculate_atr(price_data, period)
+    if pd.isna(atr.iloc[-1]):
+        logger.debug("ATR calculation returned NaN, skipping ATR stop loss check")
+        return False
+    
+    current_price = price_data['close'].iloc[-1]
+    current_atr = atr.iloc[-1]
+    stop_level = entry_price - (multiplier * current_atr)
+    
+    triggered = current_price <= stop_level
+    
+    if triggered:
+        logger.debug(f"ATR stop loss triggered: price={current_price:.2f}, "
+                    f"stop_level={stop_level:.2f}, entry={entry_price:.2f}, "
+                    f"atr={current_atr:.2f}, multiplier={multiplier}")
+    
+    return triggered
+
+
+def take_profit_atr(
+    price_data: pd.DataFrame, 
+    entry_price: float, 
+    period: int = 14, 
+    multiplier: float = 4.0
+) -> bool:
+    """Check if ATR-based take profit condition is triggered.
+    
+    Take profit triggers when current price rises above entry_price + (multiplier * current_ATR).
+    This provides volatility-adaptive profit targets that maintain consistent risk-reward ratios.
+    
+    Args:
+        price_data: DataFrame with OHLCV data (must have 'high', 'low', 'close' columns)
+        entry_price: Price at which position was entered
+        period: ATR calculation period (default 14)
+        multiplier: ATR multiplier for profit target distance (default 4.0)
+        
+    Returns:
+        True if take profit is triggered, False otherwise
+        
+    Raises:
+        ValueError: If invalid parameters
+        
+    Example:
+        >>> triggered = take_profit_atr(price_data, entry_price=100.0, multiplier=4.0)
+        >>> if triggered:
+        ...     print("Take profit triggered - exit position with profit")
+    """
+    if period <= 1:
+        raise ValueError(f"period ({period}) must be > 1")
+    if multiplier <= 0:
+        raise ValueError(f"multiplier ({multiplier}) must be > 0")
+    if entry_price <= 0:
+        raise ValueError(f"entry_price ({entry_price}) must be > 0")
+    
+    if len(price_data) == 0:
+        return False
+        
+    # Calculate current ATR
+    atr = calculate_atr(price_data, period)
+    if pd.isna(atr.iloc[-1]):
+        logger.debug("ATR calculation returned NaN, skipping ATR take profit check")
+        return False
+    
+    current_price = price_data['close'].iloc[-1]
+    current_atr = atr.iloc[-1]
+    profit_level = entry_price + (multiplier * current_atr)
+    
+    triggered = current_price >= profit_level
+    
+    if triggered:
+        logger.debug(f"ATR take profit triggered: price={current_price:.2f}, "
+                    f"profit_level={profit_level:.2f}, entry={entry_price:.2f}, "
+                    f"atr={current_atr:.2f}, multiplier={multiplier}")
+    
+    return triggered

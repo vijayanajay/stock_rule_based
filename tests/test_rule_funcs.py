@@ -21,6 +21,10 @@ from kiss_signal.rules import (
     sma_cross_under,
     stop_loss_pct,
     take_profit_pct,
+    # New functions (Story 018) - ATR-based exits
+    calculate_atr,
+    stop_loss_atr,
+    take_profit_atr,
 )
 
 
@@ -600,3 +604,289 @@ def test_sma_cross_under_insufficient_data():
     signals = sma_cross_under(price_data, fast_period=5, slow_period=10)
     assert isinstance(signals, pd.Series)
     assert all(~signals)
+
+
+# =============================================================================
+# Story 018: ATR-Based Dynamic Exit Conditions Tests
+# =============================================================================
+
+def test_calculate_atr_basic():
+    """Test ATR calculation with known values."""
+    # Create simple test data
+    price_data = pd.DataFrame({
+        'high': [22, 23, 24, 25, 26],
+        'low': [20, 21, 22, 23, 24], 
+        'close': [21, 22, 23, 24, 25],
+        'volume': [1000] * 5
+    }, index=pd.date_range('2023-01-01', periods=5, freq='D'))
+    
+    atr = calculate_atr(price_data, period=3)
+    
+    # Should have same length as input
+    assert len(atr) == len(price_data)
+    assert isinstance(atr, pd.Series)
+    
+    # First two values should be NaN due to insufficient data for period=3
+    assert pd.isna(atr.iloc[0])
+    assert pd.isna(atr.iloc[1])
+    
+    # Third value should be the first valid ATR
+    assert not pd.isna(atr.iloc[2])
+    assert atr.iloc[2] > 0
+    
+    # ATR should be positive and reasonable
+    assert (atr.dropna() > 0).all()
+
+
+def test_calculate_atr_mathematical_accuracy():
+    """Test ATR calculation with manually calculated values."""
+    # Simple data where we can manually calculate ATR
+    price_data = pd.DataFrame({
+        'high': [105, 110, 108, 115, 112],
+        'low': [95, 100, 102, 105, 108],
+        'close': [100, 105, 106, 110, 111]
+    }, index=pd.date_range('2023-01-01', periods=5, freq='D'))
+    
+    atr = calculate_atr(price_data, period=3)
+    
+    # Manual calculation:
+    # Day 1: TR = 105-95 = 10
+    # Day 2: TR = max(110-100, |110-100|, |100-100|) = max(10, 10, 0) = 10  
+    # Day 3: TR = max(108-102, |108-105|, |102-105|) = max(6, 3, 3) = 6
+    # Day 4: TR = max(115-105, |115-106|, |105-106|) = max(10, 9, 1) = 10
+    # Day 5: TR = max(112-108, |112-110|, |108-110|) = max(4, 2, 2) = 4
+    
+    # ATR(3) starts at day 3 with Wilder's smoothing
+    # First ATR = simple average of first 3 TRs = (10 + 10 + 6) / 3 = 8.67
+    
+    assert not pd.isna(atr.iloc[2])
+    assert abs(atr.iloc[2] - 8.67) < 0.1  # Allow small floating point differences
+
+
+def test_calculate_atr_insufficient_data():
+    """Test ATR with insufficient data."""
+    # Less data than required period
+    price_data = pd.DataFrame({
+        'high': [22, 23],
+        'low': [20, 21],
+        'close': [21, 22],
+        'volume': [1000] * 2
+    }, index=pd.date_range('2023-01-01', periods=2, freq='D'))
+    
+    atr = calculate_atr(price_data, period=5)
+    
+    # Should return all NaN when insufficient data
+    assert all(pd.isna(atr))
+
+
+def test_calculate_atr_missing_columns():
+    """Test ATR with missing required columns."""
+    price_data = pd.DataFrame({
+        'high': [22, 23, 24],
+        'low': [20, 21, 22],
+        # Missing 'close' column
+        'volume': [1000] * 3
+    })
+    
+    with pytest.raises(ValueError, match="Missing required columns"):
+        calculate_atr(price_data, period=3)
+
+
+def test_calculate_atr_invalid_period():
+    """Test ATR with invalid period values."""
+    price_data = pd.DataFrame({
+        'high': [22, 23, 24],
+        'low': [20, 21, 22],
+        'close': [21, 22, 23],
+        'volume': [1000] * 3
+    })
+    
+    with pytest.raises(ValueError, match="period .* must be > 1"):
+        calculate_atr(price_data, period=1)
+    
+    with pytest.raises(ValueError, match="period .* must be > 1"):
+        calculate_atr(price_data, period=0)
+
+
+def test_stop_loss_atr_basic():
+    """Test ATR-based stop loss basic functionality."""
+    # Create test data with known ATR
+    price_data = pd.DataFrame({
+        'high': [105, 110, 108, 115, 95],  # Last day: big drop
+        'low': [95, 100, 102, 105, 90],
+        'close': [100, 105, 106, 110, 92]  # Price drops to 92
+    }, index=pd.date_range('2023-01-01', periods=5, freq='D'))
+    
+    entry_price = 110.0  # Entered at day 4 price
+    
+    # Test with large multiplier - should not trigger
+    triggered = stop_loss_atr(price_data, entry_price, period=3, multiplier=10.0)
+    assert not triggered
+    
+    # Test with small multiplier - should trigger
+    triggered = stop_loss_atr(price_data, entry_price, period=3, multiplier=1.0)
+    assert triggered
+
+
+def test_stop_loss_atr_not_triggered():
+    """Test ATR stop loss when price is above stop level."""
+    price_data = pd.DataFrame({
+        'high': [105, 110, 108, 115, 118],  # Price going up
+        'low': [95, 100, 102, 105, 112],
+        'close': [100, 105, 106, 110, 115]
+    }, index=pd.date_range('2023-01-01', periods=5, freq='D'))
+    
+    entry_price = 110.0
+    
+    triggered = stop_loss_atr(price_data, entry_price, period=3, multiplier=2.0)
+    assert not triggered
+
+
+def test_stop_loss_atr_invalid_params():
+    """Test ATR stop loss with invalid parameters."""
+    price_data = pd.DataFrame({
+        'high': [22, 23, 24],
+        'low': [20, 21, 22],
+        'close': [21, 22, 23],
+        'volume': [1000] * 3
+    })
+    
+    # Invalid period
+    with pytest.raises(ValueError, match="period .* must be > 1"):
+        stop_loss_atr(price_data, 100.0, period=1, multiplier=2.0)
+    
+    # Invalid multiplier
+    with pytest.raises(ValueError, match="multiplier .* must be > 0"):
+        stop_loss_atr(price_data, 100.0, period=3, multiplier=0)
+    
+    # Invalid entry price
+    with pytest.raises(ValueError, match="entry_price .* must be > 0"):
+        stop_loss_atr(price_data, 0, period=3, multiplier=2.0)
+
+
+def test_stop_loss_atr_insufficient_data():
+    """Test ATR stop loss with insufficient data for ATR calculation."""
+    price_data = pd.DataFrame({
+        'high': [22, 23],
+        'low': [20, 21],
+        'close': [21, 22],
+        'volume': [1000] * 2
+    })
+    
+    # Insufficient data should return False (no trigger)
+    triggered = stop_loss_atr(price_data, 100.0, period=5, multiplier=2.0)
+    assert not triggered
+
+
+def test_take_profit_atr_basic():
+    """Test ATR-based take profit basic functionality."""
+    # Create test data with big price move up
+    price_data = pd.DataFrame({
+        'high': [105, 110, 108, 115, 125],  # Last day: big jump
+        'low': [95, 100, 102, 105, 120],
+        'close': [100, 105, 106, 110, 122]  # Price jumps to 122
+    }, index=pd.date_range('2023-01-01', periods=5, freq='D'))
+    
+    entry_price = 100.0  # Entered at first day
+    
+    # Test with large multiplier - should not trigger
+    triggered = take_profit_atr(price_data, entry_price, period=3, multiplier=10.0)
+    assert not triggered
+    
+    # Test with small multiplier - should trigger
+    triggered = take_profit_atr(price_data, entry_price, period=3, multiplier=1.0)
+    assert triggered
+
+
+def test_take_profit_atr_not_triggered():
+    """Test ATR take profit when price hasn't reached target."""
+    price_data = pd.DataFrame({
+        'high': [105, 110, 108, 115, 108],  # Price going down
+        'low': [95, 100, 102, 105, 102],
+        'close': [100, 105, 106, 110, 105]
+    }, index=pd.date_range('2023-01-01', periods=5, freq='D'))
+    
+    entry_price = 100.0
+    
+    triggered = take_profit_atr(price_data, entry_price, period=3, multiplier=4.0)
+    assert not triggered
+
+
+def test_take_profit_atr_invalid_params():
+    """Test ATR take profit with invalid parameters."""
+    price_data = pd.DataFrame({
+        'high': [22, 23, 24],
+        'low': [20, 21, 22],
+        'close': [21, 22, 23],
+        'volume': [1000] * 3
+    })
+    
+    # Invalid period
+    with pytest.raises(ValueError, match="period .* must be > 1"):
+        take_profit_atr(price_data, 100.0, period=1, multiplier=4.0)
+    
+    # Invalid multiplier
+    with pytest.raises(ValueError, match="multiplier .* must be > 0"):
+        take_profit_atr(price_data, 100.0, period=3, multiplier=-1.0)
+    
+    # Invalid entry price
+    with pytest.raises(ValueError, match="entry_price .* must be > 0"):
+        take_profit_atr(price_data, -100.0, period=3, multiplier=4.0)
+
+
+def test_take_profit_atr_insufficient_data():
+    """Test ATR take profit with insufficient data for ATR calculation."""
+    price_data = pd.DataFrame({
+        'high': [22, 23],
+        'low': [20, 21],
+        'close': [21, 22],
+        'volume': [1000] * 2
+    })
+    
+    # Insufficient data should return False (no trigger)
+    triggered = take_profit_atr(price_data, 100.0, period=5, multiplier=4.0)
+    assert not triggered
+
+
+def test_atr_functions_empty_data():
+    """Test ATR functions with empty DataFrame."""
+    empty_data = pd.DataFrame()
+    
+    # ATR calculation should return empty series
+    atr = calculate_atr(empty_data, period=3)
+    assert len(atr) == 0
+    
+    # Exit functions should return False for empty data
+    assert not stop_loss_atr(empty_data, 100.0, period=3, multiplier=2.0)
+    assert not take_profit_atr(empty_data, 100.0, period=3, multiplier=4.0)
+
+
+def test_atr_consistency_across_functions():
+    """Test that exit functions use consistent ATR calculation."""
+    price_data = pd.DataFrame({
+        'high': [105, 110, 108, 115, 112],
+        'low': [95, 100, 102, 105, 108],
+        'close': [100, 105, 106, 110, 111]
+    }, index=pd.date_range('2023-01-01', periods=5, freq='D'))
+    
+    entry_price = 105.0
+    period = 3
+    
+    # Calculate ATR directly
+    atr = calculate_atr(price_data, period)
+    current_atr = atr.iloc[-1]
+    current_price = price_data['close'].iloc[-1]
+    
+    # Check stop loss calculation
+    stop_multiplier = 2.0
+    expected_stop_level = entry_price - (stop_multiplier * current_atr)
+    stop_triggered = current_price <= expected_stop_level
+    actual_stop_triggered = stop_loss_atr(price_data, entry_price, period, stop_multiplier)
+    assert stop_triggered == actual_stop_triggered
+    
+    # Check take profit calculation
+    profit_multiplier = 4.0
+    expected_profit_level = entry_price + (profit_multiplier * current_atr)
+    profit_triggered = current_price >= expected_profit_level
+    actual_profit_triggered = take_profit_atr(price_data, entry_price, period, profit_multiplier)
+    assert profit_triggered == actual_profit_triggered

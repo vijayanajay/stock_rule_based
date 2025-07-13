@@ -77,6 +77,108 @@ class TestBacktester:
             )
             assert result == []
 
+    def test_atr_exit_signal_generation(self, sample_price_data):
+        """Test ATR-based exit signal generation."""
+        from kiss_signal.config import RuleDef
+        
+        backtester = Backtester()
+        
+        # Create entry signals - simple ones for testing
+        entry_signals = pd.Series(False, index=sample_price_data.index)
+        entry_signals.iloc[10] = True  # Entry on day 10
+        entry_signals.iloc[30] = True  # Entry on day 30
+        
+        # Test stop loss ATR
+        stop_loss_rule = RuleDef(
+            name="test_stop_loss_atr", 
+            type="stop_loss_atr", 
+            params={'period': 5, 'multiplier': 1.0}
+        )
+        
+        stop_exit_signals = backtester._generate_atr_exit_signals(
+            entry_signals, sample_price_data, stop_loss_rule
+        )
+        
+        assert isinstance(stop_exit_signals, pd.Series)
+        assert len(stop_exit_signals) == len(sample_price_data)
+        assert stop_exit_signals.dtype == bool
+        
+        # Test take profit ATR
+        take_profit_rule = RuleDef(
+            name="test_take_profit_atr", 
+            type="take_profit_atr", 
+            params={'period': 5, 'multiplier': 3.0}
+        )
+        
+        profit_exit_signals = backtester._generate_atr_exit_signals(
+            entry_signals, sample_price_data, take_profit_rule
+        )
+        
+        assert isinstance(profit_exit_signals, pd.Series)
+        assert len(profit_exit_signals) == len(sample_price_data)
+        assert profit_exit_signals.dtype == bool
+
+    def test_generate_exit_signals_with_atr(self, sample_price_data):
+        """Test exit signal generation including ATR-based exits."""
+        from kiss_signal.config import RuleDef
+        
+        backtester = Backtester()
+        
+        # Create entry signals
+        entry_signals = pd.Series(False, index=sample_price_data.index)
+        entry_signals.iloc[10] = True
+        
+        # Create sell conditions with ATR exits
+        sell_conditions = [
+            RuleDef(
+                name="atr_stop_loss", 
+                type="stop_loss_atr", 
+                params={'period': 5, 'multiplier': 2.0}
+            ),
+            RuleDef(
+                name="atr_take_profit", 
+                type="take_profit_atr", 
+                params={'period': 5, 'multiplier': 4.0}
+            )
+        ]
+        
+        exit_signals, sl_stop, tp_stop = backtester._generate_exit_signals(
+            entry_signals, sample_price_data, sell_conditions
+        )
+        
+        assert isinstance(exit_signals, pd.Series)
+        assert len(exit_signals) == len(sample_price_data)
+        assert exit_signals.dtype == bool
+        
+        # ATR exits should not set sl_stop or tp_stop (those are for percentage exits)
+        assert sl_stop is None
+        assert tp_stop is None
+
+    def test_track_entry_prices(self, sample_price_data):
+        """Test entry price tracking functionality."""
+        backtester = Backtester()
+        
+        # Create entry signals on specific dates
+        entry_signals = pd.Series(False, index=sample_price_data.index)
+        entry_signals.iloc[5] = True
+        entry_signals.iloc[25] = True
+        
+        entry_prices = backtester._track_entry_prices(entry_signals, sample_price_data)
+        
+        assert isinstance(entry_prices, pd.Series)
+        assert len(entry_prices) == len(sample_price_data)
+        
+        # Should have entry prices on entry dates
+        assert not pd.isna(entry_prices.iloc[5])
+        assert not pd.isna(entry_prices.iloc[25])
+        assert entry_prices.iloc[5] == sample_price_data['close'].iloc[5]
+        assert entry_prices.iloc[25] == sample_price_data['close'].iloc[25]
+        
+        # Should have NaN on non-entry dates
+        assert pd.isna(entry_prices.iloc[0])
+        assert pd.isna(entry_prices.iloc[10])
+        assert pd.isna(entry_prices.iloc[20])
+
 @pytest.fixture
 def sample_price_data():
     """Generate sample OHLCV price data for testing."""

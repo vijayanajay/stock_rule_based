@@ -108,25 +108,43 @@ layers:
 
 
 # -----------------------------------------------------------------------------
-# SELL CONDITIONS: Dynamic Exit Rules (Story 015)
+# SELL CONDITIONS: Dynamic Exit Rules (Story 015 + Story 018)
 # GOAL: Define systematic exit conditions beyond simple time-based holds
 # -----------------------------------------------------------------------------
 sell_conditions:
-  - name: "stop_loss_5_pct"
-    type: "stop_loss_pct"
-    description: "Exit if price drops 5% from entry."
+  # ATR-Based Exits (Story 018) - Volatility-adaptive risk management
+  - name: "atr_stop_loss_2x"
+    type: "stop_loss_atr"
+    description: "Primary Risk Control: Exit if price drops 2x the 14-day ATR from entry. This adapts to each stock's volatility."
     params:
-      percentage: 0.05
+      period: 14
+      multiplier: 2.0
 
-  - name: "take_profit_15_pct" 
-    type: "take_profit_pct"
-    description: "Exit if price rises 15% from entry."
+  - name: "atr_take_profit_4x"
+    type: "take_profit_atr"
+    description: "Profit Target: Exit if price rises 4x the 14-day ATR from entry. Enforces a 2:1 Reward/Risk ratio."
     params:
-      percentage: 0.15
+      period: 14
+      multiplier: 4.0
 
+  # Percentage-Based Exits (Story 015) - Traditional fixed-percentage exits
+  # Note: These are disabled by default when ATR exits are active, but kept for comparison
+  # - name: "stop_loss_5_pct"
+  #   type: "stop_loss_pct"
+  #   description: "Exit if price drops 5% from entry."
+  #   params:
+  #     percentage: 0.05
+
+  # - name: "take_profit_15_pct" 
+  #   type: "take_profit_pct"
+  #   description: "Exit if price rises 15% from entry."
+  #   params:
+  #     percentage: 0.15
+
+  # Trend-Based Exit (Story 015) - Dynamic exit when trend breaks
   - name: "sma_cross_under_exit"
     type: "sma_cross_under"
-    description: "Exit if the 10-day SMA crosses below the 20-day SMA."
+    description: "Dynamic Exit: Exit if the short-term trend breaks (10-day SMA crosses below 20-day SMA)."
     params:
       fast_period: 10
       slow_period: 20
@@ -161,3 +179,10 @@ validation:
     period: {min: 10, max: 50}
     std_dev: {min: 1.0, max: 3.0}
     squeeze_threshold: {min: 0.05, max: 0.2}
+  # ATR-Based Exit Validation (Story 018)
+  stop_loss_atr:
+    period: {min: 5, max: 50}
+    multiplier: {min: 0.5, max: 5.0}
+  take_profit_atr:
+    period: {min: 5, max: 50}
+    multiplier: {min: 1.0, max: 10.0}
