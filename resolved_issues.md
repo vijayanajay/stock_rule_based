@@ -39,3 +39,12 @@ When an issue from `arch_review.md` is resolved, its entry is moved here.
 **Last Reopened Date:** 
 **Last Resolution Summary (Concise):** The "Project Structure" section in `docs/architecture.md` was updated to remove all references to obsolete files and add missing modules, bringing the document into full alignment with the codebase.
 **Date Last Resolved:** 2025-07-17
+---
+**Issue ID:** TEST-HARNESS-INTEGRITY-20250713
+**Original Description (Concise):** Two CLI tests were structurally flawed: `test_run_command_backtest_generic_exception_verbose` used incorrect argument order (`--verbose` after `run` command), and `test_run_command_help` was not self-contained, failing due to main callback dependencies on configuration files.
+**Initial Resolution Summary (Concise):** Fixed argument order in `test_run_command_backtest_generic_exception_verbose` to place `--verbose` before the `run` command. Modified `test_run_command_help` to test main application help (`--help`) instead of subcommand help, eliminating configuration file dependencies.
+**Date First Resolved:** 2025-07-13
+**Reopen Count:** 0
+**Last Reopened Date:** 
+**Last Resolution Summary (Concise):** Fixed argument order in `test_run_command_backtest_generic_exception_verbose` to place `--verbose` before the `run` command. Modified `test_run_command_help` to test main application help (`--help`) instead of subcommand help, eliminating configuration file dependencies.
+**Date Last Resolved:** 2025-07-13

@@ -179,7 +179,7 @@ def test_run_command_file_not_found_in_backtest(
 @patch("kiss_signal.cli.data")
 def test_run_command_backtest_generic_exception_verbose(
     mock_data, mock_run_backtests, sample_config: Dict[str, Any]
-) -> None:
+    ) -> None:
     """Test that a generic exception during backtesting is handled with verbose output."""
     with runner.isolated_filesystem() as fs_path:
         data_dir = Path(fs_path) / "data"; data_dir.mkdir()
