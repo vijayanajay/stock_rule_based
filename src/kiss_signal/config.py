@@ -3,6 +3,7 @@
 import logging  # Standard library
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import json
 
 from datetime import date
 import yaml
@@ -12,8 +13,10 @@ __all__ = [
     "Config",
     "EdgeScoreWeights",
     "RulesConfig",
+    "RuleDef",
     "load_config",
     "load_rules",
+    "get_active_strategy_combinations",
 ]
 
 logger = logging.getLogger(__name__)
@@ -109,3 +112,26 @@ def load_rules(rules_path: Path) -> RulesConfig:
         return RulesConfig(**data)
     except ValidationError as e:
         raise ValueError(f"Invalid rules configuration in {rules_path}: {e}") from e
+
+
+def get_active_strategy_combinations(rules_config: "RulesConfig") -> List[str]:
+    """Parse RulesConfig to extract all possible strategy combinations.
+    
+    Args:
+        rules_config: RulesConfig object with baseline and layers
+        
+    Returns:
+        List of JSON-serialized rule stacks that match current configuration
+    """
+    combinations: List[List[RuleDef]] = []
+    
+    # Generate baseline strategy
+    if rules_config.baseline:
+        combinations.append([rules_config.baseline])
+        
+        # Generate baseline + each layer combination
+        for layer in rules_config.layers:
+            combinations.append([rules_config.baseline, layer])
+    
+    # Convert each combination to JSON string
+    return [json.dumps([r.model_dump() for r in combo]) for combo in combinations]

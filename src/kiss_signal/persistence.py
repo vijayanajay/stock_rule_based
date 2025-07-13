@@ -2,16 +2,16 @@
 """SQLite persistence layer for storing backtesting results and trading signals."""
 
 from pathlib import Path  # Standard library
-from typing import List, Dict, Any, Optional, TYPE_CHECKING
+from typing import List, Dict, Any, Optional, TYPE_CHECKING, Union
 import sqlite3
 import json
 import logging
 import hashlib
 import shutil
-from datetime import datetime
+from datetime import datetime, date
 
 if TYPE_CHECKING:
-    from .config import RulesConfig
+    from .config import RulesConfig, Config
 
 __all__ = [
     "create_database",
@@ -24,7 +24,7 @@ __all__ = [
     "migrate_strategies_table_v2",
     "generate_config_hash",
     "create_config_snapshot",
-    "get_active_strategy_combinations",
+    "clear_and_recalculate_strategies",
 ]
 
 logger = logging.getLogger(__name__)
@@ -291,10 +291,8 @@ def save_strategies_batch(
             assert "total_trades" in strategy, "total_trades key missing from strategy dict"
             assert strategy["total_trades"] is not None, "total_trades cannot be None"
             
-            # Handle numpy integer types by converting to Python int
-            total_trades = strategy["total_trades"]
-            total_trades_value = int(total_trades) if hasattr(total_trades, "item") else int(total_trades)
-            # Sanity check to prevent bad data from being stored (should be non-negative)
+            # Convert total_trades to int and validate
+            total_trades_value = int(strategy["total_trades"])
             assert total_trades_value >= 0, f"total_trades must be non-negative, got {total_trades_value}"
             
             rule_stack = strategy["rule_stack"]
@@ -448,26 +446,134 @@ def create_config_snapshot(rules_config: Dict[str, Any], app_config: Any, freeze
     return snapshot
 
 
-def get_active_strategy_combinations(rules_config: "RulesConfig") -> List[str]:
-    """Parse RulesConfig to extract all possible strategy combinations.
+# impure
+def clear_and_recalculate_strategies(
+    db_path: Path,
+    app_config: "Config",
+    rules_config: "RulesConfig", 
+    force: bool = False,
+    preserve_all: bool = False,
+    freeze_date: Optional[date] = None
+) -> List[Dict[str, Any]]:
+    """Intelligently clear current strategies and recalculate with preservation of historical data.
     
     Args:
-        rules_config: RulesConfig object with baseline and layers
+        db_path: Path to SQLite database
+        app_config: Application configuration
+        rules_config: Rules configuration
+        force: Skip confirmation prompt
+        preserve_all: Skip clearing, analysis only
+        freeze_date: Freeze data at this date
         
     Returns:
-        List of JSON-serialized rule stacks that match current configuration
-    """
-    from .config import RuleDef  # Local import for type checking
-    
-    combinations: List[List[RuleDef]] = []
-    
-    # Generate baseline strategy
-    if rules_config.baseline:
-        combinations.append([rules_config.baseline])
+        List of new strategy results
         
-        # Generate baseline + each layer combination
-        for layer in rules_config.layers:
-            combinations.append([rules_config.baseline, layer])
+    Raises:
+        FileNotFoundError: If database doesn't exist
+        sqlite3.Error: Database operation errors
+    """
+    from rich.console import Console
+    from . import data, backtester
+    from datetime import datetime
     
-    # Convert each combination to JSON string
-    return [json.dumps([r.model_dump() for r in combo]) for combo in combinations]
+    console = Console()
+    
+    with get_connection(db_path) as conn:
+        if not preserve_all:
+            # Generate current config context for intelligent clearing
+            rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
+            current_config_hash = generate_config_hash(rules_dict, app_config)
+            from .config import get_active_strategy_combinations
+            active_strategies = get_active_strategy_combinations(rules_config)
+            
+            # Count what will be preserved vs deleted
+            preserved_count = conn.execute("""
+                SELECT COUNT(*) FROM strategies 
+                WHERE config_hash != ? OR rule_stack NOT IN ({})
+            """.format(','.join(['?'] * len(active_strategies))), 
+            [current_config_hash] + active_strategies).fetchone()[0]
+            
+            total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
+            will_delete = total_count - preserved_count
+            
+            console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
+            console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
+            console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
+            
+            if not force and will_delete > 0:
+                import typer
+                if not typer.confirm("Continue with intelligent clearing?"):
+                    console.print("[blue]Operation cancelled.[/blue]")
+                    raise typer.Exit(0)
+            
+            # Perform intelligent deletion
+            if will_delete > 0:
+                cursor = conn.execute("""
+                    DELETE FROM strategies 
+                    WHERE config_hash = ? AND rule_stack IN ({})
+                """.format(','.join(['?'] * len(active_strategies))),
+                [current_config_hash] + active_strategies)
+                
+                deleted_count = cursor.rowcount
+                conn.commit()
+                console.print(f"✅ Preserved {preserved_count} historical strategies")
+                console.print(f"✅ Cleared {deleted_count} current strategy records")
+            else:
+                console.print("[green]No current strategies to clear - all are historical[/green]")
+        else:
+            console.print("[blue]Preserve-all mode: Skipping clearing phase[/blue]")
+
+        # Reuse existing backtesting logic
+        console.print("[bold blue]Starting fresh backtesting run...[/bold blue]")
+        symbols = data.load_universe(app_config.universe_path)
+        
+        bt = backtester.Backtester(
+            hold_period=getattr(app_config, "hold_period", 20),
+            min_trades_threshold=getattr(app_config, "min_trades_threshold", 10),
+        )
+        
+        all_results = []
+        with console.status("[bold green]Running backtests...") as status:
+            for i, symbol in enumerate(symbols):
+                status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
+                try:
+                    price_data = data.get_price_data(
+                        symbol=symbol,
+                        cache_dir=Path(app_config.cache_dir),
+                        refresh_days=app_config.cache_refresh_days,
+                        years=app_config.historical_data_years,
+                        freeze_date=freeze_date,
+                    )
+                    
+                    if price_data is None or len(price_data) < 100:
+                        logger.warning(f"Insufficient data for {symbol}, skipping")
+                        continue
+
+                    strategies = bt.find_optimal_strategies(
+                        rules_config=rules_config,
+                        price_data=price_data,
+                        symbol=symbol,
+                        freeze_date=freeze_date,
+                    )
+                    
+                    for strategy in strategies:
+                        strategy["symbol"] = symbol
+                        all_results.append(strategy)
+
+                except Exception as e:
+                    logger.error(f"Error analyzing {symbol}: {e}")
+                    continue
+
+        console.print("[bold blue]Saving new strategies...[/bold blue]")
+        run_timestamp = datetime.now().isoformat()
+        
+        # Generate config context for the new run
+        rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
+        config_snapshot = create_config_snapshot(rules_dict, app_config, freeze_date.isoformat() if freeze_date else None)
+        config_hash = generate_config_hash(rules_dict, app_config)
+        
+        success = save_strategies_batch(conn, all_results, run_timestamp, config_snapshot, config_hash)
+        if not success:
+            console.print("⚠️  Failed to save results to database.", style="yellow")
+        
+        return all_results

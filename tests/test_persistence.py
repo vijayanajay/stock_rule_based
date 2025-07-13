@@ -643,7 +643,8 @@ class TestMigrationV2:
         assert len(json.dumps(snapshot)) < 1024  # < 1KB
         
         # Test get_active_strategy_combinations (expects RulesConfig object)
-        combinations = persistence.get_active_strategy_combinations(rules_config)
+        from kiss_signal.config import get_active_strategy_combinations
+        combinations = get_active_strategy_combinations(rules_config)
         assert len(combinations) >= 2  # At least the buy rules
         for combo in combinations:
             parsed = json.loads(combo)

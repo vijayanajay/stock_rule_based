@@ -258,17 +258,19 @@ tests/test_rule_funcs.py::test_atr_consistency_across_functions PASSED   [100%]
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
-Name                             Stmts   Miss  Cover
-----------------------------------------------------
-src\kiss_signal\__init__.py          4      0   100%
-src\kiss_signal\backtester.py      200     20    90%
-src\kiss_signal\cli.py             279     78    72%
-src\kiss_signal\config.py           78      3    96%
-src\kiss_signal\data.py            177     15    92%
-src\kiss_signal\performance.py      41      0   100%
-src\kiss_signal\persistence.py     190     15    92%
-src\kiss_signal\reporter.py        360     82    77%
-src\kiss_signal\rules.py           238      9    96%
-----------------------------------------------------
-TOTAL                             1567    222    86%
-============================ 248 passed in 45.71s =============================
+Name                                   Stmts   Miss  Cover
+----------------------------------------------------------
+src\kiss_signal\__init__.py                4      0   100%
+src\kiss_signal\adapters\__init__.py       1      0   100%
+src\kiss_signal\adapters\yfinance.py      29      0   100%
+src\kiss_signal\backtester.py            200     20    90%
+src\kiss_signal\cli.py                   248     41    83%
+src\kiss_signal\config.py                 86      3    97%
+src\kiss_signal\data.py                  156     15    90%
+src\kiss_signal\performance.py            41      0   100%
+src\kiss_signal\persistence.py           239     72    70%
+src\kiss_signal\reporter.py              361     82    77%
+src\kiss_signal\rules.py                 238      9    96%
+----------------------------------------------------------
+TOTAL                                   1603    242    85%
+============================ 248 passed in 59.67s =============================

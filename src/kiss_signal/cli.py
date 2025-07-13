@@ -73,6 +73,45 @@ def _create_progress_context() -> progress.Progress:
     )
 
 
+def _analyze_symbol(
+    symbol: str, 
+    app_config: Config, 
+    rules_config: Any, 
+    freeze_date: Optional[date], 
+    bt: backtester.Backtester
+) -> List[Dict[str, Any]]:
+    """Helper to run backtest analysis for a single symbol."""
+    try:
+        price_data = data.get_price_data(
+            symbol=symbol,
+            cache_dir=Path(app_config.cache_dir),
+            refresh_days=app_config.cache_refresh_days,
+            years=app_config.historical_data_years,
+            freeze_date=freeze_date,
+        )
+        
+        if price_data is None or len(price_data) < 100:
+            logger.warning(f"Insufficient data for {symbol}, skipping")
+            return []
+
+        strategies = bt.find_optimal_strategies(
+            rules_config=rules_config,
+            price_data=price_data,
+            symbol=symbol,
+            freeze_date=freeze_date,
+        )
+        
+        result = []
+        for strategy in strategies:
+            strategy["symbol"] = symbol
+            result.append(strategy)
+        return result
+
+    except Exception as e:
+        logger.error(f"Error analyzing {symbol}: {e}")
+        return []
+
+
 def _run_backtests(
     app_config: Config,
     rules_config: Dict[str, Any],
@@ -80,42 +119,16 @@ def _run_backtests(
     freeze_date: Optional[date],
 ) -> List[Dict[str, Any]]:
     """Run backtester for all symbols and return combined results."""
-    all_results = []
     bt = backtester.Backtester(
         hold_period=getattr(app_config, "hold_period", 20),
         min_trades_threshold=getattr(app_config, "min_trades_threshold", 10),
     )
-
+    
+    all_results = []
     with console.status("[bold green]Running backtests...") as status:
         for i, symbol in enumerate(symbols):
             status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
-            try:
-                price_data = data.get_price_data(
-                    symbol=symbol,
-                    cache_dir=Path(app_config.cache_dir),
-                    refresh_days=app_config.cache_refresh_days,
-                    years=app_config.historical_data_years,
-                    freeze_date=freeze_date,
-                )
-                
-                if price_data is None or len(price_data) < 100:
-                    logger.warning(f"Insufficient data for {symbol}, skipping")
-                    continue
-
-                strategies = bt.find_optimal_strategies(
-                    rules_config=rules_config,
-                    price_data=price_data,
-                    symbol=symbol,
-                    freeze_date=freeze_date,
-                )
-                
-                for strategy in strategies:
-                    strategy["symbol"] = symbol
-                    all_results.append(strategy)
-
-            except Exception as e:
-                logger.error(f"Error analyzing {symbol}: {e}")
-                continue
+            all_results.extend(_analyze_symbol(symbol, app_config, rules_config, freeze_date, bt))
     return all_results
 
 
@@ -204,6 +217,23 @@ def _generate_and_save_report(
         logger.error(f"Report generation error: {e}", exc_info=True)
 
 
+def _process_and_save_results(
+    db_connection: persistence.Connection, 
+    all_results: List[Dict[str, Any]], 
+    app_config: Config, 
+    rules_config: Any
+) -> None:
+    """Helper to display, save, and report results."""
+    run_timestamp = datetime.now().isoformat()
+    rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
+    config_snapshot = persistence.create_config_snapshot(rules_dict, app_config, app_config.freeze_date.isoformat() if app_config.freeze_date else None)
+    config_hash = persistence.generate_config_hash(rules_dict, app_config)
+    
+    _display_results(all_results)
+    _save_results(db_connection, all_results, run_timestamp, config_snapshot, config_hash)
+    _generate_and_save_report(app_config, rules_config, run_timestamp)
+
+
 @app.callback()
 def main(
     ctx: typer.Context,
@@ -281,16 +311,8 @@ def run(
             all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date)
 
             console.print("[4/4] Analysis complete. Results summary:")
-            run_timestamp = datetime.now().isoformat()
             
-            # Generate config context for this run
-            rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
-            config_snapshot = persistence.create_config_snapshot(rules_dict, app_config, app_config.freeze_date.isoformat() if app_config.freeze_date else None)
-            config_hash = persistence.generate_config_hash(rules_dict, app_config)
-            
-            _display_results(all_results)
-            _save_results(db_connection, all_results, run_timestamp, config_snapshot, config_hash)
-            _generate_and_save_report(app_config, rules_config, run_timestamp)
+            _process_and_save_results(db_connection, all_results, app_config, rules_config)
 
         if verbose:
             perf_summary = performance_monitor.get_summary()
@@ -431,72 +453,16 @@ def clear_and_recalculate(
         raise typer.Exit(1)
 
     try:
-        with persistence.get_connection(db_path) as conn:
-            if not preserve_all:
-                # Generate current config context for intelligent clearing
-                rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
-                current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
-                active_strategies = persistence.get_active_strategy_combinations(rules_dict)
-                
-                # Count what will be preserved vs deleted
-                preserved_count = conn.execute("""
-                    SELECT COUNT(*) FROM strategies 
-                    WHERE config_hash != ? OR rule_stack NOT IN ({})
-                """.format(','.join(['?'] * len(active_strategies))), 
-                [current_config_hash] + active_strategies).fetchone()[0]
-                
-                total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
-                will_delete = total_count - preserved_count
-                
-                console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
-                console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
-                console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
-                
-                if not force and will_delete > 0:
-                    if not typer.confirm("Continue with intelligent clearing?"):
-                        console.print("[blue]Operation cancelled.[/blue]")
-                        raise typer.Exit(0)
-                
-                # Perform intelligent deletion
-                if will_delete > 0:
-                    cursor = conn.execute("""
-                        DELETE FROM strategies 
-                        WHERE config_hash = ? AND rule_stack IN ({})
-                    """.format(','.join(['?'] * len(active_strategies))),
-                    [current_config_hash] + active_strategies)
-                    
-                    deleted_count = cursor.rowcount
-                    conn.commit()
-                    console.print(f"✅ Preserved {preserved_count} historical strategies")
-                    console.print(f"✅ Cleared {deleted_count} current strategy records")
-                else:
-                    console.print("[green]No current strategies to clear - all are historical[/green]")
-            else:
-                console.print("[blue]Preserve-all mode: Skipping clearing phase[/blue]")
-
-            # Reuse the existing backtesting logic from the `run` command
-            console.print("[bold blue]Starting fresh backtesting run...[/bold blue]")
-            symbols = data.load_universe(app_config.universe_path)
-            freeze_date_obj = date.fromisoformat(freeze_data) if freeze_data else None
-            all_results = _run_backtests(app_config, rules_config, symbols, freeze_date_obj)
-
-            console.print("[bold blue]Saving new strategies...[/bold blue]")
-            run_timestamp = datetime.now().isoformat()
-            
-            # Generate config context for the new run
-            try:
-                rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
-                config_snapshot = persistence.create_config_snapshot(rules_dict, app_config, freeze_data)
-                config_hash = persistence.generate_config_hash(rules_dict, app_config)
-                
-                _save_results(conn, all_results, run_timestamp, config_snapshot, config_hash)
-            except Exception as config_error:
-                console.print(f"[red]Config processing error: {config_error}[/red]")
-                console.print(f"[red]rules_config type: {type(rules_config)}[/red]")
-                console.print(f"[red]app_config type: {type(app_config)}[/red]")
-                raise
-
-            console.print(f"✅ [bold green]Recalculation complete! Found {len(all_results)} new strategies.[/bold green]")
+        freeze_date_obj = date.fromisoformat(freeze_data) if freeze_data else None
+        all_results = persistence.clear_and_recalculate_strategies(
+            db_path=db_path,
+            app_config=app_config,
+            rules_config=rules_config,
+            force=force,
+            preserve_all=preserve_all,
+            freeze_date=freeze_date_obj
+        )
+        console.print(f"✅ [bold green]Recalculation complete! Found {len(all_results)} new strategies.[/bold green]")
 
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")

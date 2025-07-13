@@ -20,9 +20,10 @@ from . import data, rules, persistence
 from .config import Config
 
 # Import config functions from persistence for convenience
-from .persistence import generate_config_hash, create_config_snapshot, get_active_strategy_combinations
+from .persistence import generate_config_hash, create_config_snapshot
+from .config import get_active_strategy_combinations
 
-__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot", "get_active_strategy_combinations"]
+__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot"]
 
 logger = logging.getLogger(__name__)
 
