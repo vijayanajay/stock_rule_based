@@ -28,143 +28,143 @@ This story addresses the need for:
 
 ### AC-1: Database Schema Enhancement
 **Database Migration Implementation:**
-- [ ] Create `migrate_strategies_table_v2()` function in `src/kiss_signal/persistence.py`
-- [ ] Function checks for existing columns using `PRAGMA table_info(strategies)` before migration
-- [ ] Adds `config_snapshot` TEXT column to store JSON configuration data including:
+- [x] Create `migrate_strategies_table_v2()` function in `src/kiss_signal/persistence.py`
+- [x] Function checks for existing columns using `PRAGMA table_info(strategies)` before migration
+- [x] Adds `config_snapshot` TEXT column to store JSON configuration data including:
   - `rules_hash`: SHA256 hash of the rules.yaml file content
   - `app_config_hash`: Hash of key app configuration parameters
   - `run_parameters`: Freeze date, universe file path, date range
   - `timestamp`: When the config was captured
-- [ ] Adds `config_hash` TEXT column as primary identifier for configuration groups
-- [ ] Safely backfills existing records with placeholder values: `{"legacy": true}` and `config_hash = "legacy"`
-- [ ] Migration is idempotent - can be run multiple times safely
-- [ ] Preserves all existing strategy data during migration
-- [ ] Migration completes in < 60 seconds for databases up to 100K records
+- [x] Adds `config_hash` TEXT column as primary identifier for configuration groups
+- [x] Safely backfills existing records with placeholder values: `{"legacy": true}` and `config_hash = "legacy"`
+- [x] Migration is idempotent - can be run multiple times safely
+- [x] Preserves all existing strategy data during migration
+- [x] Migration completes in < 60 seconds for databases up to 100K records
 
 **Database Integration:**
-- [ ] Migration runs automatically on first database connection after upgrade
-- [ ] Creates database backup before migration (kiss_signal.db.backup)
-- [ ] Logs migration progress and results
-- [ ] Handles SQLite locking gracefully during migration
+- [x] Migration runs automatically on first database connection after upgrade
+- [x] Creates database backup before migration (kiss_signal.db.backup)
+- [x] Logs migration progress and results
+- [x] Handles SQLite locking gracefully during migration
 
 ### AC-2: Enhanced Strategy Persistence
 **Config Snapshot Generation:**
-- [ ] Implement `generate_config_hash(rules_config: Dict, app_config: Config) -> str` function
-- [ ] Config hash includes: rules file content hash, universe path, key parameters, freeze date
-- [ ] Hash is deterministic - same config always produces same hash
-- [ ] Hash is collision-resistant using SHA256
+- [x] Implement `generate_config_hash(rules_config: Dict, app_config: Config) -> str` function
+- [x] Config hash includes: rules file content hash, universe path, key parameters, freeze date
+- [x] Hash is deterministic - same config always produces same hash
+- [x] Hash is collision-resistant using SHA256
 
 **Config Snapshot Creation:**
-- [ ] Implement `create_config_snapshot(rules_config: Dict, app_config: Config) -> Dict[str, Any]` function
-- [ ] Snapshot includes complete context needed to understand strategy performance:
+- [x] Implement `create_config_snapshot(rules_config: Dict, app_config: Config) -> Dict[str, Any]` function
+- [x] Snapshot includes complete context needed to understand strategy performance:
   - Rules file hash and key rule parameters
   - Universe file path and modification time
   - Date range used for backtesting
   - Freeze date if applicable
   - App version/commit hash
-- [ ] Snapshot is JSON serializable and < 1KB per record
+- [x] Snapshot is JSON serializable and < 1KB per record
 
 **Enhanced Persistence:**
-- [ ] Modify `save_strategies_batch()` to accept and store config context
-- [ ] Update all calls to strategy saving to include current config snapshot
-- [ ] Ensure backward compatibility - function works with or without config parameters
-- [ ] Strategy saving performance impact < 5% compared to current implementation
+- [x] Modify `save_strategies_batch()` to accept and store config context
+- [x] Update all calls to strategy saving to include current config snapshot
+- [x] Ensure backward compatibility - function works with or without config parameters
+- [x] Strategy saving performance impact < 5% compared to current implementation
 
 ### AC-3: Enhanced Strategy Analysis Command
 **Command Interface:**
-- [ ] Existing `analyze-strategies` command interface remains unchanged
-- [ ] Command accepts only `--output` parameter (maintains simplicity)
-- [ ] Default output file remains `strategy_performance_report.csv`
-- [ ] Command help text updated to reflect comprehensive analysis capability
+- [x] Existing `analyze-strategies` command interface remains unchanged
+- [x] Command accepts only `--output` parameter (maintains simplicity)
+- [x] Default output file remains `strategy_performance_report.csv`
+- [x] Command help text updated to reflect comprehensive analysis capability
 
 **Analysis Behavior:**
-- [ ] Always generates per-stock breakdown showing individual strategy performance for each symbol
-- [ ] Always includes config tracking columns in output for historical context
-- [ ] Analyzes ALL strategies in database regardless of config or date
-- [ ] Results sorted by symbol (ascending), then edge_score (descending)
-- [ ] Handles empty database gracefully with informative message
+- [x] Always generates per-stock breakdown showing individual strategy performance for each symbol
+- [x] Always includes config tracking columns in output for historical context
+- [x] Analyzes ALL strategies in database regardless of config or date
+- [x] Results sorted by symbol (ascending), then edge_score (descending)
+- [x] Handles empty database gracefully with informative message
 
 **Output Format:**
-- [ ] CSV contains exactly these columns in this order:
+- [x] CSV contains exactly these columns in this order:
   - `symbol`, `strategy_rule_stack`, `edge_score`, `win_pct`, `sharpe`, `total_return`, `total_trades`, `config_hash`, `run_date`, `config_details`
-- [ ] `strategy_rule_stack` shows human-readable rule combination (e.g., "sma_10_20_crossover + rsi_oversold")
-- [ ] `run_date` extracts date portion from run_timestamp (YYYY-MM-DD format)
-- [ ] `config_details` shows key config information in readable format
-- [ ] All numeric values formatted to 4 decimal places
-- [ ] File encoding is UTF-8 with proper CSV escaping
+- [x] `strategy_rule_stack` shows human-readable rule combination (e.g., "sma_10_20_crossover + rsi_oversold")
+- [x] `run_date` extracts date portion from run_timestamp (YYYY-MM-DD format)
+- [x] `config_details` shows key config information in readable format
+- [x] All numeric values formatted to 4 decimal places
+- [x] File encoding is UTF-8 with proper CSV escaping
 
 ### AC-4: Intelligent Clearing Logic
 **Active Strategy Detection:**
-- [ ] Implement `get_active_strategy_combinations(rules_config: Dict) -> List[str]` function
-- [ ] Function parses current rules.yaml to extract all possible strategy combinations
-- [ ] Returns list of JSON-serialized rule stacks that match current configuration
-- [ ] Handles nested rule configurations and combinations correctly
+- [x] Implement `get_active_strategy_combinations(rules_config: Dict) -> List[str]` function
+- [x] Function parses current rules.yaml to extract all possible strategy combinations
+- [x] Returns list of JSON-serialized rule stacks that match current configuration
+- [x] Handles nested rule configurations and combinations correctly
 
 **Smart Deletion Logic:**
-- [ ] `clear-and-recalculate` command generates current config hash before deletion
-- [ ] Deletion query: `DELETE FROM strategies WHERE config_hash = ? AND rule_stack IN (?)`
-- [ ] Only deletes strategies that match BOTH current config hash AND current active rules
-- [ ] Preserves strategies from different configs or deprecated rule combinations
-- [ ] Preserves strategies with `config_hash = "legacy"` (pre-migration data)
+- [x] `clear-and-recalculate` command generates current config hash before deletion
+- [x] Deletion query: `DELETE FROM strategies WHERE config_hash = ? AND rule_stack IN (?)`
+- [x] Only deletes strategies that match BOTH current config hash AND current active rules
+- [x] Preserves strategies from different configs or deprecated rule combinations
+- [x] Preserves strategies with `config_hash = "legacy"` (pre-migration data)
 
 **User Interface:**
-- [ ] Add `--preserve-all` flag that skips deletion entirely (analysis-only mode)
-- [ ] Before deletion, show count of strategies to be preserved vs deleted
-- [ ] Require user confirmation unless `--force` flag is used
-- [ ] Display progress: "✅ Preserved X historical strategies" and "✅ Cleared Y current strategy records"
-- [ ] Complete clearing and recalculation in same database transaction
+- [x] Add `--preserve-all` flag that skips deletion entirely (analysis-only mode)
+- [x] Before deletion, show count of strategies to be preserved vs deleted
+- [x] Require user confirmation unless `--force` flag is used
+- [x] Display progress: "✅ Preserved X historical strategies" and "✅ Cleared Y current strategy records"
+- [x] Complete clearing and recalculation in same database transaction
 
 **Data Integrity:**
-- [ ] Clearing operation is atomic - either all strategies cleared or none
-- [ ] Database constraints prevent orphaned or corrupted records
-- [ ] Clearing performance scales linearly with database size
+- [x] Clearing operation is atomic - either all strategies cleared or none
+- [x] Database constraints prevent orphaned or corrupted records
+- [x] Clearing performance scales linearly with database size
 
 ### AC-5: Enhanced Reporting Functions
 **Core Analysis Function:**
-- [ ] Enhance `analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]` to remove aggregation
-- [ ] Function returns individual strategy records with all required fields
-- [ ] Handles malformed JSON in rule_stack or config_snapshot gracefully (skip record)
-- [ ] Function completes in < 30 seconds for databases with 1M+ records
-- [ ] Returns empty list for empty database (no exceptions)
+- [x] Enhance `analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]` to remove aggregation
+- [x] Function returns individual strategy records with all required fields
+- [x] Handles malformed JSON in rule_stack or config_snapshot gracefully (skip record)
+- [x] Function completes in < 30 seconds for databases with 1M+ records
+- [x] Returns empty list for empty database (no exceptions)
 
 **CSV Formatting:**
-- [ ] Enhance `format_strategy_analysis_as_csv(analysis_data: List[Dict]) -> str` 
-- [ ] Function handles the new comprehensive format with config columns
-- [ ] Proper CSV escaping for rule names containing commas or quotes
-- [ ] Consistent number formatting (4 decimal places for floats)
-- [ ] Function is pure (no side effects) and deterministic
+- [x] Enhance `format_strategy_analysis_as_csv(analysis_data: List[Dict]) -> str` 
+- [x] Function handles the new comprehensive format with config columns
+- [x] Proper CSV escaping for rule names containing commas or quotes
+- [x] Consistent number formatting (4 decimal places for floats)
+- [x] Function is pure (no side effects) and deterministic
 
 **Helper Functions:**
-- [ ] `generate_config_hash()` produces 8-character hash prefix for readability
-- [ ] Config hashing is fast (< 10ms) and memory efficient
-- [ ] All functions have comprehensive docstrings with parameter and return type documentation
+- [x] `generate_config_hash()` produces 8-character hash prefix for readability
+- [x] Config hashing is fast (< 10ms) and memory efficient
+- [x] All functions have comprehensive docstrings with parameter and return type documentation
 
 ### AC-6: Code Quality and Compliance
 **Type Safety:**
-- [ ] All new functions have complete type hints including Optional, List, Dict types
-- [ ] All functions pass `mypy --strict` without warnings
-- [ ] Type hints are accurate and enforceable at runtime where applicable
+- [x] All new functions have complete type hints including Optional, List, Dict types
+- [x] All functions pass `mypy --strict` without warnings
+- [x] Type hints are accurate and enforceable at runtime where applicable
 
 **Testing Coverage:**
-- [ ] Unit tests for all new functions with 100% line coverage
-- [ ] Integration tests for CLI commands using temporary test databases
-- [ ] Migration tests ensuring data safety with various database states
-- [ ] Performance tests validating analysis completes within time limits
-- [ ] Edge case tests for empty databases, malformed JSON, large datasets
+- [x] Unit tests for all new functions with 100% line coverage
+- [x] Integration tests for CLI commands using temporary test databases
+- [x] Migration tests ensuring data safety with various database states
+- [x] Performance tests validating analysis completes within time limits
+- [x] Edge case tests for empty databases, malformed JSON, large datasets
 
 **KISS Compliance:**
-- [ ] No new external dependencies added to project
-- [ ] Functions are single-purpose with clear responsibilities
-- [ ] Code complexity remains low (cyclomatic complexity < 10 per function)
-- [ ] Total new code < 200 lines across all modified files
-- [ ] Function interfaces are simple and intuitive
+- [x] No new external dependencies added to project
+- [x] Functions are single-purpose with clear responsibilities
+- [x] Code complexity remains low (cyclomatic complexity < 10 per function)
+- [x] Total new code < 200 lines across all modified files
+- [x] Function interfaces are simple and intuitive
 
 **Backward Compatibility:**
-- [ ] Existing CLI commands work unchanged for current users
-- [ ] Existing database schemas are preserved and enhanced
-- [ ] No breaking changes to public function signatures
-- [ ] Migration handles all existing database states gracefully
-- [ ] Legacy data is preserved and clearly marked in outputs
+- [x] Existing CLI commands work unchanged for current users
+- [x] Existing database schemas are preserved and enhanced
+- [x] No breaking changes to public function signatures
+- [x] Migration handles all existing database states gracefully
+- [x] Legacy data is preserved and clearly marked in outputs
 
 ## Technical Design (KISS Approach)
 
@@ -389,53 +389,53 @@ TCS,bollinger_breakout,0.71,0.68,1.40,0.09,16,abc123,2025-07-13,"{'rules_hash': 
 
 ## Definition of Done
 
-- [ ] All acceptance criteria are met and tested
-- [ ] Database migration script successfully updates existing data
-- [ ] `analyze-strategies` command provides comprehensive analysis with config tracking
-- [ ] `clear-and-recalculate` intelligently preserves historical strategies
-- [ ] All new functions pass `mypy --strict` type checking
-- [ ] Comprehensive test coverage including edge cases
-- [ ] Integration tests verify end-to-end functionality
-- [ ] Performance is acceptable for typical database sizes (< 1M records)
-- [ ] Documentation is updated with new command usage examples
+- [x] All acceptance criteria are met and tested
+- [x] Database migration script successfully updates existing data
+- [x] `analyze-strategies` command provides comprehensive analysis with config tracking
+- [x] `clear-and-recalculate` intelligently preserves historical strategies
+- [x] All new functions pass `mypy --strict` type checking
+- [x] Comprehensive test coverage including edge cases
+- [x] Integration tests verify end-to-end functionality
+- [x] Performance is acceptable for typical database sizes (< 1M records)
+- [x] Documentation is updated with new command usage examples
 
 ## Detailed Task List
 
 ### Task 1: Database Schema Migration
-- [ ] Create `migrate_strategies_table_v2()` function in `persistence.py`
-- [ ] Add config snapshot and hash columns to strategies table
-- [ ] Implement safe migration with backward compatibility
-- [ ] Add unit tests for migration logic
+- [x] Create `migrate_strategies_table_v2()` function in `persistence.py`
+- [x] Add config snapshot and hash columns to strategies table
+- [x] Implement safe migration with backward compatibility
+- [x] Add unit tests for migration logic
 
 ### Task 2: Enhanced Strategy Persistence
-- [ ] Modify `save_strategies_batch()` to include config context
-- [ ] Implement `generate_config_hash()` function for consistent hashing
-- [ ] Create `create_config_snapshot()` function to capture current state
-- [ ] Update strategy saving calls throughout the application
+- [x] Modify `save_strategies_batch()` to include config context
+- [x] Implement `generate_config_hash()` function for consistent hashing
+- [x] Create `create_config_snapshot()` function to capture current state
+- [x] Update strategy saving calls throughout the application
 
 ### Task 3: Simplified Analysis Enhancement
-- [ ] Enhance existing `analyze_strategy_performance()` function to always provide comprehensive analysis
-- [ ] Remove complex conditional logic - always show per-stock breakdown with config
-- [ ] Update CSV formatting to handle the comprehensive format
-- [ ] Maintain same simple CLI interface with enhanced output
+- [x] Enhance existing `analyze_strategy_performance()` function to always provide comprehensive analysis
+- [x] Remove complex conditional logic - always show per-stock breakdown with config
+- [x] Update CSV formatting to handle the comprehensive format
+- [x] Maintain same simple CLI interface with enhanced output
 
 ### Task 4: Intelligent Clearing Logic
-- [ ] Implement `get_active_strategy_combinations()` to parse current rules
-- [ ] Modify `clear_and_recalculate` command with intelligent deletion
-- [ ] Add `--preserve-all` flag for analysis-only mode
-- [ ] Include progress reporting and confirmation prompts
+- [x] Implement `get_active_strategy_combinations()` to parse current rules
+- [x] Modify `clear_and_recalculate` command with intelligent deletion
+- [x] Add `--preserve-all` flag for analysis-only mode
+- [x] Include progress reporting and confirmation prompts
 
 ### Task 5: Comprehensive Testing
-- [ ] Unit tests for all new functions with mock data
-- [ ] Integration tests for CLI commands with temporary databases
-- [ ] Migration tests ensuring data safety and correctness
-- [ ] Edge case tests for malformed data and empty databases
+- [x] Unit tests for all new functions with mock data
+- [x] Integration tests for CLI commands with temporary databases
+- [x] Migration tests ensuring data safety and correctness
+- [x] Edge case tests for malformed data and empty databases
 
 ### Task 6: Documentation and Examples
-- [ ] Update README with new command usage examples
-- [ ] Add sample CSV outputs to documentation
-- [ ] Create migration guide for existing users
-- [ ] Document configuration hash methodology
+- [x] Update README with new command usage examples
+- [x] Add sample CSV outputs to documentation
+- [x] Create migration guide for existing users
+- [x] Document configuration hash methodology
 
 ## User Acceptance Testing Scenarios
 

@@ -454,7 +454,7 @@ def get_active_strategy_combinations(rules_config: Dict[str, Any]) -> List[str]:
     Returns:
         List of JSON-serialized rule stacks that match current configuration
     """
-    combinations = []
+    combinations: List[str] = []
     
     # Extract buy rules from config
     buy_rules = rules_config.get('buy_rules', [])

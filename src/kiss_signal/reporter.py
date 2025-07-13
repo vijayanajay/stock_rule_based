@@ -577,7 +577,7 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
             for row in cursor.fetchall():
                 try:
                     rules = json.loads(row['rule_stack'])
-                    strategy_name = " + ".join(r.get('name', r.get('type', 'N/A')) for r in rules if isinstance(r, dict)) if isinstance(rules, list) else "Unknown Strategy"
+                    strategy_name = " + ".join(str(r.get('name') or r.get('type') or 'N/A') for r in rules if isinstance(r, dict)) if isinstance(rules, list) else "Unknown Strategy"
                     config_details = json.loads(row['config_snapshot'] or '{}')
                     results.append(dict(row) | {'strategy_rule_stack': strategy_name, 'config_details': str(config_details), 'run_date': row['run_timestamp'][:10] if row['run_timestamp'] else 'unknown'})
                 except (json.JSONDecodeError, TypeError, KeyError) as e:
@@ -621,7 +621,7 @@ def analyze_strategy_performance_aggregated(db_path: Path) -> List[Dict[str, Any
                     # Parse rule stack to create human-readable strategy name
                     rules = json.loads(row['rule_stack'])
                     if isinstance(rules, list) and rules:
-                        strategy_name = " + ".join(r.get('name', r.get('type', 'N/A')) for r in rules if isinstance(r, dict))
+                        strategy_name = " + ".join(str(r.get('name') or r.get('type') or 'N/A') for r in rules if isinstance(r, dict))
                     else:
                         strategy_name = "Unknown Strategy"
                     
@@ -665,7 +665,7 @@ def analyze_strategy_performance_aggregated(db_path: Path) -> List[Dict[str, Any
                 avg_trades = sum(r['total_trades'] or 0 for r in records) / len(records)
                 
                 # Find top symbols by frequency
-                symbol_counts = {}
+                symbol_counts: Dict[str, int] = {}
                 for r in records:
                     symbol = r['symbol']
                     symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
