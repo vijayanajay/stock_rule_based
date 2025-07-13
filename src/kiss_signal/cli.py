@@ -299,33 +299,16 @@ def run(
                 console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
                 console.print(f"Slowest Function: {perf_summary['slowest_function']}")
 
-        # Save log after successful completion
-        try:
-            log_path = Path("run_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            logger.info(f"Log file saved to {log_path}")
-        except OSError as log_e:
-            error_msg = f"Critical error: Could not save log file to run_log.txt. Reason: {log_e}"
-            logger.error(error_msg, exc_info=True)
-            console.print(f"[red]{error_msg}[/red]")
-
     except (typer.Exit, FileNotFoundError, ValueError) as e:
         console.print(f"[red]Error: {e}[/red]")
-        # Save log before exiting on error
-        try:
-            log_path = Path("run_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            logger.info(f"Log file saved to {log_path}")
-        except OSError as log_e:
-            error_msg = f"Critical error: Could not save log file to run_log.txt. Reason: {log_e}"
-            logger.error(error_msg, exc_info=True)
-            console.print(f"[red]{error_msg}[/red]")
         raise
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")
         if verbose:
             console.print_exception()
-        # Save log before exiting on error
+        raise typer.Exit(1)
+    finally:
+        # Save log regardless of success or failure
         try:
             log_path = Path("run_log.txt")
             log_path.write_text(console.export_text(clear=False), encoding="utf-8")
@@ -334,8 +317,7 @@ def run(
             error_msg = f"Critical error: Could not save log file to run_log.txt. Reason: {log_e}"
             logger.error(error_msg, exc_info=True)
             console.print(f"[red]{error_msg}[/red]")
-        raise typer.Exit(1)
-    finally:
+        
         if db_connection:
             db_connection.close()
             logger.info("Database connection closed.")
@@ -415,21 +397,13 @@ def analyze_strategies(
         output_file.write_text(report_content, encoding="utf-8")
         console.print(f"✅ Strategy performance analysis saved to: [cyan]{output_file}[/cyan]")
 
-        # Save log before completing
-        try:
-            log_path = Path("analyze_strategies_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            logger.info(f"Log file saved to {log_path}")
-        except OSError as log_e:
-            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
-            logger.error(error_msg, exc_info=True)
-            console.print(f"[red]{error_msg}[/red]")
-
     except Exception as e:
         console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
         if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose", False):
             console.print_exception()
-        # Save log before exiting
+        raise typer.Exit(1)
+    finally:
+        # Save log regardless of success or failure
         try:
             log_path = Path("analyze_strategies_log.txt")
             log_path.write_text(console.export_text(clear=False), encoding="utf-8")
@@ -438,7 +412,6 @@ def analyze_strategies(
             error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
             logger.error(error_msg, exc_info=True)
             console.print(f"[red]{error_msg}[/red]")
-        raise typer.Exit(1)
 
 
 @app.command(name="clear-and-recalculate")
@@ -525,21 +498,13 @@ def clear_and_recalculate(
 
             console.print(f"✅ [bold green]Recalculation complete! Found {len(all_results)} new strategies.[/bold green]")
 
-        # Save log after successful completion
-        try:
-            log_path = Path("clear_and_recalculate_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            logger.info(f"Log file saved to {log_path}")
-        except OSError as log_e:
-            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
-            logger.error(error_msg, exc_info=True)
-            console.print(f"[red]{error_msg}[/red]")
-
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")
         if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose"):
             console.print_exception()
-        # Save log before exiting on error
+        raise typer.Exit(1)
+    finally:
+        # Save log regardless of success or failure
         try:
             log_path = Path("clear_and_recalculate_log.txt")
             log_path.write_text(console.export_text(clear=False), encoding="utf-8")
@@ -548,4 +513,3 @@ def clear_and_recalculate(
             error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
             logger.error(error_msg, exc_info=True)
             console.print(f"[red]{error_msg}[/red]")
-        raise typer.Exit(1)

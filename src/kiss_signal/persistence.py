@@ -2,13 +2,16 @@
 """SQLite persistence layer for storing backtesting results and trading signals."""
 
 from pathlib import Path  # Standard library
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 import sqlite3
 import json
 import logging
 import hashlib
 import shutil
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from .config import RulesConfig
 
 __all__ = [
     "create_database",
@@ -291,8 +294,8 @@ def save_strategies_batch(
             # Handle numpy integer types by converting to Python int
             total_trades = strategy["total_trades"]
             total_trades_value = int(total_trades) if hasattr(total_trades, "item") else int(total_trades)
-            # Sanity check to prevent bad data from being stored (should be positive)
-            assert total_trades_value > 0, f"total_trades must be positive, got {total_trades_value}"
+            # Sanity check to prevent bad data from being stored (should be non-negative)
+            assert total_trades_value >= 0, f"total_trades must be non-negative, got {total_trades_value}"
             
             rule_stack = strategy["rule_stack"]
             if rule_stack and hasattr(rule_stack[0], 'model_dump'):
@@ -445,27 +448,26 @@ def create_config_snapshot(rules_config: Dict[str, Any], app_config: Any, freeze
     return snapshot
 
 
-def get_active_strategy_combinations(rules_config: Dict[str, Any]) -> List[str]:
-    """Parse current rules configuration to extract all possible strategy combinations.
+def get_active_strategy_combinations(rules_config: "RulesConfig") -> List[str]:
+    """Parse RulesConfig to extract all possible strategy combinations.
     
     Args:
-        rules_config: Rules configuration dictionary
+        rules_config: RulesConfig object with baseline and layers
         
     Returns:
         List of JSON-serialized rule stacks that match current configuration
     """
-    combinations: List[str] = []
+    from .config import RuleDef  # Local import for type checking
     
-    # Extract buy rules from config
-    buy_rules = rules_config.get('buy_rules', [])
-    if not buy_rules:
-        return combinations
+    combinations: List[List[RuleDef]] = []
     
-    # Generate JSON representations of current rule stacks
-    # This is a simplified approach - in reality you'd need to generate all combinations
-    # For now, we'll just return the individual rules as basic combinations
-    for rule in buy_rules:
-        rule_stack = [{'type': rule.get('type'), 'name': rule.get('name', rule.get('type')), 'params': rule.get('params', {})}]
-        combinations.append(json.dumps(rule_stack))
+    # Generate baseline strategy
+    if rules_config.baseline:
+        combinations.append([rules_config.baseline])
+        
+        # Generate baseline + each layer combination
+        for layer in rules_config.layers:
+            combinations.append([rules_config.baseline, layer])
     
-    return combinations
+    # Convert each combination to JSON string
+    return [json.dumps([r.model_dump() for r in combo]) for combo in combinations]

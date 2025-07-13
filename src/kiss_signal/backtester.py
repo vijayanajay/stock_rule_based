@@ -37,6 +37,117 @@ class Backtester:
             f"min_trades={min_trades_threshold}"
         )
 
+    def _backtest_combination(
+        self,
+        combo: List[Any],
+        price_data: pd.DataFrame,
+        rules_config: RulesConfig,
+        edge_score_weights: EdgeScoreWeights,
+        symbol: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Backtest a single rule combination and return its performance metrics."""
+        try:
+            # Generate combined signal for the rule combination
+            entry_signals: Optional[pd.Series] = None
+            for rule_def in combo:
+                rule_signals = self._generate_signals(rule_def, price_data)
+                if entry_signals is None:
+                    entry_signals = rule_signals.copy()
+                else:
+                    entry_signals &= rule_signals
+            
+            if entry_signals is None:
+                # This case should ideally not be reached if combos are always non-empty
+                logger.warning(f"Could not generate entry signals for combo: {[r.name for r in combo]}")
+                return None
+            
+            # Generate exit signals from sell_conditions and time-based exits
+            exit_signals, sl_stop, tp_stop = self._generate_exit_signals(
+                entry_signals, price_data, rules_config.sell_conditions
+            )
+            
+            # Debug logging
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Entry signals for {symbol}: {entry_signals.sum()} total")
+                logger.debug(f"Exit signals for {symbol}: {exit_signals.sum()} total")
+                if sl_stop:
+                    logger.debug(f"Stop loss: {sl_stop:.1%}")
+                if tp_stop:
+                    logger.debug(f"Take profit: {tp_stop:.1%}")
+                if entry_signals.sum() > 0:
+                    logger.debug(f"First 3 entry dates: {entry_signals[entry_signals].index[:3].tolist()}")
+                    logger.debug(f"Last 3 entry dates: {entry_signals[entry_signals].index[-3:].tolist()}")
+            
+            portfolio = vbt.Portfolio.from_signals(
+                close=price_data['close'],
+                entries=entry_signals,
+                exits=exit_signals,
+                sl_stop=sl_stop,
+                tp_stop=tp_stop,
+                fees=0.001,
+                slippage=0.0005,
+                init_cash=self.initial_capital,
+                size=np.inf,
+            )
+            total_trades = portfolio.trades.count()
+            
+            # More debug logging
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"Portfolio trades count for {symbol}: {total_trades}")
+                logger.debug(f"Trade count type: {type(total_trades)}")
+                if total_trades == 0 and entry_signals.sum() > 0:
+                    logger.debug(f"WARNING: {entry_signals.sum()} entry signals but 0 trades generated!")
+            
+            # Ensure total_trades is explicitly cast to Python int to avoid any vectorbt-specific type issues
+            total_trades = int(total_trades)
+            
+            rule_names = " + ".join([r.name for r in combo])
+            
+            # Calculate performance metrics regardless of threshold for completeness
+            if total_trades > 0:
+                win_pct = portfolio.trades.win_rate()  # Already returns decimal ratio (e.g., 0.65 for 65%)
+                sharpe = portfolio.sharpe_ratio()
+                avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
+                
+                # Debug logging for suspiciously low win rates
+                if win_pct < 0.2:  # Less than 20% win rate is suspicious
+                    logger.warning(f"Low win rate detected for {symbol}: {win_pct:.1%} with {total_trades} trades")
+                    logger.warning(f"Rule combination: {rule_names}")
+                    logger.warning(f"Average PnL: {avg_return:.2f}, Sharpe: {sharpe:.2f}")
+                    
+                    # Additional debug info
+                    if logger.isEnabledFor(logging.DEBUG):
+                        winning_trades = portfolio.trades.count_winning()
+                        losing_trades = portfolio.trades.count_losing()
+                        avg_win = portfolio.trades.pnl[portfolio.trades.pnl > 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl > 0]) > 0 else 0
+                        avg_loss = portfolio.trades.pnl[portfolio.trades.pnl < 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl < 0]) > 0 else 0
+                        logger.debug(f"Winning trades: {winning_trades}, Losing trades: {losing_trades}")
+                        logger.debug(f"Average win: {avg_win:.2f}, Average loss: {avg_loss:.2f}")
+            else:
+                win_pct = 0.0
+                sharpe = 0.0
+                avg_return = 0.0
+            
+            # Skip strategies that don't meet the minimum trades threshold
+            if total_trades < self.min_trades_threshold:
+                logger.warning(f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, which is below the threshold of {self.min_trades_threshold}.")
+                return None
+            
+            edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
+            strategy = {
+                'rule_stack': combo,  # Persist the entire rule combination
+                'edge_score': edge_score,
+                'win_pct': win_pct,
+                'sharpe': sharpe,
+                'total_trades': int(total_trades),  # Ensure this is always an integer
+                'avg_return': avg_return,
+            }
+            
+            return strategy
+        except Exception as e:
+            logger.error(f"Error processing rule combination {[r.name for r in combo]}: {e}")
+            return None
+
     @performance_monitor.profile_performance
     def find_optimal_strategies(
         self, 
@@ -93,107 +204,12 @@ class Backtester:
         logger.info(f"Backtesting {len(combinations_to_test)} rule combinations for {symbol}")
         strategies = []
         
-        for i, combo in enumerate(combinations_to_test):
-            try:
-                # Generate combined signal for the rule combination
-                entry_signals: Optional[pd.Series] = None
-                for rule_def in combo:
-                    rule_signals = self._generate_signals(rule_def, price_data)
-                    if entry_signals is None:
-                        entry_signals = rule_signals.copy()
-                    else:
-                        entry_signals &= rule_signals
-                
-                if entry_signals is None:
-                    # This case should ideally not be reached if combos are always non-empty
-                    logger.warning(f"Could not generate entry signals for combo: {[r.name for r in combo]}")
-                    continue
-                
-                # Generate exit signals from sell_conditions and time-based exits
-                exit_signals, sl_stop, tp_stop = self._generate_exit_signals(
-                    entry_signals, price_data, rules_config.sell_conditions
-                )
-                
-                # Debug logging
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Entry signals for {symbol}: {entry_signals.sum()} total")
-                    logger.debug(f"Exit signals for {symbol}: {exit_signals.sum()} total")
-                    if sl_stop:
-                        logger.debug(f"Stop loss: {sl_stop:.1%}")
-                    if tp_stop:
-                        logger.debug(f"Take profit: {tp_stop:.1%}")
-                    if entry_signals.sum() > 0:
-                        logger.debug(f"First 3 entry dates: {entry_signals[entry_signals].index[:3].tolist()}")
-                        logger.debug(f"Last 3 entry dates: {entry_signals[entry_signals].index[-3:].tolist()}")
-                
-                portfolio = vbt.Portfolio.from_signals(
-                    close=price_data['close'],
-                    entries=entry_signals,
-                    exits=exit_signals,
-                    sl_stop=sl_stop,
-                    tp_stop=tp_stop,
-                    fees=0.001,
-                    slippage=0.0005,
-                    init_cash=self.initial_capital,
-                    size=np.inf,
-                )
-                total_trades = portfolio.trades.count()
-                
-                # More debug logging
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Portfolio trades count for {symbol}: {total_trades}")
-                    logger.debug(f"Trade count type: {type(total_trades)}")
-                    if total_trades == 0 and entry_signals.sum() > 0:
-                        logger.debug(f"WARNING: {entry_signals.sum()} entry signals but 0 trades generated!")
-                
-                # Ensure total_trades is explicitly cast to Python int to avoid any vectorbt-specific type issues
-                total_trades = int(total_trades)
-                
-                rule_names = " + ".join([r.name for r in combo])
-                
-                # Calculate performance metrics regardless of threshold for completeness
-                if total_trades > 0:
-                    win_pct = portfolio.trades.win_rate()  # Already returns decimal ratio (e.g., 0.65 for 65%)
-                    sharpe = portfolio.sharpe_ratio()
-                    avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
-                    
-                    # Debug logging for suspiciously low win rates
-                    if win_pct < 0.2:  # Less than 20% win rate is suspicious
-                        logger.warning(f"Low win rate detected for {symbol}: {win_pct:.1%} with {total_trades} trades")
-                        logger.warning(f"Rule combination: {rule_names}")
-                        logger.warning(f"Average PnL: {avg_return:.2f}, Sharpe: {sharpe:.2f}")
-                        
-                        # Additional debug info
-                        if logger.isEnabledFor(logging.DEBUG):
-                            winning_trades = portfolio.trades.count_winning()
-                            losing_trades = portfolio.trades.count_losing()
-                            avg_win = portfolio.trades.pnl[portfolio.trades.pnl > 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl > 0]) > 0 else 0
-                            avg_loss = portfolio.trades.pnl[portfolio.trades.pnl < 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl < 0]) > 0 else 0
-                            logger.debug(f"Winning trades: {winning_trades}, Losing trades: {losing_trades}")
-                            logger.debug(f"Average win: {avg_win:.2f}, Average loss: {avg_loss:.2f}")
-                else:
-                    win_pct = 0.0
-                    sharpe = 0.0
-                    avg_return = 0.0
-                
-                # Skip strategies that don't meet the minimum trades threshold
-                if total_trades < self.min_trades_threshold:
-                    logger.warning(f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, which is below the threshold of {self.min_trades_threshold}.")
-                    continue
-                edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
-                strategy = {
-                    'rule_stack': combo,  # Persist the entire rule combination
-                    'edge_score': edge_score,
-                    'win_pct': win_pct,
-                    'sharpe': sharpe,
-                    'total_trades': int(total_trades),  # Ensure this is always an integer
-                    'avg_return': avg_return,
-                }
-                
-                strategies.append(strategy)
-            except Exception as e:
-                logger.error(f"Error processing rule combination {combo}: {e}")
-                continue
+        for combo in combinations_to_test:
+            strategy_result = self._backtest_combination(
+                combo, price_data, rules_config, edge_score_weights, symbol
+            )
+            if strategy_result:
+                strategies.append(strategy_result)
         strategies.sort(key=lambda x: x['edge_score'], reverse=True)
         return strategies
 

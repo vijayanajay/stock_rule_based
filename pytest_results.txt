@@ -243,14 +243,14 @@ ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 Name                             Stmts   Miss  Cover
 ----------------------------------------------------
 src\kiss_signal\__init__.py          4      0   100%
-src\kiss_signal\backtester.py      149     14    91%
-src\kiss_signal\cli.py             311     98    68%
+src\kiss_signal\backtester.py      153     14    91%
+src\kiss_signal\cli.py             279     78    72%
 src\kiss_signal\config.py           78      3    96%
 src\kiss_signal\data.py            177     15    92%
 src\kiss_signal\performance.py      41      0   100%
-src\kiss_signal\persistence.py     189     15    92%
-src\kiss_signal\reporter.py        357     82    77%
+src\kiss_signal\persistence.py     190     15    92%
+src\kiss_signal\reporter.py        360     82    77%
 src\kiss_signal\rules.py           176      9    95%
 ----------------------------------------------------
-TOTAL                             1482    236    84%
-============================ 230 passed in 40.61s =============================
+TOTAL                             1458    216    85%
+============================ 230 passed in 42.78s =============================

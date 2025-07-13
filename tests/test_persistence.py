@@ -597,13 +597,22 @@ class TestMigrationV2:
         universe_file = temp_db_path.parent / "test_universe.csv"
         universe_file.write_text("symbol\nRELIANCE\nINFY\n")
         
-        # Create mock config objects
-        rules_config = {
-            "buy_rules": [
-                {"type": "sma_crossover", "name": "sma_10_20_crossover", "params": {"fast": 10, "slow": 20}},
-                {"type": "rsi_oversold", "name": "rsi_oversold_30", "params": {"period": 14, "threshold": 30}}
+        # Create mock config objects using proper RulesConfig structure
+        from kiss_signal.config import RulesConfig, RuleDef
+        rules_config = RulesConfig(
+            baseline=RuleDef(
+                type="sma_crossover", 
+                name="sma_10_20_crossover", 
+                params={"fast": 10, "slow": 20}
+            ),
+            layers=[
+                RuleDef(
+                    type="rsi_oversold", 
+                    name="rsi_oversold_30", 
+                    params={"period": 14, "threshold": 30}
+                )
             ]
-        }
+        )
         
         app_config = Config(
             database_path=str(temp_db_path),
@@ -618,21 +627,22 @@ class TestMigrationV2:
             edge_score_threshold=0.5
         )
         
-        # Test generate_config_hash
-        hash1 = persistence.generate_config_hash(rules_config, app_config)
-        hash2 = persistence.generate_config_hash(rules_config, app_config)
+        # Test generate_config_hash (expects dict format)
+        rules_dict = rules_config.model_dump()
+        hash1 = persistence.generate_config_hash(rules_dict, app_config)
+        hash2 = persistence.generate_config_hash(rules_dict, app_config)
         assert hash1 == hash2  # Deterministic
         assert len(hash1) == 8  # 8-character prefix
         
-        # Test create_config_snapshot
-        snapshot = persistence.create_config_snapshot(rules_config, app_config, "2025-07-13")
+        # Test create_config_snapshot (expects dict format)
+        snapshot = persistence.create_config_snapshot(rules_dict, app_config, "2025-07-13")
         assert 'rules_hash' in snapshot
         assert 'universe_path' in snapshot
         assert 'freeze_date' in snapshot
         assert snapshot['freeze_date'] == "2025-07-13"
         assert len(json.dumps(snapshot)) < 1024  # < 1KB
         
-        # Test get_active_strategy_combinations
+        # Test get_active_strategy_combinations (expects RulesConfig object)
         combinations = persistence.get_active_strategy_combinations(rules_config)
         assert len(combinations) >= 2  # At least the buy rules
         for combo in combinations:

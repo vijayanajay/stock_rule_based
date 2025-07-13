@@ -273,72 +273,9 @@ def generate_daily_report(
     try:
         # 1. Fetch all existing open positions
         open_positions = persistence.get_open_positions(db_path)
-        run_date = config.freeze_date or date.today()
-
-        positions_to_hold: List[Dict[str, Any]] = []
-        positions_to_close: List[Dict[str, Any]] = []
 
         # 2. Process each open position with dynamic exit checking
-        for pos in open_positions:
-            entry_date = date.fromisoformat(pos["entry_date"])
-            days_held = (run_date - entry_date).days
-
-            try:
-                price_data = data.get_price_data(symbol=pos["symbol"], cache_dir=Path(config.cache_dir), start_date=entry_date, end_date=run_date, freeze_date=config.freeze_date, years=config.historical_data_years)
-
-                if price_data.empty:
-                    logger.warning(f"No price data available for {pos['symbol']} from {entry_date} to {run_date}")
-                    current_price = pos['entry_price']
-                    current_low = current_high = current_price
-                    return_pct = 0.0
-                    nifty_return_pct = 0.0
-                else:
-                    # Use the latest available price (which may be older than run_date)
-                    current_price = price_data['close'].iloc[-1]
-                    current_low = price_data['low'].iloc[-1]  
-                    current_high = price_data['high'].iloc[-1]
-                    return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
-                    
-                    # Log if data is stale (last date != run_date)
-                    last_data_date = price_data.index[-1].date()
-                    if last_data_date < run_date:
-                        logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date}")
-                    
-                    # Calculate NIFTY return for the same period as available stock data
-                    actual_end_date = last_data_date if last_data_date < run_date else run_date
-                    try:
-                        nifty_data = data.get_price_data(symbol="^NSEI", cache_dir=Path(config.cache_dir), start_date=entry_date, end_date=actual_end_date, freeze_date=config.freeze_date, years=config.historical_data_years)
-                        
-                        if nifty_data is None or nifty_data.empty or len(nifty_data) == 0:
-                            logger.warning(f"No NIFTY data available for period {entry_date} to {actual_end_date}")
-                            nifty_return_pct = 0.0
-                        elif nifty_data['close'].iloc[0] <= 0:
-                            logger.warning(f"Invalid NIFTY entry price for period {entry_date} to {actual_end_date}")
-                            nifty_return_pct = 0.0
-                        else:
-                            nifty_return_pct = (nifty_data['close'].iloc[-1] - nifty_data['close'].iloc[0]) / nifty_data['close'].iloc[0] * 100
-                    except Exception as e:
-                        logger.warning(f"Failed to get NIFTY data for {pos['symbol']} comparison: {e}")
-                        nifty_return_pct = 0.0
-
-                pos.update({'current_price': current_price, 'return_pct': return_pct, 'nifty_return_pct': nifty_return_pct, 'days_held': days_held})
-
-                # Check for dynamic exit conditions
-                sell_conditions = getattr(rules_config, 'sell_conditions', None) if hasattr(rules_config, 'sell_conditions') else rules_config.get('sell_conditions', [])
-                # Ensure sell_conditions is a list
-                if sell_conditions is None:
-                    sell_conditions = []
-                exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, sell_conditions, days_held, config.hold_period)
-                if exit_reason:
-                    pos.update({'exit_date': run_date.isoformat(), 'exit_price': current_price, 'final_return_pct': return_pct, 'final_nifty_return_pct': nifty_return_pct, 'exit_reason': exit_reason})
-                    positions_to_close.append(pos)
-                else:
-                    positions_to_hold.append(pos)
-            except Exception as e:
-                logger.error(f"Failed to process position for {pos['symbol']}: {e}")
-                # Fall back to N/A values when everything fails
-                pos.update({'current_price': None, 'return_pct': None, 'nifty_return_pct': None, 'days_held': days_held})
-                positions_to_hold.append(pos)
+        positions_to_hold, positions_to_close = _process_open_positions(open_positions, config, rules_config)
 
         # 3. Persist changes (close positions)
         if positions_to_close:
@@ -367,7 +304,119 @@ def generate_daily_report(
         logger.error(f"Failed to generate report: {e}", exc_info=True)
         return None
 
-# impure
+def _process_open_positions(
+    open_positions: List[Dict[str, Any]], 
+    config: Config, 
+    rules_config: Dict[str, Any]
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Process open positions to determine which to hold and which to close.
+    
+    Args:
+        open_positions: List of open position records from database
+        config: Application configuration
+        rules_config: Rules configuration dictionary
+        
+    Returns:
+        Tuple of (positions_to_hold, positions_to_close)
+    """
+    run_date = config.freeze_date or date.today()
+    positions_to_hold: List[Dict[str, Any]] = []
+    positions_to_close: List[Dict[str, Any]] = []
+
+    for pos in open_positions:
+        entry_date = date.fromisoformat(pos["entry_date"])
+        days_held = (run_date - entry_date).days
+
+        try:
+            price_data = data.get_price_data(
+                symbol=pos["symbol"], 
+                cache_dir=Path(config.cache_dir), 
+                start_date=entry_date, 
+                end_date=run_date, 
+                freeze_date=config.freeze_date, 
+                years=config.historical_data_years
+            )
+
+            if price_data.empty:
+                logger.warning(f"No price data available for {pos['symbol']} from {entry_date} to {run_date}")
+                current_price = pos['entry_price']
+                current_low = current_high = current_price
+                return_pct = 0.0
+                nifty_return_pct = 0.0
+            else:
+                # Use the latest available price (which may be older than run_date)
+                current_price = price_data['close'].iloc[-1]
+                current_low = price_data['low'].iloc[-1]  
+                current_high = price_data['high'].iloc[-1]
+                return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
+                
+                # Log if data is stale (last date != run_date)
+                last_data_date = price_data.index[-1].date()
+                if last_data_date < run_date:
+                    logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date}")
+                
+                # Calculate NIFTY return for the same period as available stock data
+                actual_end_date = last_data_date if last_data_date < run_date else run_date
+                try:
+                    nifty_data = data.get_price_data(
+                        symbol="^NSEI", 
+                        cache_dir=Path(config.cache_dir), 
+                        start_date=entry_date, 
+                        end_date=actual_end_date, 
+                        freeze_date=config.freeze_date, 
+                        years=config.historical_data_years
+                    )
+                    
+                    if nifty_data is None or nifty_data.empty or len(nifty_data) == 0:
+                        logger.warning(f"No NIFTY data available for period {entry_date} to {actual_end_date}")
+                        nifty_return_pct = 0.0
+                    elif nifty_data['close'].iloc[0] <= 0:
+                        logger.warning(f"Invalid NIFTY entry price for period {entry_date} to {actual_end_date}")
+                        nifty_return_pct = 0.0
+                    else:
+                        nifty_return_pct = (nifty_data['close'].iloc[-1] - nifty_data['close'].iloc[0]) / nifty_data['close'].iloc[0] * 100
+                except Exception as e:
+                    logger.warning(f"Failed to get NIFTY data for {pos['symbol']} comparison: {e}")
+                    nifty_return_pct = 0.0
+
+            pos.update({
+                'current_price': current_price, 
+                'return_pct': return_pct, 
+                'nifty_return_pct': nifty_return_pct, 
+                'days_held': days_held
+            })
+
+            # Check for dynamic exit conditions
+            sell_conditions = getattr(rules_config, 'sell_conditions', None) if hasattr(rules_config, 'sell_conditions') else rules_config.get('sell_conditions', [])
+            # Ensure sell_conditions is a list
+            if sell_conditions is None:
+                sell_conditions = []
+            exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, sell_conditions, days_held, config.hold_period)
+            if exit_reason:
+                pos.update({
+                    'exit_date': run_date.isoformat(), 
+                    'exit_price': current_price, 
+                    'final_return_pct': return_pct, 
+                    'final_nifty_return_pct': nifty_return_pct, 
+                    'exit_reason': exit_reason
+                })
+                positions_to_close.append(pos)
+            else:
+                positions_to_hold.append(pos)
+        except Exception as e:
+            logger.error(f"Failed to process position for {pos['symbol']}: {e}")
+            # Fall back to N/A values when everything fails
+            pos.update({
+                'current_price': None, 
+                'return_pct': None, 
+                'nifty_return_pct': None, 
+                'days_held': days_held
+            })
+            positions_to_hold.append(pos)
+
+    return positions_to_hold, positions_to_close
+
+
 def analyze_rule_performance(db_path: Path) -> List[Dict[str, Any]]:
     """Analyzes the entire history of strategies to rank individual rule performance."""
     rule_stats: Dict[str, Dict[str, List[Any]]] = defaultdict(lambda: {'metrics': [], 'symbols': []})
