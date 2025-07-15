@@ -116,15 +116,15 @@ def get_price_data(
 
 
 def _needs_refresh(symbol: str, cache_dir: Path, refresh_days: int) -> bool:
-    """Check if symbol data needs refresh based on file modification time.
+    """Check if symbol data needs refresh - refreshes once per day.
     
     Args:
         symbol: Symbol to check
         cache_dir: Directory containing cached data files
-        refresh_days: Days before refresh is needed
+        refresh_days: DEPRECATED - kept for compatibility, always uses daily refresh
         
     Returns:
-        True if symbol needs refresh
+        True if symbol needs refresh (file doesn't exist or wasn't modified today)
     """
     cache_file = cache_dir / f"{symbol}.NS.csv"
     
@@ -132,12 +132,12 @@ def _needs_refresh(symbol: str, cache_dir: Path, refresh_days: int) -> bool:
         if not cache_file.exists():
             return True # Needs refresh if file doesn't exist
 
-        # If exists, check modification time
+        # Check if file was modified today
         file_modified_timestamp = cache_file.stat().st_mtime
-        file_modified_date = datetime.fromtimestamp(file_modified_timestamp)
-        cutoff_date = datetime.now() - timedelta(days=refresh_days)
+        file_modified_date = datetime.fromtimestamp(file_modified_timestamp).date()
+        today = datetime.now().date()
 
-        return file_modified_date < cutoff_date # Needs refresh if older than cutoff
+        return file_modified_date < today # Needs refresh if not modified today
 
     except OSError: # Catch OS errors from .exists() or .stat()
         logger.warning(f"OSError checking cache status for {symbol}, assuming refresh needed.")

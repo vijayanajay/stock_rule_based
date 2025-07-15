@@ -38,7 +38,7 @@ class Config(BaseModel):
     universe_path: str
     historical_data_years: int = Field(..., gt=0)
     cache_dir: str
-    cache_refresh_days: int = Field(..., ge=0)
+    cache_refresh_days: Optional[int] = Field(default=1, ge=0)  # DEPRECATED: kept for compatibility
     hold_period: int = Field(..., gt=0)
     min_trades_threshold: int = Field(..., ge=0)
     edge_score_weights: EdgeScoreWeights

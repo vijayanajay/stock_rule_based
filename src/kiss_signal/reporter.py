@@ -312,6 +312,14 @@ def _process_open_positions(
 ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Process open positions to determine which to hold and which to close.
     
+    This function processes each open position to:
+    1. Calculate current price and return percentage
+    2. Calculate Nifty index return for the same period (for benchmark comparison)
+    3. Check exit conditions to determine if positions should be closed
+    
+    The Nifty period return calculation ensures accurate comparison between stock
+    and market performance by using the exact same date range for both calculations.
+    
     Args:
         open_positions: List of open position records from database
         config: Application configuration
@@ -357,27 +365,61 @@ def _process_open_positions(
                     logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date}")
                 
                 # Calculate NIFTY return for the same period as available stock data
+                # This is important for comparing stock performance against the market benchmark
                 actual_end_date = last_data_date if last_data_date < run_date else run_date
                 try:
+                    # Ensure we're using the exact same date range for Nifty data as for the stock
+                    # This alignment is critical for accurate comparison between stock and index performance
+                    logger.info(f"Fetching NIFTY data for {pos['symbol']} from {entry_date} to {actual_end_date}")
+                    
+                    # Get Nifty index data for the same period as the stock position
                     nifty_data = data.get_price_data(
                         symbol="^NSEI", 
                         cache_dir=Path(config.cache_dir), 
-                        start_date=entry_date, 
-                        end_date=actual_end_date, 
-                        freeze_date=config.freeze_date, 
+                        start_date=entry_date,  # Use the same entry date as the stock position
+                        end_date=actual_end_date,  # Use the same end date as available for the stock
+                        freeze_date=config.freeze_date,
                         years=config.historical_data_years
                     )
                     
+                    # Log the retrieved Nifty data details for debugging and verification
+                    if nifty_data is not None and not nifty_data.empty:
+                        logger.info(f"NIFTY data retrieved: {len(nifty_data)} rows, date range: {nifty_data.index[0].date()} to {nifty_data.index[-1].date()}")
+                        logger.debug(f"NIFTY first value: {nifty_data['close'].iloc[0]}, last value: {nifty_data['close'].iloc[-1]}")
+                    
+                    # Handle cases where Nifty data is missing or invalid
                     if nifty_data is None or nifty_data.empty or len(nifty_data) == 0:
                         logger.warning(f"No NIFTY data available for period {entry_date} to {actual_end_date}")
                         nifty_return_pct = 0.0
                     elif nifty_data['close'].iloc[0] <= 0:
-                        logger.warning(f"Invalid NIFTY entry price for period {entry_date} to {actual_end_date}")
+                        logger.warning(f"Invalid NIFTY entry price for period {entry_date} to {actual_end_date}: {nifty_data['close'].iloc[0]}")
                         nifty_return_pct = 0.0
                     else:
-                        nifty_return_pct = (nifty_data['close'].iloc[-1] - nifty_data['close'].iloc[0]) / nifty_data['close'].iloc[0] * 100
-                except Exception as e:
+                        # Calculate Nifty return with proper start and end values
+                        # This calculation mirrors how stock returns are calculated for consistency
+                        try:
+                            nifty_start = nifty_data['close'].iloc[0]  # First day's closing price
+                            nifty_end = nifty_data['close'].iloc[-1]   # Last day's closing price
+                            
+                            # Validate the values to prevent calculation errors
+                            if nifty_start > 0 and nifty_end > 0:
+                                # Calculate percentage return using the standard formula:
+                                # ((end_price - start_price) / start_price) * 100
+                                nifty_return_pct = (nifty_end - nifty_start) / nifty_start * 100
+                                logger.info(f"NIFTY return calculation for {pos['symbol']}: {nifty_start:.2f} to {nifty_end:.2f} = {nifty_return_pct:.2f}%")
+                            else:
+                                logger.warning(f"Invalid NIFTY values for {pos['symbol']}: start={nifty_start}, end={nifty_end}")
+                                nifty_return_pct = 0.0
+                        except (IndexError, ZeroDivisionError) as e:
+                            logger.warning(f"Error calculating NIFTY return for {pos['symbol']}: {e}")
+                            nifty_return_pct = 0.0
+                except (data.DataRetrievalError, ValueError) as e:
+                    # Handle specific data retrieval errors
                     logger.warning(f"Failed to get NIFTY data for {pos['symbol']} comparison: {e}")
+                    nifty_return_pct = 0.0
+                except Exception as e:
+                    # Catch-all for unexpected errors
+                    logger.error(f"Unexpected error calculating NIFTY return for {pos['symbol']}: {e}", exc_info=True)
                     nifty_return_pct = 0.0
 
             pos.update({
