@@ -317,3 +317,11 @@
     - **Prevention**: Use virtual environments properly and avoid installing the package being developed unless using editable mode (`pip install -e .`)
     - **Detection Pattern**: Import errors showing site-packages paths instead of local source paths
     - **Quick Check**: `pip list | grep package_name` and `dir venv\Lib\site-packages\` to identify conflicts
+## Test Harness Integrity: Incomplete Mock Configuration in Transaction Tests (2025-07-16)
+- **Issue**: Three persistence tests failed due to a structural flaw in mock configuration for database transaction rollback scenarios. The tests were setting up `side_effect` lists for `cursor.execute()` but not accounting for all SQL statements executed during error handling, specifically the `ROLLBACK` statement. This caused `StopIteration` exceptions when the mock tried to get the next effect from an exhausted iterator.
+    1.  **Migration Test (`test_migrate_v2_error_handling`):** Mock returned a `MagicMock` object instead of a proper integer for database version comparison, causing `TypeError: '>=' not supported between instances of 'MagicMock' and 'int'`.
+    2.  **Transaction Rollback Tests:** Both `test_close_positions_transaction_rollback` and `test_add_positions_transaction_rollback` failed with `StopIteration` because their mocks didn't include the `ROLLBACK` statement in the `side_effect` list.
+- **Fix**: 
+    1.  Updated the migration test mock to properly return an integer value for the database version check by configuring `mock_result.__getitem__.return_value = 1`.
+    2.  Extended the `side_effect` lists in both transaction rollback tests to include `None` for the `ROLLBACK` statement, ensuring the mock can handle the complete execution path including error recovery.
+- **Lesson**: Mock configurations must model the **complete execution path** including error handling and recovery scenarios. When testing transaction rollback behavior, the mock must account for all SQL statements that will be executed, not just the happy path. Incomplete mocks create a structural flaw where tests fail due to mock exhaustion rather than testing the actual application logic. Always trace through the full code path when setting up `side_effect` lists for database operations.

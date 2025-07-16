@@ -284,15 +284,19 @@ def _fetch_and_store_data(
     """Fetch, validate, and store data for a single symbol."""
     symbol_with_suffix = _add_ns_suffix(symbol)
 
-    # Fetch data with retry logic
+    # Fetch data with improved retry logic
     fetched_data = None
-    for attempt in range(3):  # Max 3 retries
+    max_retries = 3
+    
+    for attempt in range(max_retries):
         fetched_data = _fetch_symbol_data(symbol_with_suffix, years, freeze_date)
         if fetched_data is not None:
             break
 
-        if attempt < 2:  # Don't sleep on final attempt
-            time.sleep(2 ** attempt)  # Exponential backoff
+        if attempt < max_retries - 1:  # Don't sleep on final attempt
+            delay = 1 + (attempt * 0.5)  # Progressive delay: 1s, 1.5s, 2s
+            logger.debug(f"Retrying {symbol} in {delay}s (attempt {attempt + 1}/{max_retries})")
+            time.sleep(delay)
 
     if fetched_data is not None and _validate_data_quality(fetched_data, symbol):
         success = _save_symbol_cache(symbol, fetched_data, cache_path)
@@ -300,7 +304,12 @@ def _fetch_and_store_data(
             logger.warning(f"Failed to save cache for {symbol}")
         return success
     
-    logger.warning(f"Failed to fetch or validate data for {symbol}")
+    # Log more informative warnings
+    if fetched_data is None:
+        logger.warning(f"Failed to fetch data for {symbol} after {max_retries} attempts")
+    else:
+        logger.warning(f"Data validation failed for {symbol}")
+    
     return False
 
 
@@ -327,7 +336,16 @@ def _fetch_data_for_symbols(
         return {}
 
     logger.info(f"Refreshing {len(symbols_to_fetch)} symbols")
-    results = {symbol: _fetch_and_store_data(symbol, years, freeze_date, cache_path) for symbol in symbols_to_fetch}
+    
+    results = {}
+    for i, symbol in enumerate(symbols_to_fetch):
+        # Add rate limiting between requests
+        if i > 0:
+            time.sleep(0.5)  # 500ms delay between requests to avoid rate limiting
+            
+        logger.debug(f"Fetching {symbol} ({i+1}/{len(symbols_to_fetch)})")
+        results[symbol] = _fetch_and_store_data(symbol, years, freeze_date, cache_path)
+    
     return results
 
 

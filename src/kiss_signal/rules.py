@@ -536,9 +536,24 @@ def calculate_atr(price_data: pd.DataFrame, period: int = 14) -> pd.Series:
         
     _validate_ohlcv_columns(price_data, ['high', 'low', 'close'])
     
+    # If we have some data but less than the requested period,
+    # adapt by using the available data length as the period
+    # This is a key improvement for handling the early rows in a dataset
     if len(price_data) < period:
-        logger.warning(f"Insufficient data for ATR: {len(price_data)} rows, need {period}")
-        return pd.Series(float('nan'), index=price_data.index)
+        if len(price_data) >= 3:  # Need at least 3 points for a meaningful ATR calculation
+            # Dynamically adjust the period to use all available data
+            # This ensures we can calculate ATR values even at the beginning of a dataset
+            adjusted_period = len(price_data)
+            # Use debug level instead of info to reduce log noise in logs
+            logger.debug(f"Adapting ATR calculation: using {adjusted_period} rows instead of {period}")
+            period = adjusted_period
+        else:
+            # When we have fewer than 3 data points, we can't calculate a meaningful ATR
+            # Use debug level instead of warning to reduce log noise
+            logger.debug(f"Insufficient data for ATR: {len(price_data)} rows, need at least 3")
+            # Return a Series filled with NaN values with the same index as the input data
+            # This ensures alignment with the original data for any subsequent calculations
+            return pd.Series(float('nan'), index=price_data.index)
     
     # Calculate True Range for each period
     # TR = max(H-L, abs(H-C_prev), abs(L-C_prev))

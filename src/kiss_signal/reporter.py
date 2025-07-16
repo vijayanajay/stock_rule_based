@@ -398,22 +398,34 @@ def _process_open_positions(
                         # Calculate Nifty return with proper start and end values
                         # This calculation mirrors how stock returns are calculated for consistency
                         try:
-                            nifty_start = nifty_data['close'].iloc[0]  # First day's closing price
-                            nifty_end = nifty_data['close'].iloc[-1]   # Last day's closing price
-                            
-                            # Validate the values to prevent calculation errors
-                            if nifty_start > 0 and nifty_end > 0:
-                                # Calculate percentage return using the standard formula:
-                                # ((end_price - start_price) / start_price) * 100
-                                nifty_return_pct = (nifty_end - nifty_start) / nifty_start * 100
-                                logger.info(f"NIFTY return calculation for {pos['symbol']}: {nifty_start:.2f} to {nifty_end:.2f} = {nifty_return_pct:.2f}%")
+                            # Ensure we have data points to calculate with - need at least 2 points for a valid return calculation
+                            # (one for the starting value and one for the ending value)
+                            if len(nifty_data) >= 2:
+                                nifty_start = nifty_data['close'].iloc[0]  # First day's closing price (position entry date)
+                                nifty_end = nifty_data['close'].iloc[-1]   # Last day's closing price (current date)
+                                
+                                # Validate the values to prevent calculation errors
+                                # Both start and end values must be positive for a valid percentage calculation
+                                if nifty_start > 0 and nifty_end > 0:
+                                    # Calculate percentage return using the standard formula:
+                                    # ((end_price - start_price) / start_price) * 100
+                                    # This gives us the percentage change in the Nifty index over the same period
+                                    # that the position has been held, allowing for direct comparison
+                                    nifty_return_pct = (nifty_end - nifty_start) / nifty_start * 100
+                                    logger.info(f"NIFTY return calculation for {pos['symbol']}: {nifty_start:.2f} to {nifty_end:.2f} = {nifty_return_pct:.2f}%")
+                                else:
+                                    logger.warning(f"Invalid NIFTY values for {pos['symbol']}: start={nifty_start}, end={nifty_end}")
+                                    nifty_return_pct = 0.0
                             else:
-                                logger.warning(f"Invalid NIFTY values for {pos['symbol']}: start={nifty_start}, end={nifty_end}")
+                                # For very new positions (e.g., entered today), we might only have one data point
+                                # In this case, we can't calculate a return, so we default to 0.0%
+                                logger.warning(f"Insufficient NIFTY data points for {pos['symbol']}: {len(nifty_data)} rows")
                                 nifty_return_pct = 0.0
                         except (IndexError, ZeroDivisionError) as e:
+                            # Handle specific calculation errors gracefully
                             logger.warning(f"Error calculating NIFTY return for {pos['symbol']}: {e}")
                             nifty_return_pct = 0.0
-                except (data.DataRetrievalError, ValueError) as e:
+                except ValueError as e:
                     # Handle specific data retrieval errors
                     logger.warning(f"Failed to get NIFTY data for {pos['symbol']} comparison: {e}")
                     nifty_return_pct = 0.0
@@ -635,8 +647,14 @@ def _check_exit_conditions(
         else:
             try:
                 rule_func = getattr(rules, rule_type, None)
-                if rule_func and rule_func(price_data, **params).iloc[-1]:
-                    return f"Rule: {condition_name}"
+                if rule_func:
+                    # Special handling for ATR-based exit functions that require entry_price
+                    if rule_type in ['stop_loss_atr', 'take_profit_atr']:
+                        if rule_func(price_data, entry_price, **params):
+                            return f"Rule: {condition_name}"
+                    else:
+                        if rule_func(price_data, **params).iloc[-1]:
+                            return f"Rule: {condition_name}"
             except Exception as e:
                 logger.warning(f"Error checking exit rule {rule_type}: {e}")
 

@@ -7,9 +7,10 @@ import json
 import tempfile
 from pathlib import Path
 from typing import List, Dict, Any
-from unittest.mock import patch # Import patch
+from unittest.mock import patch, MagicMock
 import typing
-import numpy as np # Import numpy
+import numpy as np
+import pandas as pd
 
 from kiss_signal.persistence import create_database, save_strategies_batch, add_new_positions_from_signals
 from kiss_signal.persistence import get_open_positions, close_positions_batch # Import missing functions
@@ -649,3 +650,712 @@ class TestMigrationV2:
         for combo in combinations:
             parsed = json.loads(combo)
             assert isinstance(parsed, list)
+
+class TestClearAndRecalculateStrategies:
+    """Test the clear_and_recalculate_strategies function comprehensively."""
+
+    def test_clear_and_recalculate_basic_functionality(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]):
+        """Test basic clear and recalculate functionality."""
+        # Set up test data
+        create_database(temp_db_path)
+        
+        # Create mock universe file
+        universe_file = temp_db_path.parent / "test_universe.csv"
+        universe_file.write_text("RELIANCE\nINFY\n")
+        
+        from kiss_signal.config import Config, EdgeScoreWeights, RulesConfig, RuleDef
+        from kiss_signal import persistence
+        from unittest.mock import patch, MagicMock
+        
+        # Create mock configs
+        rules_config = RulesConfig(
+            baseline=RuleDef(type="sma_crossover", name="sma_10_20", params={"fast": 10, "slow": 20}),
+            layers=[]
+        )
+        
+        app_config = Config(
+            database_path=str(temp_db_path),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        # Mock the heavy dependencies
+        with patch('kiss_signal.data') as mock_data, \
+             patch('kiss_signal.backtester') as mock_backtester, \
+             patch('rich.console.Console') as mock_console, \
+             patch('builtins.input', return_value='y'):
+            
+            mock_data.load_universe.return_value = ["RELIANCE", "INFY"]
+            mock_data.get_price_data.return_value = None  # Simulate no data
+            
+            mock_bt = MagicMock()
+            mock_bt.find_optimal_strategies.return_value = []
+            mock_backtester.Backtester.return_value = mock_bt
+            
+            mock_console_instance = MagicMock()
+            mock_console.return_value = mock_console_instance
+            
+            # Test with preserve_all=True
+            result = persistence.clear_and_recalculate_strategies(
+                temp_db_path, app_config, rules_config, 
+                force=True, preserve_all=True
+            )
+            
+            assert isinstance(result, list)
+            mock_console_instance.print.assert_called()
+
+    def test_clear_and_recalculate_with_existing_data(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]):
+        """Test clear and recalculate with existing database data."""
+        create_database(temp_db_path)
+        
+        # Add some existing strategies
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            save_strategies_batch(conn, sample_strategies, "2025-01-01T12:00:00", {}, "testhash")
+        
+        universe_file = temp_db_path.parent / "test_universe.csv"
+        universe_file.write_text("RELIANCE\nINFY\n")
+        
+        from kiss_signal.config import Config, EdgeScoreWeights, RulesConfig, RuleDef
+        from kiss_signal import persistence
+        from unittest.mock import patch, MagicMock
+        
+        rules_config = RulesConfig(
+            baseline=RuleDef(type="sma_crossover", name="sma_10_20", params={"fast": 10, "slow": 20}),
+            layers=[]
+        )
+        
+        app_config = Config(
+            database_path=str(temp_db_path),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        with patch('kiss_signal.data') as mock_data, \
+             patch('kiss_signal.backtester') as mock_backtester, \
+             patch('rich.console.Console') as mock_console:
+            
+            mock_data.load_universe.return_value = ["RELIANCE"]
+            mock_data.get_price_data.return_value = None
+            
+            mock_bt = MagicMock()
+            mock_bt.find_optimal_strategies.return_value = []
+            mock_backtester.Backtester.return_value = mock_bt
+            
+            mock_console_instance = MagicMock()
+            mock_console.return_value = mock_console_instance
+            
+            result = persistence.clear_and_recalculate_strategies(
+                temp_db_path, app_config, rules_config, force=True
+            )
+            
+            assert isinstance(result, list)
+
+    def test_clear_and_recalculate_with_successful_backtesting(self, temp_db_path: Path):
+        """Test clear and recalculate with successful backtesting results."""
+        create_database(temp_db_path)
+        
+        universe_file = temp_db_path.parent / "test_universe.csv"
+        universe_file.write_text("RELIANCE\n")
+        
+        from kiss_signal.config import Config, EdgeScoreWeights, RulesConfig, RuleDef
+        from kiss_signal import persistence
+        from unittest.mock import patch, MagicMock
+        import pandas as pd
+        
+        rules_config = RulesConfig(
+            baseline=RuleDef(type="sma_crossover", name="sma_10_20", params={"fast": 10, "slow": 20}),
+            layers=[]
+        )
+        
+        app_config = Config(
+            database_path=str(temp_db_path),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        # Mock successful price data
+        mock_price_data = pd.DataFrame({
+            'Close': [100.0] * 200,
+            'High': [105.0] * 200,
+            'Low': [95.0] * 200,
+            'Volume': [1000] * 200
+        }, index=pd.date_range('2023-01-01', periods=200))
+        
+        with patch('kiss_signal.data') as mock_data, \
+             patch('kiss_signal.backtester') as mock_backtester, \
+             patch('rich.console.Console') as mock_console:
+            
+            mock_data.load_universe.return_value = ["RELIANCE"]
+            mock_data.get_price_data.return_value = mock_price_data
+            
+            # Mock successful strategy results
+            mock_strategy = {
+                "rule_stack": [{"type": "sma_crossover", "name": "test", "params": {}}],
+                "edge_score": 0.75,
+                "win_pct": 65.0,
+                "sharpe": 1.2,
+                "total_trades": 50,
+                "avg_return": 2.5
+            }
+            
+            mock_bt = MagicMock()
+            mock_bt.find_optimal_strategies.return_value = [mock_strategy]
+            mock_backtester.Backtester.return_value = mock_bt
+            
+            mock_console_instance = MagicMock()
+            mock_console.return_value = mock_console_instance
+            
+            result = persistence.clear_and_recalculate_strategies(
+                temp_db_path, app_config, rules_config, force=True
+            )
+            
+            assert len(result) == 1
+            assert result[0]["symbol"] == "RELIANCE"
+            assert result[0]["edge_score"] == 0.75
+
+    def test_clear_and_recalculate_error_handling(self, temp_db_path: Path):
+        """Test error handling in clear_and_recalculate_strategies."""
+        create_database(temp_db_path)
+        
+        universe_file = temp_db_path.parent / "test_universe.csv"
+        universe_file.write_text("RELIANCE\n")
+        
+        from kiss_signal.config import Config, EdgeScoreWeights, RulesConfig, RuleDef
+        from kiss_signal import persistence
+        from unittest.mock import patch, MagicMock
+        
+        rules_config = RulesConfig(
+            baseline=RuleDef(type="sma_crossover", name="sma_10_20", params={"fast": 10, "slow": 20}),
+            layers=[]
+        )
+        
+        app_config = Config(
+            database_path=str(temp_db_path),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        with patch('kiss_signal.data') as mock_data, \
+             patch('kiss_signal.backtester') as mock_backtester, \
+             patch('rich.console.Console') as mock_console:
+            
+            mock_data.load_universe.return_value = ["RELIANCE"]
+            mock_data.get_price_data.side_effect = Exception("Data fetch error")
+            
+            mock_bt = MagicMock()
+            mock_backtester.Backtester.return_value = mock_bt
+            
+            mock_console_instance = MagicMock()
+            mock_console.return_value = mock_console_instance
+            
+            # Should handle exceptions gracefully and continue
+            result = persistence.clear_and_recalculate_strategies(
+                temp_db_path, app_config, rules_config, force=True
+            )
+            
+            assert isinstance(result, list)
+
+
+class TestGetConnectionEdgeCases:
+    """Test get_connection function edge cases and migration scenarios."""
+
+    def test_get_connection_with_migration_needed(self, temp_db_path: Path):
+        """Test get_connection when migration is needed."""
+        # Create old database schema manually (without new columns)
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            conn.execute("""
+                CREATE TABLE strategies (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    run_timestamp TEXT NOT NULL,
+                    rule_stack TEXT NOT NULL,
+                    edge_score REAL NOT NULL,
+                    win_pct REAL NOT NULL,
+                    sharpe REAL NOT NULL,
+                    total_trades INTEGER NOT NULL,
+                    avg_return REAL NOT NULL
+                );
+            """)
+            conn.commit()
+        
+        from kiss_signal import persistence
+        
+        # This should trigger migration
+        conn = persistence.get_connection(temp_db_path)
+        
+        # Check that new columns exist after migration
+        cursor = conn.execute("PRAGMA table_info(strategies)")
+        columns = [row[1] for row in cursor.fetchall()]
+        assert 'config_snapshot' in columns
+        assert 'config_hash' in columns
+        conn.close()
+
+    def test_get_connection_database_error(self, temp_db_path: Path):
+        """Test get_connection when database connection fails."""
+        from kiss_signal import persistence
+        from unittest.mock import patch
+        
+        with patch('sqlite3.connect', side_effect=sqlite3.Error("Connection failed")):
+            with pytest.raises(sqlite3.Error):
+                persistence.get_connection(temp_db_path)
+
+    def test_get_connection_already_migrated(self, temp_db_path: Path):
+        """Test get_connection with already migrated database."""
+        create_database(temp_db_path)  # Creates v2 schema
+        
+        from kiss_signal import persistence
+        
+        # Should not trigger migration
+        conn = persistence.get_connection(temp_db_path)
+        
+        # Verify connection works and WAL mode is enabled
+        result = conn.execute("PRAGMA journal_mode").fetchone()
+        assert result[0].lower() == 'wal'
+        conn.close()
+
+
+class TestCreateDatabaseEdgeCases:
+    """Test create_database function edge cases."""
+
+    def test_create_database_parent_directory_creation(self, tmp_path: Path):
+        """Test create_database creates parent directories."""
+        db_path = tmp_path / "subdir" / "another_subdir" / "test.db"
+        
+        create_database(db_path)
+        
+        assert db_path.exists()
+        assert db_path.parent.exists()
+
+    def test_create_database_oserror(self, tmp_path: Path):
+        """Test create_database handles OS errors."""
+        from unittest.mock import patch
+        
+        db_path = tmp_path / "test.db"
+        
+        with patch('pathlib.Path.mkdir', side_effect=OSError("Permission denied")):
+            with pytest.raises(OSError):
+                create_database(db_path)
+
+
+class TestConfigHashAndSnapshot:
+    """Test config hash and snapshot functions."""
+
+    def test_generate_config_hash_deterministic(self, tmp_path: Path):
+        """Test that config hash generation is deterministic."""
+        from kiss_signal.config import Config, EdgeScoreWeights
+        from kiss_signal import persistence
+        
+        # Create a temporary universe file
+        universe_file = tmp_path / "universe.csv"
+        universe_file.write_text("RELIANCE\nINFY\n")
+        
+        rules_config = {"baseline": {"type": "sma_crossover"}, "layers": []}
+        
+        app_config = Config(
+            database_path=str(tmp_path / "test.db"),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        hash1 = persistence.generate_config_hash(rules_config, app_config)
+        hash2 = persistence.generate_config_hash(rules_config, app_config)
+        
+        assert hash1 == hash2
+        assert len(hash1) == 8
+        assert isinstance(hash1, str)
+
+    def test_generate_config_hash_different_configs(self, tmp_path: Path):
+        """Test that different configs produce different hashes."""
+        from kiss_signal.config import Config, EdgeScoreWeights
+        from kiss_signal import persistence
+        
+        # Create a temporary universe file
+        universe_file = tmp_path / "universe.csv"
+        universe_file.write_text("RELIANCE\nINFY\n")
+        
+        rules_config1 = {"baseline": {"type": "sma_crossover"}, "layers": []}
+        rules_config2 = {"baseline": {"type": "rsi_oversold"}, "layers": []}
+        
+        app_config = Config(
+            database_path=str(tmp_path / "test.db"),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        hash1 = persistence.generate_config_hash(rules_config1, app_config)
+        hash2 = persistence.generate_config_hash(rules_config2, app_config)
+        
+        assert hash1 != hash2
+
+    def test_create_config_snapshot_with_freeze_date(self, tmp_path: Path):
+        """Test config snapshot creation with freeze date."""
+        from kiss_signal.config import Config, EdgeScoreWeights
+        from kiss_signal import persistence
+        
+        # Create a temporary universe file
+        universe_file = tmp_path / "universe.csv"
+        universe_file.write_text("RELIANCE\nINFY\n")
+        
+        rules_config = {"baseline": {"type": "sma_crossover"}, "layers": []}
+        
+        app_config = Config(
+            database_path=str(tmp_path / "test.db"),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        snapshot = persistence.create_config_snapshot(rules_config, app_config, "2025-07-15")
+        
+        assert snapshot['freeze_date'] == "2025-07-15"
+        assert 'rules_hash' in snapshot
+        assert 'universe_path' in snapshot
+        assert 'hold_period' in snapshot
+        assert 'timestamp' in snapshot
+        assert len(snapshot['rules_hash']) == 16
+
+    def test_create_config_snapshot_without_freeze_date(self, tmp_path: Path):
+        """Test config snapshot creation without freeze date."""
+        from kiss_signal.config import Config, EdgeScoreWeights
+        from kiss_signal import persistence
+        
+        # Create a temporary universe file
+        universe_file = tmp_path / "universe.csv"
+        universe_file.write_text("RELIANCE\nINFY\n")
+        
+        rules_config = {"baseline": {"type": "sma_crossover"}, "layers": []}
+        
+        app_config = Config(
+            database_path=str(tmp_path / "test.db"),
+            universe_path=str(universe_file),
+            cache_dir="cache",
+            cache_refresh_days=7,
+            historical_data_years=3,
+            hold_period=20,
+            min_trades_threshold=10,
+            edge_score_threshold=0.5,
+            edge_score_weights=EdgeScoreWeights(win_pct=0.6, sharpe=0.4),
+            reports_output_dir="reports"
+        )
+        
+        snapshot = persistence.create_config_snapshot(rules_config, app_config)
+        
+        assert snapshot['freeze_date'] is None
+        assert 'timestamp' in snapshot
+
+
+class TestSaveStrategiesBatchEdgeCases:
+    """Test additional edge cases for save_strategies_batch."""
+
+    def test_save_strategies_batch_with_pydantic_models(self, temp_db_path: Path):
+        """Test save_strategies_batch with Pydantic model rule stacks."""
+        create_database(temp_db_path)
+        
+        from kiss_signal.config import RuleDef
+        
+        # Create strategy with Pydantic models
+        rule_def = RuleDef(type="sma_crossover", name="test", params={"fast": 10, "slow": 20})
+        strategy = {
+            "symbol": "TEST",
+            "rule_stack": [rule_def],  # Pydantic model
+            "edge_score": 0.75,
+            "win_pct": 65.0,
+            "sharpe": 1.2,
+            "total_trades": 50,
+            "avg_return": 2.5
+        }
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            success = save_strategies_batch(conn, [strategy], "2025-01-01T12:00:00")
+            assert success
+
+    def test_save_strategies_batch_assertion_errors(self, temp_db_path: Path):
+        """Test save_strategies_batch assertion errors."""
+        create_database(temp_db_path)
+        
+        # Test with missing total_trades key
+        strategy_missing_key = {
+            "symbol": "TEST",
+            "rule_stack": [],
+            "edge_score": 0.75,
+            "win_pct": 65.0,
+            "sharpe": 1.2,
+            # Missing total_trades
+            "avg_return": 2.5
+        }
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            success = save_strategies_batch(conn, [strategy_missing_key], "2025-01-01T12:00:00")
+            assert not success
+
+        # Test with None total_trades
+        strategy_none_trades = {
+            "symbol": "TEST",
+            "rule_stack": [],
+            "edge_score": 0.75,
+            "win_pct": 65.0,
+            "sharpe": 1.2,
+            "total_trades": None,
+            "avg_return": 2.5
+        }
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            success = save_strategies_batch(conn, [strategy_none_trades], "2025-01-01T12:00:00")
+            assert not success
+
+        # Test with negative total_trades
+        strategy_negative_trades = {
+            "symbol": "TEST",
+            "rule_stack": [],
+            "edge_score": 0.75,
+            "win_pct": 65.0,
+            "sharpe": 1.2,
+            "total_trades": -5,
+            "avg_return": 2.5
+        }
+        
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            success = save_strategies_batch(conn, [strategy_negative_trades], "2025-01-01T12:00:00")
+            assert not success
+
+
+class TestAddNewPositionsFromSignalsEdgeCases:
+    """Test additional edge cases for add_new_positions_from_signals."""
+
+    def test_add_positions_with_rule_stack_json(self, temp_db_path: Path):
+        """Test adding positions with pre-formatted rule_stack_used JSON."""
+        create_database(temp_db_path)
+        
+        signals = [
+            {
+                'ticker': 'RELIANCE',
+                'date': '2025-01-15',
+                'entry_price': 2500.0,
+                'rule_stack_used': '["sma_crossover", "rsi_oversold"]'  # Pre-formatted JSON
+            }
+        ]
+        
+        add_new_positions_from_signals(temp_db_path, signals)
+        
+        positions = get_open_positions(temp_db_path)
+        assert len(positions) == 1
+        assert positions[0]['symbol'] == 'RELIANCE'
+        assert positions[0]['rule_stack_used'] == '["sma_crossover", "rsi_oversold"]'
+
+    def test_add_positions_fallback_rule_stack(self, temp_db_path: Path):
+        """Test adding positions with fallback rule_stack handling."""
+        create_database(temp_db_path)
+        
+        signals = [
+            {
+                'ticker': 'INFY',
+                'date': '2025-01-15',
+                'entry_price': 1800.0,
+                'rule_stack': 'single_rule'  # Fallback to rule_stack
+            }
+        ]
+        
+        add_new_positions_from_signals(temp_db_path, signals)
+        
+        positions = get_open_positions(temp_db_path)
+        assert len(positions) == 1
+        assert positions[0]['symbol'] == 'INFY'
+
+
+class TestMigrateStrategiesTableV2EdgeCases:
+    """Test migration function edge cases."""
+
+    def test_migrate_v2_with_data_and_pragma_check(self, temp_db_path: Path):
+        """Test migration with existing data and version checking."""
+        # Create old schema with some data
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            conn.execute("""
+                CREATE TABLE strategies (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    rule_stack TEXT NOT NULL,
+                    edge_score REAL NOT NULL,
+                    win_pct REAL NOT NULL,
+                    sharpe REAL NOT NULL,
+                    total_trades INTEGER NOT NULL,
+                    avg_return REAL NOT NULL,
+                    run_timestamp TEXT NOT NULL
+                );
+            """)
+            
+            # Insert test data
+            conn.execute("""
+                INSERT INTO strategies 
+                (symbol, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return, run_timestamp)
+                VALUES ('TEST', '[]', 0.5, 50.0, 1.0, 10, 1.5, '2025-01-01T12:00:00')
+            """)
+            
+            # Set version to 1
+            conn.execute("PRAGMA user_version = 1;")
+            conn.commit()
+        
+        from kiss_signal import persistence
+        
+        # Run migration
+        persistence.migrate_strategies_table_v2(temp_db_path)
+        
+        # Verify migration succeeded
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            # Check version updated
+            version = conn.execute("PRAGMA user_version;").fetchone()[0]
+            assert version == 2
+            
+            # Check data preserved
+            rows = conn.execute("SELECT symbol, config_snapshot, config_hash FROM strategies").fetchall()
+            assert len(rows) == 1
+            assert rows[0][0] == 'TEST'
+            assert rows[0][1] == '{"legacy": true}'  # Legacy placeholder
+            assert rows[0][2] == 'legacy'
+
+    def test_migrate_v2_error_handling(self, temp_db_path: Path):
+        """Test migration error handling."""
+        from kiss_signal import persistence
+        from unittest.mock import patch
+        
+        # Create a corrupted database scenario
+        with sqlite3.connect(str(temp_db_path)) as conn:
+            conn.execute("CREATE TABLE strategies (id INTEGER);")  # Minimal table
+            conn.execute("PRAGMA user_version = 1;")
+            conn.commit()
+        
+        # Mock an error during migration
+        with patch('sqlite3.connect') as mock_connect:
+            mock_conn = MagicMock()
+            # Mock fetchone to return a proper version number
+            mock_result = MagicMock()
+            mock_result.__getitem__.return_value = 1  # Version 1
+            mock_conn.execute.return_value.fetchone.return_value = mock_result
+            mock_conn.execute.side_effect = [
+                mock_conn.execute.return_value,  # First call (version check) succeeds
+                sqlite3.Error("Migration failed")  # Second call fails
+            ]
+            mock_connect.return_value.__enter__.return_value = mock_conn
+            
+            with pytest.raises(sqlite3.Error):
+                persistence.migrate_strategies_table_v2(temp_db_path)
+
+
+class TestAdditionalPersistenceFunctions:
+    """Test remaining persistence functions for full coverage."""
+
+    def test_close_positions_transaction_rollback(self, temp_db_path: Path):
+        """Test close_positions_batch transaction rollback on error."""
+        create_database(temp_db_path)
+        
+        # Add an open position first
+        signals = [{'ticker': 'TEST', 'date': '2025-01-15', 'entry_price': 100.0, 'rule_stack_used': '[]'}]
+        add_new_positions_from_signals(temp_db_path, signals)
+        
+        positions = get_open_positions(temp_db_path)
+        assert len(positions) == 1
+        
+        # Try to close with invalid data that will cause an error
+        invalid_position = {
+            'id': positions[0]['id'],
+            'exit_date': '2025-01-20',
+            'exit_price': 'invalid_price',  # This should cause an error
+            'final_return_pct': 10.0,
+            'final_nifty_return_pct': 5.0,
+            'days_held': 5,
+            'exit_reason': 'test'
+        }
+        
+        from unittest.mock import patch
+        
+        # Mock sqlite3 to raise an error during UPDATE
+        with patch('sqlite3.connect') as mock_connect:
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value = mock_cursor
+            mock_cursor.execute.side_effect = [
+                None,  # BEGIN TRANSACTION
+                sqlite3.Error("Update failed"),  # UPDATE statement
+                None   # ROLLBACK
+            ]
+            mock_connect.return_value.__enter__.return_value = mock_conn
+            
+            # This should handle the error gracefully
+            close_positions_batch(temp_db_path, [invalid_position])
+            
+            # Verify rollback was called
+            mock_cursor.execute.assert_any_call("ROLLBACK")
+
+    def test_add_positions_transaction_rollback(self, temp_db_path: Path):
+        """Test add_new_positions_from_signals transaction rollback on error."""
+        create_database(temp_db_path)
+        
+        signals = [{'ticker': 'TEST', 'date': '2025-01-15', 'entry_price': 100.0}]
+        
+        from unittest.mock import patch
+        
+        with patch('sqlite3.connect') as mock_connect:
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_conn.cursor.return_value = mock_cursor
+            mock_cursor.execute.side_effect = [
+                None,  # BEGIN TRANSACTION  
+                MagicMock(),  # SELECT for open_symbols
+                sqlite3.Error("Insert failed"),  # INSERT statement
+                None   # ROLLBACK
+            ]
+            mock_cursor.fetchall.return_value = []  # No existing open positions
+            mock_connect.return_value.__enter__.return_value = mock_conn
+            
+            # This should handle the error gracefully
+            add_new_positions_from_signals(temp_db_path, signals)
+            
+            # Verify rollback was called
+            mock_cursor.execute.assert_any_call("ROLLBACK")

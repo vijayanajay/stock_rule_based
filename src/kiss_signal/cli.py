@@ -34,7 +34,7 @@ def setup_logging(verbose: bool = False) -> None:
     logging.basicConfig(
         level=level,
         format="%(message)s",
-        datefmt="[%X]",
+        datefmt="[%Y-%m-%d %H:%M:%S]",
         handlers=[RichHandler(console=console, show_path=False)],
         force=True,
     )
