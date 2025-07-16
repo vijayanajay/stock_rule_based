@@ -86,7 +86,8 @@ def get_price_data(
         else:
             # Download fresh data
             logger.info(f"Downloading fresh data for {symbol}")
-            data = _fetch_symbol_data(symbol, years)
+            symbol_with_suffix = _add_ns_suffix(symbol)
+            data = _fetch_symbol_data(symbol_with_suffix, years)
             if data is not None:
                 _save_symbol_cache(symbol, data, cache_dir)
             else:
@@ -97,9 +98,11 @@ def get_price_data(
     
     # Apply date filtering
     if start_date:
-        data = data[data.index >= pd.to_datetime(start_date)]    
+        start_timestamp = pd.to_datetime(start_date)
+        data = data[data.index >= start_timestamp]    
     if end_date:
-        data = data[data.index <= pd.to_datetime(end_date)]
+        end_timestamp = pd.to_datetime(end_date)
+        data = data[data.index <= end_timestamp]
     
     # Apply freeze date restriction
     if freeze_date:
@@ -109,7 +112,8 @@ def get_price_data(
         raise ValueError(f"No data available for {symbol} in requested date range")
     
     # Only log in verbose mode for individual symbol data serving
-    if len(data) < 50:
+    # Skip warning for NIFTY index as it's used for benchmark calculations with short date ranges
+    if len(data) < 50 and not symbol.startswith('^NSEI'):
         logger.warning(f"Limited data for {symbol}: only {len(data)} rows")
     
     return data

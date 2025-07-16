@@ -253,9 +253,111 @@ class TestDataBasicFunctions:
             assert len(result) == 10
             assert "Limited data for TEST" in caplog.text
 
+    def test_get_price_data_nifty_no_warning_for_limited_data(self, temp_cache_dir, caplog):
+        """Test get_price_data does NOT log a warning for limited NIFTY data."""
+        # Create limited NIFTY data (only 3 rows, which would normally trigger warning)
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=3)),
+            'open': [18000, 18100, 18200], 
+            'high': [18200, 18300, 18400], 
+            'low': [17800, 17900, 18000], 
+            'close': [18050, 18150, 18250],
+            'volume': [1000000, 1100000, 1200000]
+        })
+        data._save_symbol_cache("^NSEI", test_data, temp_cache_dir)
+        
+        with caplog.at_level(logging.WARNING):
+            result = data.get_price_data("^NSEI", temp_cache_dir)
+            assert len(result) == 3
+            # Verify NO warning was logged for NIFTY
+            assert "Limited data for ^NSEI" not in caplog.text
+            
+    def test_get_price_data_regular_stock_still_warns_for_limited_data(self, temp_cache_dir, caplog):
+        """Test that regular stocks still get warnings for limited data while NIFTY doesn't."""
+        # Create limited data for both NIFTY and regular stock
+        nifty_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=3)),
+            'open': [18000, 18100, 18200], 
+            'high': [18200, 18300, 18400], 
+            'low': [17800, 17900, 18000], 
+            'close': [18050, 18150, 18250],
+            'volume': [1000000, 1100000, 1200000]
+        })
+        
+        stock_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=3)),
+            'open': [100, 101, 102], 
+            'high': [105, 106, 107], 
+            'low': [95, 96, 97], 
+            'close': [102, 103, 104],
+            'volume': [1000, 1100, 1200]
+        })
+        
+        data._save_symbol_cache("^NSEI", nifty_data, temp_cache_dir)
+        data._save_symbol_cache("RELIANCE", stock_data, temp_cache_dir)
+        
+        with caplog.at_level(logging.WARNING):
+            # Test NIFTY - should NOT warn
+            caplog.clear()
+            nifty_result = data.get_price_data("^NSEI", temp_cache_dir)
+            assert len(nifty_result) == 3
+            assert "Limited data for ^NSEI" not in caplog.text
+            
+            # Test regular stock - should warn
+            caplog.clear()
+            stock_result = data.get_price_data("RELIANCE", temp_cache_dir)
+            assert len(stock_result) == 3
+            assert "Limited data for RELIANCE" in caplog.text
+
     def test_needs_refresh_os_error(self, temp_cache_dir):
         """Test _needs_refresh handles OSError."""
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_file.touch()
         with patch('pathlib.Path.stat', side_effect=OSError("Permission denied")):
             assert data._needs_refresh("TEST", temp_cache_dir, 7) is True
+
+    @patch('kiss_signal.data._fetch_symbol_data')
+    def test_get_price_data_adds_ns_suffix_for_fetch(self, mock_fetch, temp_cache_dir):
+        """Test that get_price_data adds .NS suffix when fetching fresh data."""
+        # Setup: no cache file exists, so it will try to fetch fresh data
+        mock_fetch.return_value = pd.DataFrame({
+            'date': pd.to_datetime(['2023-01-01', '2023-01-02']),
+            'open': [100, 101],
+            'high': [105, 106],
+            'low': [95, 96],
+            'close': [102, 103],
+            'volume': [1000, 1100]
+        })
+        
+        # Call get_price_data with a plain symbol
+        try:
+            data.get_price_data("BPCL", temp_cache_dir, refresh_days=0, years=1)
+        except Exception:
+            # We expect this to fail during save, but we only care about the fetch call
+            pass
+        
+        # Verify that _fetch_symbol_data was called with the .NS suffix
+        mock_fetch.assert_called_once_with("BPCL.NS", 1)
+
+    @patch('kiss_signal.data._fetch_symbol_data')
+    def test_get_price_data_preserves_index_symbols(self, mock_fetch, temp_cache_dir):
+        """Test that get_price_data preserves index symbols like ^NSEI without adding .NS suffix."""
+        # Setup: no cache file exists, so it will try to fetch fresh data
+        mock_fetch.return_value = pd.DataFrame({
+            'date': pd.to_datetime(['2023-01-01', '2023-01-02']),
+            'open': [18000, 18100],
+            'high': [18200, 18300],
+            'low': [17800, 17900],
+            'close': [18050, 18150],
+            'volume': [1000000, 1100000]
+        })
+        
+        # Call get_price_data with an index symbol
+        try:
+            data.get_price_data("^NSEI", temp_cache_dir, refresh_days=0, years=1)
+        except Exception:
+            # We expect this to fail during save, but we only care about the fetch call
+            pass
+        
+        # Verify that _fetch_symbol_data was called with the original symbol (no .NS suffix)
+        mock_fetch.assert_called_once_with("^NSEI", 1)
