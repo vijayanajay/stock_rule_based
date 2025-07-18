@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Test Coverage Guard",
+  "description": "Monitors source file changes to identify new/modified functions, check test coverage, generate missing tests, run verification, and update coverage reports",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file has been modified. Please:\n\n1. Analyze the changed file to identify new or modified functions and methods\n2. Check if corresponding tests exist in the tests/ directory that cover these changes\n3. If test coverage is missing or insufficient, generate comprehensive test cases for the new/modified code\n4. Run the generated tests to verify they pass and provide meaningful coverage\n5. Update the coverage reports (.coverage file) to reflect the new test coverage\n\nFocus on ensuring complete test coverage for all new functionality while maintaining existing test quality standards."
+  }
+}

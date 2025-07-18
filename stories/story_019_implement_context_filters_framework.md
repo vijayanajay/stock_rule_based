@@ -18,11 +18,12 @@ The current system generates signals based purely on individual stock patterns w
 **KISS Approach**: Start with ONE simple market filter instead of building a complex framework.
 
 **Single Context Filter to Implement:**
-- **Market Bullish Filter**: Only allow signals when NIFTY 50 is above its 50-day Simple Moving Average
+- **Market Above SMA Filter**: Only allow signals when NIFTY 50 is above its configurable SMA period
 
 This single filter will:
 - Reduce signals during bear markets (when most strategies underperform)
 - Improve risk-adjusted returns by avoiding counter-trend trades
+- Allow configuration of different SMA periods (20, 50, 200 day) without code changes
 - Provide measurable business value before adding complexity
 
 ## Architectural Deep Dive
@@ -36,26 +37,26 @@ The existing architecture follows a clean modular monolith pattern:
 ### Proposed Simple Changes
 
 #### 1. Add One Simple Function
-Add `is_market_bullish()` function to `rules.py` that checks if NIFTY > 50-day SMA.
+Add `market_above_sma()` function to `rules.py` that checks if NIFTY > configurable SMA period.
 
 #### 2. Add Simple Configuration Field
-Extend `RulesConfig` with optional `market_bullish_required: bool = False` field.
+Extend `RulesConfig` with optional `context_filters: List[RuleDef] = []` field.
 
 #### 3. Add Basic Market Data Support
 Extend `data.py` to fetch and cache NIFTY 50 data (^NSEI).
 
 #### 4. Integrate in Backtester
-Modify `_backtest_combination()` to check market condition before generating signals.
+Modify `_backtest_combination()` to apply context filters before generating signals.
 
 **No Frameworks, No Registries, No Complex Configuration** - Just solve the immediate business need.
 
 ## Technical Implementation Goals
 
 ### Single Phase: Simple Market Filter (Story 019)
-1. **Simple Rule Function**: `is_market_bullish()` - one function, one purpose
-2. **Simple Configuration**: `market_bullish_required: bool` in `RulesConfig`
+1. **Simple Rule Function**: `market_above_sma()` - one function, configurable parameters
+2. **Simple Configuration**: `context_filters` with one filter definition
 3. **Basic Data Support**: Fetch and cache NIFTY 50 data
-4. **Basic Integration**: Check market condition in backtester
+4. **Basic Integration**: Apply context filters in backtester
 5. **Measure Impact**: Prove business value before adding complexity
 
 **Next Steps (Future Stories)**:
@@ -66,10 +67,10 @@ Modify `_backtest_combination()` to check market condition before generating sig
 
 ### AC-1: Simple Market Context Function
 **File**: `src/kiss_signal/rules.py`
-**Function Signature**: `is_market_bullish(market_data: pd.DataFrame) -> pd.Series`
+**Function Signature**: `market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series`
 
 **Implementation Requirements**:
-- [ ] **Single Purpose**: Check if market (NIFTY 50) is above 50-day SMA
+- [ ] **Single Purpose**: Check if market index is above configurable SMA period
 - [ ] **Clear Logic**: Simple, readable function with no abstraction layers
 - [ ] **Data Validation**: Use existing `_validate_ohlcv_columns()` pattern
 - [ ] **Edge Case Handling**: Return `pd.Series(False, index=market_data.index)` if insufficient data
@@ -77,44 +78,50 @@ Modify `_backtest_combination()` to check market condition before generating sig
 
 **Simple Implementation**:
 ```python
-def is_market_bullish(market_data: pd.DataFrame) -> pd.Series:
-    """Check if market (NIFTY 50) is above 50-day Simple Moving Average.
+def market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series:
+    """Check if market index is above its Simple Moving Average.
     
     This represents a bullish market regime where long strategies 
     typically perform better.
     
     Args:
-        market_data: DataFrame with OHLCV data for NIFTY 50
+        market_data: DataFrame with OHLCV data for market index (e.g., NIFTY 50)
+        period: SMA period in days (default: 50)
         
     Returns:
-        Boolean Series with True when market is bullish (price > 50-day SMA)
+        Boolean Series with True when market is above SMA
     """
     _validate_ohlcv_columns(market_data, ['close'])
     
-    # Check sufficient data for 50-day SMA
-    if len(market_data) < 50:
-        logger.warning(f"Insufficient market data: {len(market_data)} rows, need 50")
+    if period <= 0:
+        raise ValueError(f"SMA period must be positive, got {period}")
+    
+    # Check sufficient data for SMA calculation
+    if len(market_data) < period:
+        logger.warning(f"Insufficient market data: {len(market_data)} rows, need {period}")
         return pd.Series(False, index=market_data.index)
     
-    # Calculate 50-day SMA
-    sma_50 = market_data['close'].rolling(window=50).mean()
+    # Calculate SMA
+    sma = market_data['close'].rolling(window=period).mean()
     
     # Market is bullish when price > SMA
-    bullish_signals = market_data['close'] > sma_50
+    bullish_signals = market_data['close'] > sma
     
     signal_count = bullish_signals.sum()
     total_periods = len(bullish_signals)
-    logger.debug(f"Market bullish (NIFTY > 50-day SMA): {signal_count}/{total_periods} days "
+    logger.debug(f"Market above {period}-day SMA: {signal_count}/{total_periods} days "
                 f"({signal_count/total_periods*100:.1f}%)")
     
     return bullish_signals.fillna(False)
 ```
 
 **Unit Tests Required**:
+- [ ] Test with different SMA periods (20, 50, 200)
 - [ ] Test with bullish market data (price consistently above SMA)
 - [ ] Test with bearish market data (price consistently below SMA)
-- [ ] Test with insufficient data (< 50 rows)
+- [ ] Test with insufficient data (< period rows)
 - [ ] Test with missing data (NaN values)
+- [ ] Test with invalid period (0, negative)
 - [ ] Test crossover scenarios (price crossing above/below SMA)
 
 ### AC-2: Simple Configuration Extension
@@ -127,61 +134,69 @@ class RulesConfig(BaseModel):
     baseline: RuleDef
     layers: List[RuleDef] = []
     sell_conditions: List[RuleDef] = Field(default_factory=list)
-    market_bullish_required: bool = False  # NEW SIMPLE FIELD
+    context_filters: List[RuleDef] = Field(default_factory=list)  # NEW SIMPLE FIELD
     validation: Optional[Dict[str, Any]] = None
 ```
 
 **Simple Configuration Example**:
 ```yaml
 # Add to existing rules.yaml
-market_bullish_required: true  # Only trade when NIFTY > 50-day SMA
+context_filters:
+  - name: "filter_market_is_bullish"
+    type: "market_above_sma"
+    description: "Context 1: Don't fight the tape. The NIFTY 50 index must be above its 50-day SMA."
+    params:
+      index_symbol: "^NSEI"
+      period: 50
 ```
 
 ### AC-3: Basic Market Data Support
 **File**: `src/kiss_signal/data.py`
 
-**New Simple Function**: `get_nifty_data`
+**New Simple Function**: `get_market_data`
 ```python
-def get_nifty_data(
+def get_market_data(
+    index_symbol: str,
     cache_dir: Path,
     years: int = 1,
     freeze_date: Optional[date] = None,
 ) -> pd.DataFrame:
-    """Get NIFTY 50 index data for market context filtering.
+    """Get market index data for context filtering.
     
-    Simplified version of get_price_data specifically for market index.
+    Simplified version of get_price_data specifically for market indices.
     
     Args:
+        index_symbol: Market index symbol (e.g., '^NSEI')
         cache_dir: Path to cache directory
         years: Number of years of data
         freeze_date: Optional freeze date for backtesting
         
     Returns:
-        DataFrame with NIFTY 50 OHLCV data
+        DataFrame with market index OHLCV data
     """
-    symbol = "^NSEI"
-    cache_file = cache_dir / f"NIFTY50.csv"
+    # Use different cache filename pattern for indices
+    cache_file = cache_dir / f"{index_symbol.replace('^', 'INDEX_')}.csv"
     
-    # Same logic as get_price_data but for NIFTY
-    if freeze_date or not _needs_refresh(symbol, cache_dir, 30):
+    # Same logic as get_price_data but for market indices
+    if freeze_date or not _needs_refresh(index_symbol, cache_dir, 30):
         if cache_file.exists():
-            return _load_nifty_cache(cache_file)
+            return _load_market_cache(cache_file)
     
     # Download fresh data
-    logger.info("Downloading NIFTY 50 data")
-    data = _fetch_symbol_data(symbol, years)
+    logger.info(f"Downloading market index data for {index_symbol}")
+    data = _fetch_symbol_data(index_symbol, years)
     if data is not None:
-        _save_nifty_cache(data, cache_file)
+        _save_market_cache(data, cache_file)
         return data
     else:
-        raise ValueError("Failed to fetch NIFTY 50 data")
+        raise ValueError(f"Failed to fetch market data for {index_symbol}")
 
-def _load_nifty_cache(cache_file: Path) -> pd.DataFrame:
-    """Load NIFTY data from cache."""
+def _load_market_cache(cache_file: Path) -> pd.DataFrame:
+    """Load market index data from cache."""
     # Same as _load_symbol_cache
 
-def _save_nifty_cache(data: pd.DataFrame, cache_file: Path) -> None:
-    """Save NIFTY data to cache."""
+def _save_market_cache(data: pd.DataFrame, cache_file: Path) -> None:
+    """Save market index data to cache."""
     # Same as _save_symbol_cache
 ```
 
@@ -198,17 +213,21 @@ def _backtest_combination(
     edge_score_weights: EdgeScoreWeights,
     symbol: str,
 ) -> Optional[Dict[str, Any]]:
-    """Modified to include simple market bullish check."""
+    """Modified to include simple context filters check."""
     try:
-        # NEW: Check market condition first if required
-        if rules_config.market_bullish_required:
-            market_data = self._get_nifty_data_cached()
-            market_bullish = getattr(rules, 'is_market_bullish')(market_data)
+        # NEW: Apply context filters first if any are defined
+        if rules_config.context_filters:
+            context_signals = self._apply_context_filters(
+                price_data, rules_config.context_filters, symbol
+            )
             
-            # If market is never bullish, skip expensive rule evaluation
-            if not market_bullish.any():
-                logger.debug(f"Market not bullish for {symbol}, skipping")
+            # If no favorable context periods, skip expensive rule evaluation
+            if not context_signals.any():
+                logger.debug(f"No favorable context for {symbol}, skipping")
                 return None
+        else:
+            # No context filters - allow all periods
+            context_signals = pd.Series(True, index=price_data.index)
         
         # Generate combined signal for the rule combination
         entry_signals: Optional[pd.Series] = None
@@ -223,46 +242,93 @@ def _backtest_combination(
             logger.warning(f"Could not generate entry signals for combo: {[r.name for r in combo]}")
             return None
         
-        # Apply market filter to final signals if required
-        if rules_config.market_bullish_required:
-            # Align market signals with stock signals
-            aligned_market_signals = market_bullish.reindex(entry_signals.index, method='ffill').fillna(False)
-            final_entry_signals = entry_signals & aligned_market_signals
-        else:
-            final_entry_signals = entry_signals
+        # Apply context filters to final signals
+        final_entry_signals = entry_signals & context_signals
         
         # Rest of the method unchanged, but use final_entry_signals
         # ...
 
-def _get_nifty_data_cached(self) -> pd.DataFrame:
-    """Get NIFTY data with caching for backtesting."""
-    if not hasattr(self, '_nifty_cache'):
-        from .data import get_nifty_data
-        self._nifty_cache = get_nifty_data(
+def _apply_context_filters(
+    self,
+    stock_data: pd.DataFrame,
+    context_filters: List[RuleDef],
+    symbol: str
+) -> pd.Series:
+    """Apply context filters and return combined boolean series."""
+    if not context_filters:
+        return pd.Series(True, index=stock_data.index)
+    
+    # Initialize with all True
+    combined_signals = pd.Series(True, index=stock_data.index)
+    
+    for filter_def in context_filters:
+        try:
+            if filter_def.type == "market_above_sma":
+                # Get market data
+                index_symbol = filter_def.params["index_symbol"]
+                market_data = self._get_market_data_cached(index_symbol)
+                
+                # Apply the filter
+                filter_params = {k: v for k, v in filter_def.params.items() if k != "index_symbol"}
+                filter_signals = getattr(rules, filter_def.type)(market_data, **filter_params)
+                
+                # Align with stock data and apply AND logic
+                aligned_filter = filter_signals.reindex(stock_data.index, method='ffill').fillna(False)
+                combined_signals &= aligned_filter
+                
+                # Log filter effectiveness
+                filter_count = aligned_filter.sum()
+                logger.debug(f"Context filter '{filter_def.name}' for {symbol}: "
+                            f"{filter_count}/{len(aligned_filter)} days pass "
+                            f"({filter_count/len(aligned_filter)*100:.1f}%)")
+            else:
+                raise ValueError(f"Unknown context filter type: {filter_def.type}")
+                
+        except Exception as e:
+            logger.error(f"Error applying context filter '{filter_def.name}' to {symbol}: {e}")
+            # Fail-safe: if context filter fails, exclude all signals
+            return pd.Series(False, index=stock_data.index)
+    
+    combined_count = combined_signals.sum()
+    logger.info(f"Combined context filters for {symbol}: "
+               f"{combined_count}/{len(combined_signals)} days pass "
+               f"({combined_count/len(combined_signals)*100:.1f}%)")
+    
+    return combined_signals
+
+def _get_market_data_cached(self, index_symbol: str) -> pd.DataFrame:
+    """Get market data with caching for backtesting."""
+    if not hasattr(self, '_market_cache'):
+        self._market_cache = {}
+    
+    if index_symbol not in self._market_cache:
+        from .data import get_market_data
+        self._market_cache[index_symbol] = get_market_data(
+            index_symbol=index_symbol,
             cache_dir=Path("data"),  # TODO: Get from config
             years=2,  # Buffer for lookback calculations
             freeze_date=getattr(self, 'freeze_date', None)
         )
-    return self._nifty_cache
+    return self._market_cache[index_symbol]
 ```
 
 ## Simple Success Metrics
 
 ### SM-1: Functional Validation
-- [ ] **Rule Function**: `is_market_bullish()` passes unit tests with edge cases
-- [ ] **Configuration**: `market_bullish_required` loads without errors
-- [ ] **Data Integration**: NIFTY 50 data fetching and caching works correctly
-- [ ] **Backtester Pipeline**: Full integration test with market filter completes successfully
+- [ ] **Rule Function**: `market_above_sma()` passes unit tests with edge cases
+- [ ] **Configuration**: `context_filters` loads without errors
+- [ ] **Data Integration**: Market index data fetching and caching works correctly
+- [ ] **Backtester Pipeline**: Full integration test with context filters completes successfully
 
 ### SM-2: Business Impact Validation
 - [ ] **Signal Reduction**: Market filter reduces signals during bear markets by 50-80%
-- [ ] **Performance Impact**: Market filter adds <5% to total backtest time
-- [ ] **Edge Score Improvement**: At least 30% of strategies show improved edge scores with market filter
+- [ ] **Performance Impact**: Context filter evaluation adds <5% to total backtest time
+- [ ] **Edge Score Improvement**: At least 30% of strategies show improved edge scores with context filter
 - [ ] **Practical Value**: Demonstrable improvement in risk-adjusted returns
 
 ### SM-3: Technical Quality
-- [ ] **Backward Compatibility**: All existing tests pass with `market_bullish_required: false`
-- [ ] **Error Handling**: NIFTY data failures gracefully degrade to no filtering
+- [ ] **Backward Compatibility**: All existing tests pass with empty `context_filters`
+- [ ] **Error Handling**: Market data failures gracefully degrade to no filtering
 - [ ] **Logging**: Clear debug information for troubleshooting
 - [ ] **Simple Code**: Function is <20 lines, easy to understand and debug
 
@@ -272,69 +338,70 @@ def _get_nifty_data_cached(self) -> pd.DataFrame:
 **Owner**: Backend Developer
 **Dependencies**: None
 **Deliverables**:
-- [ ] `is_market_bullish()` function (15 LOC)
+- [ ] `market_above_sma()` function (20 LOC)
 - [ ] Add function to `__all__` exports in `rules.py`
-- [ ] Unit tests for the function (50 LOC)
+- [ ] Unit tests for the function (60 LOC)
 
 **Files Modified**:
-- `src/kiss_signal/rules.py` (+15 LOC)
-- `tests/test_rule_funcs.py` (+50 LOC)
+- `src/kiss_signal/rules.py` (+20 LOC)
+- `tests/test_rule_funcs.py` (+60 LOC)
 
 ### Task 019.2: Simple Configuration Extension (1 story point)
 **Owner**: Backend Developer  
 **Dependencies**: Task 019.1
 **Deliverables**:
-- [ ] Add `market_bullish_required: bool` to `RulesConfig`
+- [ ] Add `context_filters: List[RuleDef]` to `RulesConfig`
 - [ ] Update example in `rules.yaml`
 - [ ] Test configuration loading
 
 **Files Modified**:
 - `src/kiss_signal/config.py` (+2 LOC)
-- `config/rules.yaml` (+2 LOC)
-- `tests/test_config.py` (+20 LOC)
+- `config/rules.yaml` (+5 LOC)
+- `tests/test_config.py` (+30 LOC)
 
 ### Task 019.3: Simple Data Support (1 story point)
 **Owner**: Backend Developer
 **Dependencies**: None  
 **Deliverables**:
-- [ ] `get_nifty_data()` function
-- [ ] NIFTY data caching
-- [ ] Test NIFTY data fetching
+- [ ] `get_market_data()` function
+- [ ] Market index data caching
+- [ ] Test market data fetching
 
 **Files Modified**:
-- `src/kiss_signal/data.py` (+30 LOC)
-- `tests/test_data.py` (+30 LOC)
+- `src/kiss_signal/data.py` (+40 LOC)
+- `tests/test_data.py` (+40 LOC)
 
 ### Task 019.4: Simple Backtester Integration (1 story point)
 **Owner**: Backend Developer
 **Dependencies**: Tasks 019.1, 019.2, 019.3
 **Deliverables**:
-- [ ] Modify `_backtest_combination()` to check market condition
-- [ ] Add NIFTY data caching in backtester
+- [ ] Modify `_backtest_combination()` to apply context filters
+- [ ] Add `_apply_context_filters()` method
+- [ ] Add market data caching in backtester
 - [ ] Integration test
 
 **Files Modified**:
-- `src/kiss_signal/backtester.py` (+25 LOC)
-- `tests/test_backtester.py` (+40 LOC)
+- `src/kiss_signal/backtester.py` (+50 LOC)
+- `tests/test_backtester.py` (+50 LOC)
 
 ## Risk Assessment & Mitigation
 
 ### Low Risks (Simple Implementation)
-1. **NIFTY Data Availability**: ^NSEI data might have gaps
+1. **Market Data Availability**: Index data might have gaps
    - *Mitigation*: Simple error handling, fallback to no filtering, clear logging
    
 2. **Performance**: Additional market data fetching
-   - *Mitigation*: Simple caching, single market data fetch per backtest
+   - *Mitigation*: Simple caching, single market data fetch per index per backtest
 
 3. **Data Alignment**: Stock vs market data date mismatches  
    - *Mitigation*: Simple pandas reindex with forward fill
 
 ### Minimal Risks
-1. **Configuration Error**: User sets `market_bullish_required: true` incorrectly
-   - *Mitigation*: Simple boolean field, hard to misconfigure
+1. **Configuration Error**: User misconfigures context filter parameters
+   - *Mitigation*: Simple parameter validation, clear error messages
    
 2. **Backward Compatibility**: Existing configurations breaking
-   - *Mitigation*: Optional field with `False` default
+   - *Mitigation*: Optional field with empty list default
 
 ## Post-Implementation Monitoring
 
@@ -342,45 +409,47 @@ def _get_nifty_data_cached(self) -> pd.DataFrame:
 1. **Signal Reduction Rate**: Expected 50-80% reduction during bear markets
 2. **Performance Impact**: <5% increase in backtesting time
 3. **Edge Score Improvement**: Improvement in edge scores for filtered strategies
-4. **Error Rates**: Monitor NIFTY data fetching issues
+4. **Error Rates**: Monitor market data fetching issues
 
 ### Success Criteria (1 week post-deployment)
 - [ ] No bugs or performance regressions
-- [ ] Market filter demonstrably improves strategy performance during bear markets
+- [ ] Context filter demonstrably improves strategy performance during bear markets
 - [ ] Simple configuration adoption by users
-- [ ] Stable NIFTY data fetching
+- [ ] Stable market data fetching
 
 ## Next Possible Stories
 
-### Story 020: Add Stock Outperformance Filter (2 story points)
-**Description**: Add second simple filter for stock vs market performance
+### Story 020: Add Market Above EMA Filter (2 story points)
+**Description**: Add second simple filter for market above EMA (different from SMA)
 **Justification**: Only if Story 019 proves valuable
 
-### Story 021: Add RSI Overbought Filter (2 story points)  
-**Description**: Avoid signals when market RSI > 70
+### Story 021: Add Stock Outperformance Filter (3 story points)  
+**Description**: Add filter for stock vs market performance comparison
 **Justification**: Only if previous filters prove valuable
 
-### Story 022: Configuration-Driven Context Filters (5 story points)
-**Description**: Make filters configurable through YAML (if we have 3+ hardcoded filters)
-**Justification**: Only after proving value with hardcoded filters
+### Story 022: Add RSI Overbought Filter (2 story points)
+**Description**: Avoid signals when market RSI > 70 (overbought conditions)
+**Justification**: Only if we have 2+ proven context filters
 
 ## KISS Principle Compliance Check
 
-✅ **Tiny Diffs**: Total addition <75 LOC across all files
-✅ **Single Purpose**: One simple function doing one thing  
-✅ **Simple Configuration**: Single boolean field
-✅ **No Frameworks**: No registries, no abstractions
-✅ **Backward Compatible**: Optional feature with safe default
+✅ **Tiny Diffs**: Total addition <115 LOC across all files
+✅ **Single Purpose**: One simple function doing one thing well  
+✅ **Simple Configuration**: Single context filter with configurable parameters
+✅ **No Complex Frameworks**: No registries, just one function and simple config
+✅ **Backward Compatible**: Optional feature with safe default (empty list)
 ✅ **Testable**: Simple function with clear inputs/outputs
 ✅ **Debuggable**: Easy to understand what went wrong
 ✅ **Minimal Dependencies**: No new external libraries
 ✅ **Prove First**: Solve immediate problem, measure impact
+✅ **Configurable**: Flexible SMA period without code changes
 
 **ARCHITECTURAL BENEFITS**:
 - **Simple Solution**: One function for one business need
-- **No Over-Engineering**: No premature abstractions
+- **No Over-Engineering**: No premature abstractions  
+- **Configurable Parameters**: Flexible without complex frameworks
 - **Measurable Impact**: Clear before/after comparison
-- **Future-Friendly**: Easy to extend if proven valuable
+- **Future-Friendly**: Easy to add more context filters if proven valuable
 
 ## Definition of Done (Simplified)
 
@@ -399,13 +468,13 @@ def _get_nifty_data_cached(self) -> pd.DataFrame:
 - [ ] **Regression Testing**: All existing tests continue to pass
 
 ### Configuration & Business Value
-- [ ] **Simple Schema**: `RulesConfig` handles `market_bullish_required` boolean
+- [ ] **Simple Schema**: `RulesConfig` handles `context_filters` list
 - [ ] **Clear Errors**: Invalid configurations fail with clear error messages  
 - [ ] **Documentation**: Simple example in `rules.yaml`
 - [ ] **Business Impact**: Measurable improvement in bear market performance
 
 ### Production Readiness
-- [ ] **Simple Error Handling**: Graceful degradation when NIFTY data unavailable
+- [ ] **Simple Error Handling**: Graceful degradation when market data unavailable
 - [ ] **Clear Logging**: Appropriate logging for debugging
 - [ ] **No Memory Leaks**: Simple implementation with no resource issues
 - [ ] **Success Metrics**: Clear measurement of filter effectiveness
@@ -413,15 +482,16 @@ def _get_nifty_data_cached(self) -> pd.DataFrame:
 ---
 
 **Story Estimation Rationale**:
-Reduced from 8 points to 3 points after KISS simplification:
-- **Single Function** (-3 points): One simple function vs complex framework
-- **Simple Configuration** (-1 point): Boolean field vs complex YAML structures  
-- **No Registries** (-1 point): Direct implementation vs abstraction layers
+Maintained at 3 points after configuration change:
+- **Single Function** (1 point): One simple function with configurable parameters
+- **Simple Configuration** (1 point): Context filters list vs boolean field (same complexity)  
+- **No Registries** (1 point): Direct implementation vs abstraction layers
 - **Prove Value First** (+0 points): Start simple, add complexity only if needed
 
 **KISS Compliance**:
-- **No Premature Abstractions**: Hardcode the most common use case
-- **Tiny Diffs**: <75 total LOC addition
+- **No Premature Abstractions**: One function for most common use case
+- **Tiny Diffs**: <115 total LOC addition
 - **Single Purpose**: One function does one thing well
+- **Configurable**: Flexible parameters without complex frameworks
 - **Debuggable**: Clear failure modes and error messages
 - **Measurable**: Easy to prove business value before adding complexity

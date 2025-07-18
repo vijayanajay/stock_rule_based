@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Kailash Principles Checker",
+  "description": "Automatically reviews newly added code against Kailash Nadh's 22 hard rules including type hints, function length, dependencies, imports, and code quality standards",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.py",
+      "tests/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review the newly added code in the saved file against Kailash Nadh's 22 hard rules. Check for:\n\nH-1: Observable behavior preservation\nH-2: Only touching src/ & tests/ directories  \nH-3: Deletion over clever rewrites for unused code\nH-4: Zero new abstractions unless deleting ≥2 copies of near-identical logic\nH-5: Show net LOC delta for suggestions\nH-6: Green tests requirement\nH-7: 100% type hints, mypy --strict compliance, no implicit Any\nH-8: No mutable global state, explicit dependency passing\nH-9: Functions/methods ≤40 logical lines\nH-10: External deps limited to rich, pydantic, PyYAML only\nH-11: Acyclic import graph, no in-function imports without comments\nH-12: Zero silent failures, concrete exception catching, proper error logging\nH-13: Ruff compliance (F,E,W,I,B,N)\nH-14: No TODO/FIXME/commented blocks\nH-15: Max one public class per module, helpers start with \"_\"\nH-16: Pure-function bias, side-effects marked with \"# impure\"\nH-17: Every module defines __all__, no \"from x import *\"\nH-18: No print() outside cli.py, use Console logger\nH-19: No eval(), exec(), runtime monkey-patching\nH-20: YAML config keys are snake_case\nH-21: Core library offline-safe, network I/O only in src/adapters/\nH-22: Cold-start budget ≤0.3s for help command\n\nProvide specific feedback on any violations found and suggest fixes that align with these principles."
+  }
+}
