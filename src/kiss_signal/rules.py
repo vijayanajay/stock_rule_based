@@ -27,6 +27,8 @@ __all__ = [
     "calculate_atr",
     "stop_loss_atr",
     "take_profit_atr",
+    # New functions (Story 019) - Market context filters
+    "market_above_sma",
 ]
 
 logger = logging.getLogger(__name__)
@@ -694,3 +696,51 @@ def take_profit_atr(
                     f"atr={current_atr:.2f}, multiplier={multiplier}")
     
     return triggered
+
+
+# =============================================================================
+# Story 019: Market Context Filters
+# =============================================================================
+
+def market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series:
+    """Check if market index is above its Simple Moving Average.
+    
+    This represents a bullish market regime where long strategies 
+    typically perform better.
+    
+    Args:
+        market_data: DataFrame with OHLCV data for market index (e.g., NIFTY 50)
+        period: SMA period in days (default: 50)
+        
+    Returns:
+        Boolean Series with True when market is above SMA
+        
+    Raises:
+        ValueError: If invalid parameters or missing required columns
+        
+    Example:
+        >>> bullish_periods = market_above_sma(nifty_data, period=50)
+        >>> print(f"Market bullish {bullish_periods.sum()} out of {len(bullish_periods)} days")
+    """
+    _validate_ohlcv_columns(market_data, ['close'])
+    
+    if period <= 0:
+        raise ValueError(f"SMA period must be positive, got {period}")
+    
+    # Check sufficient data for SMA calculation
+    if len(market_data) < period:
+        logger.warning(f"Insufficient market data: {len(market_data)} rows, need {period}")
+        return pd.Series(False, index=market_data.index)
+    
+    # Calculate SMA
+    sma = market_data['close'].rolling(window=period).mean()
+    
+    # Market is bullish when price > SMA
+    bullish_signals = market_data['close'] > sma
+    
+    signal_count = bullish_signals.sum()
+    total_periods = len(bullish_signals)
+    logger.debug(f"Market above {period}-day SMA: {signal_count}/{total_periods} days "
+                f"({signal_count/total_periods*100:.1f}%)")
+    
+    return bullish_signals.fillna(False)

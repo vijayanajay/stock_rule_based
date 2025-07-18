@@ -3,6 +3,7 @@
 Tests all technical indicator functions with known data sets and edge cases.
 """
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -25,6 +26,8 @@ from kiss_signal.rules import (
     calculate_atr,
     stop_loss_atr,
     take_profit_atr,
+    # New functions (Story 019) - Market context filters
+    market_above_sma,
 )
 
 
@@ -776,6 +779,384 @@ def test_stop_loss_atr_insufficient_data():
     # Insufficient data should return False (no trigger)
     triggered = stop_loss_atr(price_data, 100.0, period=5, multiplier=2.0)
     assert not triggered
+
+
+# =============================================================================
+# Story 019: Market Context Filters Tests
+# =============================================================================
+
+@pytest.fixture
+def bullish_market_data() -> pd.DataFrame:
+    """Create market data that is consistently above SMA (bullish market)."""
+    dates = pd.date_range('2023-01-01', periods=60, freq='D')
+    
+    # Create uptrending market data
+    base_price = 15000  # NIFTY-like levels
+    trend = 50  # Strong uptrend
+    
+    prices = []
+    for i in range(len(dates)):
+        price = base_price + trend * i + (i % 7 - 3) * 20  # Add some volatility
+        prices.append(price)
+    
+    return pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.005 for p in prices],
+        'low': [p * 0.995 for p in prices],
+        'close': prices,
+        'volume': [100000 + i * 1000 for i in range(len(dates))]
+    }, index=dates)
+
+
+@pytest.fixture
+def bearish_market_data() -> pd.DataFrame:
+    """Create market data that is consistently below SMA (bearish market)."""
+    dates = pd.date_range('2023-01-01', periods=60, freq='D')
+    
+    # Create downtrending market data
+    base_price = 18000  # Start high
+    decline_rate = -80  # Strong decline
+    
+    prices = []
+    for i in range(len(dates)):
+        price = base_price + decline_rate * i + (i % 5 - 2) * 30  # Add volatility
+        prices.append(max(price, 12000))  # Floor at 12000
+    
+    return pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.005 for p in prices],
+        'low': [p * 0.995 for p in prices],
+        'close': prices,
+        'volume': [100000] * len(dates)
+    }, index=dates)
+
+
+@pytest.fixture
+def mixed_market_data() -> pd.DataFrame:
+    """Create market data with periods above and below SMA."""
+    dates = pd.date_range('2023-01-01', periods=100, freq='D')
+    
+    # Create market that oscillates around a level
+    base_price = 16000
+    prices = []
+    
+    for i in range(len(dates)):
+        # Create sine wave pattern with trend
+        cycle_position = (i / 20) * 2 * 3.14159  # 20-day cycles
+        cycle_value = 800 * (0.5 + 0.5 * np.sin(cycle_position))  # 0 to 800 range
+        trend_value = i * 2  # Small uptrend
+        noise = (i % 11 - 5) * 10  # Random-ish noise
+        
+        price = base_price + cycle_value + trend_value + noise
+        prices.append(price)
+    
+    return pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.005 for p in prices],
+        'low': [p * 0.995 for p in prices],
+        'close': prices,
+        'volume': [100000] * len(dates)
+    }, index=dates)
+
+
+class TestMarketAboveSMA:
+    """Test market above SMA context filter functionality."""
+    
+    def test_bullish_market_detection(self, bullish_market_data: pd.DataFrame) -> None:
+        """Test detection of bullish market periods with different SMA periods."""
+        # Test with 20-day SMA
+        signals_20 = market_above_sma(bullish_market_data, period=20)
+        
+        assert isinstance(signals_20, pd.Series)
+        assert signals_20.dtype == bool
+        assert len(signals_20) == len(bullish_market_data)
+        assert signals_20.index.equals(bullish_market_data.index)
+        
+        # In a strong uptrend, most periods should be bullish after initial SMA calculation
+        bullish_count = signals_20.sum()
+        total_periods = len(signals_20)
+        bullish_ratio = bullish_count / total_periods
+        
+        # Should have high percentage of bullish periods (>65%) in uptrending market
+        assert bullish_ratio > 0.65, f"Expected >65% bullish periods, got {bullish_ratio:.1%}"
+        
+        # Test with 50-day SMA
+        signals_50 = market_above_sma(bullish_market_data, period=50)
+        assert isinstance(signals_50, pd.Series)
+        assert len(signals_50) == len(bullish_market_data)
+        
+        # 50-day should also show bullish trend but may be less sensitive
+        # With only 60 days of data, 50-day SMA has limited comparison periods
+        bullish_count_50 = signals_50.sum()
+        bullish_ratio_50 = bullish_count_50 / total_periods
+        # More lenient threshold for 50-day SMA due to limited data
+        assert bullish_ratio_50 > 0.15, f"Expected >15% bullish periods with 50-day SMA, got {bullish_ratio_50:.1%}"
+    
+    def test_bearish_market_detection(self, bearish_market_data: pd.DataFrame) -> None:
+        """Test detection of bearish market periods."""
+        signals = market_above_sma(bearish_market_data, period=20)
+        
+        assert isinstance(signals, pd.Series)
+        assert signals.dtype == bool
+        assert len(signals) == len(bearish_market_data)
+        
+        # In a strong downtrend, most periods should be bearish
+        bullish_count = signals.sum()
+        total_periods = len(signals)
+        bullish_ratio = bullish_count / total_periods
+        
+        # Should have low percentage of bullish periods (<30%) in downtrending market
+        assert bullish_ratio < 0.3, f"Expected <30% bullish periods, got {bullish_ratio:.1%}"
+    
+    def test_mixed_market_conditions(self, mixed_market_data: pd.DataFrame) -> None:
+        """Test with market data that has both bullish and bearish periods."""
+        signals = market_above_sma(mixed_market_data, period=20)
+        
+        assert isinstance(signals, pd.Series)
+        assert signals.dtype == bool
+        assert len(signals) == len(mixed_market_data)
+        
+        # Mixed market should have reasonable distribution of bullish/bearish periods
+        bullish_count = signals.sum()
+        total_periods = len(signals)
+        bullish_ratio = bullish_count / total_periods
+        
+        # Should be somewhere in the middle (20% to 80%)
+        assert 0.2 < bullish_ratio < 0.8, f"Expected 20-80% bullish periods, got {bullish_ratio:.1%}"
+        
+        # Should have both True and False values
+        assert signals.any(), "Should have some bullish periods"
+        assert not signals.all(), "Should have some bearish periods"
+    
+    def test_different_sma_periods(self, sample_price_data: pd.DataFrame) -> None:
+        """Test market filter with different SMA periods."""
+        periods_to_test = [20, 50, 200]
+        
+        for period in periods_to_test:
+            signals = market_above_sma(sample_price_data, period=period)
+            
+            assert isinstance(signals, pd.Series)
+            assert signals.dtype == bool
+            assert len(signals) == len(sample_price_data)
+            assert signals.index.equals(sample_price_data.index)
+            
+            # All values should be boolean (True/False, no NaN after fillna)
+            assert not signals.isna().any(), f"Found NaN values with period={period}"
+    
+    def test_insufficient_data_handling(self) -> None:
+        """Test handling when market data has insufficient periods for SMA calculation."""
+        # Create data with fewer periods than required SMA period
+        short_data = pd.DataFrame({
+            'open': [15000, 15100, 15200],
+            'high': [15050, 15150, 15250],
+            'low': [14950, 15050, 15150],
+            'close': [15000, 15100, 15200],
+            'volume': [100000, 110000, 120000]
+        }, index=pd.date_range('2023-01-01', periods=3, freq='D'))
+        
+        # Request 50-day SMA with only 3 days of data
+        signals = market_above_sma(short_data, period=50)
+        
+        assert isinstance(signals, pd.Series)
+        assert signals.dtype == bool
+        assert len(signals) == len(short_data)
+        
+        # Should return all False when insufficient data
+        assert not signals.any(), "Should return all False with insufficient data"
+        assert signals.sum() == 0, "Should have zero bullish signals with insufficient data"
+    
+    def test_parameter_validation(self, sample_price_data: pd.DataFrame) -> None:
+        """Test parameter validation for market_above_sma function."""
+        # Test invalid period values
+        with pytest.raises(ValueError, match="SMA period must be positive"):
+            market_above_sma(sample_price_data, period=0)
+        
+        with pytest.raises(ValueError, match="SMA period must be positive"):
+            market_above_sma(sample_price_data, period=-10)
+        
+        # Test valid periods
+        valid_periods = [1, 5, 10, 20, 50, 100, 200]
+        for period in valid_periods:
+            signals = market_above_sma(sample_price_data, period=period)
+            assert isinstance(signals, pd.Series)
+            assert signals.dtype == bool
+    
+    def test_missing_required_columns(self) -> None:
+        """Test error handling when required columns are missing."""
+        # Missing 'close' column
+        incomplete_data = pd.DataFrame({
+            'open': [15000, 15100, 15200],
+            'high': [15050, 15150, 15250],
+            'low': [14950, 15050, 15150],
+            'volume': [100000, 110000, 120000]
+        })
+        
+        with pytest.raises(ValueError, match="Missing required columns"):
+            market_above_sma(incomplete_data, period=20)
+        
+        # Test with only close column (should work)
+        close_only_data = pd.DataFrame({
+            'close': [15000, 15100, 15200, 15150, 15250]
+        })
+        
+        signals = market_above_sma(close_only_data, period=3)
+        assert isinstance(signals, pd.Series)
+        assert signals.dtype == bool
+    
+    def test_empty_dataframe_handling(self) -> None:
+        """Test handling of empty DataFrame."""
+        empty_data = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'volume'])
+        
+        signals = market_above_sma(empty_data, period=20)
+        
+        assert isinstance(signals, pd.Series)
+        assert len(signals) == 0
+        assert signals.dtype == bool
+    
+    def test_nan_values_handling(self) -> None:
+        """Test handling of NaN values in market data."""
+        dates = pd.date_range('2023-01-01', periods=30, freq='D')
+        prices = [15000 + i * 10 for i in range(30)]
+        
+        # Introduce some NaN values
+        prices[5] = float('nan')
+        prices[15] = float('nan')
+        prices[25] = float('nan')
+        
+        data_with_nan = pd.DataFrame({
+            'open': prices,
+            'high': [p * 1.005 if not pd.isna(p) else float('nan') for p in prices],
+            'low': [p * 0.995 if not pd.isna(p) else float('nan') for p in prices],
+            'close': prices,
+            'volume': [100000] * 30
+        }, index=dates)
+        
+        # Should handle NaN gracefully
+        signals = market_above_sma(data_with_nan, period=10)
+        
+        assert isinstance(signals, pd.Series)
+        assert signals.dtype == bool
+        assert len(signals) == len(data_with_nan)
+        
+        # fillna(False) should ensure no NaN values in output
+        assert not signals.isna().any(), "Output should not contain NaN values"
+    
+    def test_crossover_scenarios(self) -> None:
+        """Test market filter behavior during SMA crossover scenarios."""
+        dates = pd.date_range('2023-01-01', periods=60, freq='D')
+        
+        # Create data that crosses above and below SMA
+        prices = []
+        base_price = 16000
+        
+        # First 20 days: below SMA (declining)
+        for i in range(20):
+            prices.append(base_price - i * 30)
+        
+        # Next 20 days: recovery and cross above SMA
+        for i in range(20):
+            prices.append(base_price - 600 + i * 40)  # Recovery
+        
+        # Last 20 days: above SMA (continuing uptrend)
+        for i in range(20):
+            prices.append(base_price + 200 + i * 20)
+        
+        crossover_data = pd.DataFrame({
+            'open': prices,
+            'high': [p * 1.005 for p in prices],
+            'low': [p * 0.995 for p in prices],
+            'close': prices,
+            'volume': [100000] * 60
+        }, index=dates)
+        
+        signals = market_above_sma(crossover_data, period=20)
+        
+        assert isinstance(signals, pd.Series)
+        assert signals.dtype == bool
+        
+        # Should show transition from bearish to bullish
+        early_signals = signals[:25]  # First 25 days
+        late_signals = signals[-15:]  # Last 15 days
+        
+        # Early period should be mostly bearish
+        early_bullish_ratio = early_signals.sum() / len(early_signals)
+        assert early_bullish_ratio < 0.4, f"Early period should be mostly bearish, got {early_bullish_ratio:.1%}"
+        
+        # Late period should be mostly bullish
+        late_bullish_ratio = late_signals.sum() / len(late_signals)
+        assert late_bullish_ratio > 0.6, f"Late period should be mostly bullish, got {late_bullish_ratio:.1%}"
+    
+    def test_edge_case_single_data_point(self) -> None:
+        """Test with single data point."""
+        single_point_data = pd.DataFrame({
+            'close': [15000]
+        }, index=pd.date_range('2023-01-01', periods=1, freq='D'))
+        
+        signals = market_above_sma(single_point_data, period=20)
+        
+        assert isinstance(signals, pd.Series)
+        assert len(signals) == 1
+        assert not signals.iloc[0], "Single point should be False (insufficient data)"
+    
+    def test_mathematical_accuracy(self) -> None:
+        """Test mathematical accuracy of SMA calculation and comparison."""
+        # Create simple data where we can manually verify SMA calculation
+        prices = [100, 102, 104, 106, 108, 110, 112, 114, 116, 118]
+        dates = pd.date_range('2023-01-01', periods=len(prices), freq='D')
+        
+        test_data = pd.DataFrame({
+            'close': prices
+        }, index=dates)
+        
+        signals = market_above_sma(test_data, period=5)
+        
+        # Manual calculation for 5-day SMA:
+        # Day 5: SMA = (100+102+104+106+108)/5 = 104, Price = 108 > 104 → True
+        # Day 6: SMA = (102+104+106+108+110)/5 = 106, Price = 110 > 106 → True
+        # Day 7: SMA = (104+106+108+110+112)/5 = 108, Price = 112 > 108 → True
+        # etc.
+        
+        # First 4 values should be False (insufficient data for SMA)
+        assert not signals[:4].any(), "First 4 values should be False"
+        
+        # From day 5 onwards, all should be True (price consistently above SMA)
+        assert signals[4:].all(), "Days 5+ should all be True (price above SMA)"
+    
+    def test_performance_with_large_dataset(self) -> None:
+        """Test performance and correctness with larger dataset."""
+        # Create 2 years of daily data
+        dates = pd.date_range('2022-01-01', periods=730, freq='D')
+        
+        # Create realistic market data with trend and volatility
+        base_price = 15000
+        prices = []
+        
+        for i in range(len(dates)):
+            trend = i * 5  # Long-term uptrend
+            cycle = 500 * np.sin(i / 50)  # Medium-term cycles
+            noise = (hash(str(i)) % 200) - 100  # Pseudo-random noise
+            price = base_price + trend + cycle + noise
+            prices.append(max(price, 10000))  # Floor price
+        
+        large_dataset = pd.DataFrame({
+            'open': prices,
+            'high': [p * 1.01 for p in prices],
+            'low': [p * 0.99 for p in prices],
+            'close': prices,
+            'volume': [100000] * len(dates)
+        }, index=dates)
+        
+        # Test with different SMA periods
+        for period in [20, 50, 200]:
+            signals = market_above_sma(large_dataset, period=period)
+            
+            assert isinstance(signals, pd.Series)
+            assert len(signals) == len(large_dataset)
+            assert signals.dtype == bool
+            
+            # Should have reasonable distribution of signals
+            bullish_ratio = signals.sum() / len(signals)
+            assert 0.1 < bullish_ratio < 0.9, f"Period {period}: unrealistic bullish ratio {bullish_ratio:.1%}"
 
 
 def test_take_profit_atr_basic():
