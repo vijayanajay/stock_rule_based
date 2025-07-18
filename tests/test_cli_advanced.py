@@ -179,15 +179,15 @@ def test_run_command_file_not_found_in_backtest(
 @patch("kiss_signal.cli.data")
 def test_run_command_backtest_generic_exception_verbose(
     mock_data, mock_run_backtests, sample_config: Dict[str, Any]
-    ) -> None:
+) -> None:
     """Test that a generic exception during backtesting is handled with verbose output."""
-    with runner.isolated_filesystem() as fs_path:
-        data_dir = Path(fs_path) / "data"; data_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"; universe_path.write_text("symbol\nRELIANCE\n")
+    with runner.isolated_filesystem() as fs:
+        data_dir = Path(fs) / "data"; data_dir.mkdir()
+        universe_path = data_dir / "nifty_large_mid.csv"; universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
         sample_config["universe_path"] = str(universe_path)
-        config_path = Path(fs_path) / "config.yaml"
+        config_path = Path("config.yaml")
         config_path.write_text(yaml.dump(sample_config))
-        rules_path = Path(fs_path) / "config" / "rules.yaml"
+        rules_path = Path(fs) / "config" / "rules.yaml"
         rules_path.parent.mkdir()
         rules_path.write_text(VALID_RULES_YAML)
 
@@ -195,7 +195,7 @@ def test_run_command_backtest_generic_exception_verbose(
         result = runner.invoke(
             app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"]
         )
-        assert result.exit_code == 1, result.stdout
+        assert result.exit_code == 1
         assert "An unexpected error occurred: Generic backtest error" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
 

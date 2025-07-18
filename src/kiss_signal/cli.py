@@ -453,16 +453,46 @@ def clear_and_recalculate(
         raise typer.Exit(1)
 
     try:
-        freeze_date_obj = date.fromisoformat(freeze_data) if freeze_data else None
-        all_results = persistence.clear_and_recalculate_strategies(
-            db_path=db_path,
-            app_config=app_config,
-            rules_config=rules_config,
-            force=force,
-            preserve_all=preserve_all,
-            freeze_date=freeze_date_obj
+        # Show preview information before confirmation
+        if not preserve_all:
+            with persistence.get_connection(db_path) as conn:
+                rules_dict = rules_config.model_dump()
+                current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
+                from .config import get_active_strategy_combinations
+                active_strategies = get_active_strategy_combinations(rules_config)
+
+                total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
+                
+                delete_count_query = f"""
+                    SELECT COUNT(*) FROM strategies
+                    WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
+                """
+                will_delete = conn.execute(delete_count_query, [current_config_hash] + active_strategies).fetchone()[0]
+                preserved_count = total_count - will_delete
+
+                console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
+                console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
+                console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
+
+                if not force and will_delete > 0:
+                    if not typer.confirm("Continue with intelligent clearing?"):
+                        console.print("[blue]Operation cancelled.[/blue]")
+                        raise typer.Exit(0)
+        else:
+            console.print("[blue]Preserve-all mode: Skipping clearing phase[/blue]")
+
+        console.print("[bold blue]Starting clear and recalculate operation...[/bold blue]")
+        
+        # Use the new persistence function
+        results = persistence.clear_and_recalculate_strategies(
+            db_path, app_config, rules_config, 
+            force=force, preserve_all=preserve_all, freeze_date=freeze_data
         )
-        console.print(f"✅ [bold green]Recalculation complete! Found {len(all_results)} new strategies.[/bold green]")
+        
+        console.print(f"✅ [bold green]Recalculation complete![/bold green]")
+        console.print(f"[green]Cleared: {results['cleared_count']} strategies[/green]")
+        console.print(f"[green]Preserved: {results['preserved_count']} historical strategies[/green]")
+        console.print(f"[green]New strategies found: {results['new_strategies']}[/green]")
 
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")

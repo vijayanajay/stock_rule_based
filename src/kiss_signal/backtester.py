@@ -135,6 +135,7 @@ class Backtester:
             
             edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
             strategy = {
+                'symbol': symbol,  # Add symbol to strategy data for persistence
                 'rule_stack': combo,  # Persist the entire rule combination
                 'edge_score': edge_score,
                 'win_pct': win_pct,
@@ -354,11 +355,6 @@ class Backtester:
         Returns:
             Boolean series of exit signals
         """
-        exit_signals = pd.Series(False, index=price_data.index)
-        
-        # Track entry prices
-        entry_prices = self._track_entry_prices(entry_signals, price_data)
-        
         # Get ATR parameters
         period = rule_def.params.get('period', 14)
         multiplier = rule_def.params.get('multiplier', 2.0 if rule_def.type == 'stop_loss_atr' else 4.0)
@@ -368,43 +364,17 @@ class Backtester:
             atr_values = rules.calculate_atr(price_data, period)
         except Exception as e:
             logger.warning(f"Failed to calculate ATR for {rule_def.name}: {e}")
-            return exit_signals
+            return pd.Series(False, index=price_data.index)
+
+        # Vectorized approach: forward-fill entry prices and calculate exit levels
+        entry_prices = price_data['close'].where(entry_signals).ffill()
         
-        # Track current position entry price
-        current_entry_price = None
-        in_position = False
-        
-        for date in price_data.index:
-            # Check for new entry
-            if entry_signals.loc[date]:
-                current_entry_price = entry_prices.loc[date]
-                in_position = True
-                logger.debug(f"ATR exit tracker: Entered position at {current_entry_price:.2f} on {date}")
-            
-            # Check for ATR-based exit if in position
-            if in_position and current_entry_price is not None:
-                # Get data up to current date for ATR calculation
-                current_idx = price_data.index.get_loc(date)
-                current_price_data = price_data.iloc[:current_idx + 1]
-                
-                try:
-                    if rule_def.type == 'stop_loss_atr':
-                        triggered = rules.stop_loss_atr(
-                            current_price_data, current_entry_price, period, multiplier
-                        )
-                    else:  # take_profit_atr
-                        triggered = rules.take_profit_atr(
-                            current_price_data, current_entry_price, period, multiplier
-                        )
-                    
-                    if triggered:
-                        exit_signals.loc[date] = True
-                        in_position = False
-                        current_entry_price = None
-                        logger.debug(f"ATR exit triggered: {rule_def.type} on {date}")
-                        
-                except Exception as e:
-                    logger.debug(f"ATR exit check failed on {date}: {e}")
+        if rule_def.type == 'stop_loss_atr':
+            exit_level = entry_prices - (multiplier * atr_values)
+            exit_signals = price_data['close'] <= exit_level
+        else:  # take_profit_atr
+            exit_level = entry_prices + (multiplier * atr_values)
+            exit_signals = price_data['close'] >= exit_level
         
         logger.debug(f"Generated {exit_signals.sum()} ATR-based exit signals for {rule_def.name}")
         return exit_signals

@@ -3,7 +3,8 @@
 __version__ = "1.4.0"
 __author__ = "KISS Signal Team"
 
-# Re-export main classes for convenience
+# Re-export main classes and modules for convenience
 from .config import Config
+from . import data, backtester, persistence, reporter
 
-__all__ = ["Config", "__version__"]
+__all__ = ["Config", "data", "backtester", "persistence", "reporter", "__version__"]

@@ -29,7 +29,7 @@ def test_run_command_help() -> None:
     # Testing subcommand help can be brittle if the main callback has dependencies.
     # This test is simplified to check the main help, which is more robust.
     result = runner.invoke(app, ["--help"])
-    assert result.exit_code == 0, result.stdout
+    assert result.exit_code == 0
     assert "run" in result.stdout
 
 

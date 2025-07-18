@@ -1,5 +1,11 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Error Handling Hierarchy: Inconsistent Exception Flow (2025-07-18)
+- **Issue**: The `clear_and_recalculate_strategies()` function had inconsistent error handling where data-related exceptions were being swallowed by a catch-all handler instead of propagating to the CLI level as intended.
+- **Structural Flaw**: Two-tier exception handling with overlapping responsibilities - specific exceptions (`ValueError`, `FileNotFoundError`, `ConnectionError`) had conditional re-raising logic, but generic `Exception` handler was catching data errors before the string-based detection could work.
+- **Fix**: Moved data-related error detection (string matching for "fetch"/"data") to the general exception handler to ensure consistent propagation regardless of exception type.
+- **Lesson**: Error handling hierarchy must be designed with clear, non-overlapping responsibilities. String-based error classification should be applied consistently across all exception types when determining whether to propagate vs. handle gracefully.
+
 ## Test Harness Integrity: Flawed Invocation and Non-Resilient Setup (2025-07-25)
     1.  **Flawed CLI Invocation (`test_run_command_backtest_generic_exception_verbose`):** A test invoked the Typer CLI with an incorrect argument order (a global option like `--verbose` placed after the `run` command), causing a framework `UsageError` (exit code 2) instead of testing the application's error handling (exit code 1).
     2.  **Non-Resilient Test Setup (`test_run_command_help`):** A help-text test for a subcommand (`run --help`) failed because it was not self-contained. It relied on filesystem state (e.g., `config.yaml`), causing the main CLI callback to fail on config loading before the help text could be displayed.
@@ -259,7 +265,26 @@
     -   CLI tests must precisely mirror valid user invocation patterns.
     -   Tests should be self-contained and not rely on implicit filesystem state.
     -   Use framework-provided fixtures (like `tmp_path`) for resource management over manual implementations to avoid platform-specific issues like file locking.
- 
+
+## Test Harness Integrity: Configuration and Fixture Desynchronization (2025-07-22)
+- **Issue**: A major refactoring of the `clear-and-recalculate` feature occurred, changing the return type of `persistence.clear_and_recalculate_strategies` from a `List` of new strategies to a `Dict` containing an operational summary. The test suite was not updated in parallel.
+- **Symptoms**:
+    1.  **API Contract Drift**: Tests in `test_persistence.py` failed with `AssertionError` because they were asserting on the old `List` contract (e.g., `isinstance(result, list)`) instead of the new `Dict` contract.
+    2.  **Flawed Mocks**: Tests for the `clear-and-recalculate` command in `test_cli_*.py` were mocking helper functions from the `run` command's workflow (`_run_backtests`, etc.) instead of the actual dependency (`persistence.clear_and_recalculate_strategies`). This made the tests completely detached from the implementation, causing them to fail unexpectedly.
+- **Fix**:
+    1.  **Corrected Assertions**: The persistence tests were updated to assert against the new `Dict` contract (e.g., `assert isinstance(result, dict)`, `assert result['new_strategies'] == 1`).
+    2.  **Corrected Mocks**: The CLI tests were rewritten to mock the correct dependency (`persistence.clear_and_recalculate_strategies`) and assert on the observable CLI output, realigning the tests with the actual implementation.
+    3.  **Improved Robustness**: The exception handling in the persistence layer was broadened to catch `Exception` instead of specific subtypes, making the data processing loop more resilient.
+- **Lesson**: The test suite is a first-class consumer of the application's API. Any refactoring is incomplete until the corresponding tests are updated or deleted. Maintaining test-code synchronization is critical to prevent architectural drift and ensure the test suite remains a reliable safety net. Zombie tests for old implementations must be killed, and mocks must target the actual, direct dependencies of the code under test.
+
+## Test Harness Integrity: Flawed Invocation and Data Structure Flaw (2025-07-23)
+- **Issue**: A large number of test failures were caused by a structural desynchronization between the application's `Config` Pydantic model and the test fixtures that create `config.yaml` files or instantiate `Config` objects. The `Config` model was updated with new required fields (`reports_output_dir`, `edge_score_threshold`), but several test cases were not updated, leading to widespread `ValidationError` during test setup. Additionally, some CLI tests used incorrect argument ordering for Typer, and help-text tests were not resilient.
+- **Fix**:
+    1.  **Fixtures Updated**: All inline test configurations (`sample_config_dict` in `test_cli_advanced.py`) were updated to provide all required fields for the `Config` model, resolving the `ValidationError`.
+    2.  **Correct CLI Invocation**: A CLI test was corrected to place global options (like `--verbose`) before the command, aligning with Typer's expected syntax and preventing a `UsageError`.
+    3.  **Resilient Help Test**: The CLI help test was modified to test the main application's help text (`--help`) instead of a subcommand's, making it more robust and less dependent on a fully configured test environment.
+- **Lesson**: The test harness is a critical part of the application's structure. Any change to a core data contract like a configuration model must be propagated to all test fixtures immediately. Fixtures must be self-contained and reflect valid user invocation patterns to be reliable. An incomplete fixture is a bug in the test suite.
+
 ## Test Harness Integrity: Configuration and Fixture Desynchronization (2025-07-22)
 - **Issue**: A large number of test failures were caused by a structural desynchronization between the application's `Config` Pydantic model and the test fixtures that create `config.yaml` files or instantiate `Config` objects. The `Config` model was updated with new required fields (`reports_output_dir`, `edge_score_threshold`), but several test cases were not updated, leading to widespread `ValidationError` during test setup. Additionally, some CLI tests used incorrect argument ordering for Typer, and help-text tests were not resilient.
 - **Fix**:

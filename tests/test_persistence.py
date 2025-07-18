@@ -702,14 +702,15 @@ class TestClearAndRecalculateStrategies:
             mock_console_instance = MagicMock()
             mock_console.return_value = mock_console_instance
             
-            # Test with preserve_all=True
+            # Test with preserve_all=True, which should not clear anything
             result = persistence.clear_and_recalculate_strategies(
                 temp_db_path, app_config, rules_config, 
                 force=True, preserve_all=True
             )
             
-            assert isinstance(result, list)
-            mock_console_instance.print.assert_called()
+            assert isinstance(result, dict)
+            assert 'cleared_count' in result and result['cleared_count'] == 0
+            assert 'new_strategies' in result and result['new_strategies'] == 0
 
     def test_clear_and_recalculate_with_existing_data(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]):
         """Test clear and recalculate with existing database data."""
@@ -762,7 +763,8 @@ class TestClearAndRecalculateStrategies:
                 temp_db_path, app_config, rules_config, force=True
             )
             
-            assert isinstance(result, list)
+            assert isinstance(result, dict)
+            assert 'preserved_count' in result and result['preserved_count'] > 0
 
     def test_clear_and_recalculate_with_successful_backtesting(self, temp_db_path: Path):
         """Test clear and recalculate with successful backtesting results."""
@@ -811,12 +813,17 @@ class TestClearAndRecalculateStrategies:
             
             # Mock successful strategy results
             mock_strategy = {
+                "symbol": "RELIANCE",
                 "rule_stack": [{"type": "sma_crossover", "name": "test", "params": {}}],
                 "edge_score": 0.75,
                 "win_pct": 65.0,
                 "sharpe": 1.2,
-                "total_trades": 50,
-                "avg_return": 2.5
+                "total_trades": 15,
+                "avg_return": 2.5,
+                "max_drawdown": -5.0,
+                "volatility": 12.0,
+                "calmar": 0.5,
+                "sortino": 1.8
             }
             
             mock_bt = MagicMock()
@@ -830,9 +837,9 @@ class TestClearAndRecalculateStrategies:
                 temp_db_path, app_config, rules_config, force=True
             )
             
-            assert len(result) == 1
-            assert result[0]["symbol"] == "RELIANCE"
-            assert result[0]["edge_score"] == 0.75
+            assert isinstance(result, dict)
+            assert result['new_strategies'] == 1
+            assert result['cleared_count'] == 0
 
     def test_clear_and_recalculate_error_handling(self, temp_db_path: Path):
         """Test error handling in clear_and_recalculate_strategies."""
@@ -876,12 +883,11 @@ class TestClearAndRecalculateStrategies:
             mock_console_instance = MagicMock()
             mock_console.return_value = mock_console_instance
             
-            # Should handle exceptions gracefully and continue
-            result = persistence.clear_and_recalculate_strategies(
-                temp_db_path, app_config, rules_config, force=True
-            )
-            
-            assert isinstance(result, list)
+            # Should raise the exception up to the CLI to handle
+            with pytest.raises(Exception, match="Data fetch error"):
+                persistence.clear_and_recalculate_strategies(
+                    temp_db_path, app_config, rules_config, force=True
+                )
 
 
 class TestGetConnectionEdgeCases:

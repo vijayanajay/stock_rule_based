@@ -5,7 +5,7 @@ Following KISS principles: small, focused tests targeting uncovered lines.
 
 from typer.testing import CliRunner
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 import pytest
 from rich.console import Console
 
@@ -78,9 +78,12 @@ class TestClearAndRecalculateCommand:
             # Create database file
             db_path = Path(fs) / "data" / "test.db"
             db_path.parent.mkdir(exist_ok=True)
-            db_path.touch()
-
-            mock_clear_recalc.return_value = [{"symbol": "TEST", "edge_score": 0.8}]
+            from kiss_signal import persistence
+            persistence.create_database(db_path)
+            
+            mock_clear_recalc.return_value = {
+                'cleared_count': 5, 'preserved_count': 10, 'new_strategies': 8
+            }
 
             result = runner.invoke(app, [
                 "--config", str(config_path),
@@ -90,7 +93,7 @@ class TestClearAndRecalculateCommand:
             ])
             
             assert result.exit_code == 0
-            assert "Recalculation complete" in result.stdout
+            assert "Cleared: 5 strategies" in result.stdout
             mock_clear_recalc.assert_called_once()
 
     def test_clear_and_recalculate_db_not_found(self, sample_config, tmp_path):
@@ -133,9 +136,10 @@ class TestClearAndRecalculateCommand:
             
             db_path = Path(fs) / "data" / "test.db"
             db_path.parent.mkdir(exist_ok=True)
-            db_path.touch()
-
-            mock_clear_recalc.return_value = []
+            from kiss_signal import persistence
+            persistence.create_database(db_path)
+            
+            mock_clear_recalc.return_value = {'cleared_count': 0, 'preserved_count': 0, 'new_strategies': 0}
 
             result = runner.invoke(app, [
                 "--config", str(config_path),
@@ -147,6 +151,8 @@ class TestClearAndRecalculateCommand:
             
             assert result.exit_code == 0
             mock_clear_recalc.assert_called_once()
+            assert mock_clear_recalc.call_args[1]['preserve_all'] is True
+            assert mock_clear_recalc.call_args[1]['freeze_date'] == "2024-01-01"
 
 
 class TestAnalyzeSymbolHelperFunction:
@@ -379,11 +385,11 @@ class TestMainCallbackEdgeCases:
 class TestClearAndRecalculateErrorHandling:
     """Test clear-and-recalculate command error handling."""
 
-    @patch("kiss_signal.cli.persistence.clear_and_recalculate_strategies")
-    def test_clear_and_recalculate_exception_handling(self, mock_clear_recalc, sample_config):
+    @patch("kiss_signal.cli.persistence.get_connection")
+    def test_clear_and_recalculate_exception_handling(self, mock_get_connection, sample_config):
         """Test clear-and-recalculate handles exceptions properly."""
         with runner.isolated_filesystem() as fs:
-            mock_clear_recalc.side_effect = ValueError("Database corruption")
+            mock_get_connection.side_effect = ValueError("Database corruption")
 
             universe_path = Path(fs) / "data" / "universe.csv"
             universe_path.parent.mkdir(exist_ok=True)
@@ -398,7 +404,8 @@ class TestClearAndRecalculateErrorHandling:
             
             db_path = Path(fs) / "data" / "test.db"
             db_path.parent.mkdir(exist_ok=True)
-            db_path.touch()
+            from kiss_signal import persistence
+            persistence.create_database(db_path)
 
             result = runner.invoke(app, [
                 "--config", str(config_path),
@@ -409,12 +416,13 @@ class TestClearAndRecalculateErrorHandling:
             assert result.exit_code == 1
             assert "An unexpected error occurred" in result.stdout
 
-    @patch("kiss_signal.cli.persistence.clear_and_recalculate_strategies")
+    @patch("kiss_signal.cli._run_backtests")
+    @patch("kiss_signal.cli.data.load_universe")
+    @patch("kiss_signal.cli.persistence.get_connection")
     @patch("kiss_signal.cli.console.export_text")
-    def test_clear_and_recalculate_log_file_error(self, mock_export_text, mock_clear_recalc, sample_config):
+    def test_clear_and_recalculate_log_file_error(self, mock_export_text, mock_get_connection, mock_load_universe, mock_run_backtests, sample_config):
         """Test clear-and-recalculate log file error handling."""
         with runner.isolated_filesystem() as fs:
-            mock_clear_recalc.return_value = []
             mock_export_text.return_value = "Test log content"
 
             universe_path = Path(fs) / "data" / "universe.csv"
@@ -430,7 +438,21 @@ class TestClearAndRecalculateErrorHandling:
             
             db_path = Path(fs) / "data" / "test.db"
             db_path.parent.mkdir(exist_ok=True)
-            db_path.touch()
+            from kiss_signal import persistence
+            persistence.create_database(db_path)
+
+            # Mock database connection
+            mock_conn = Mock()
+            mock_cursor = Mock()
+            mock_cursor.fetchone.return_value = [0]  # no records to delete
+            mock_conn.execute.return_value = mock_cursor
+            mock_conn.__enter__ = Mock(return_value=mock_conn)
+            mock_conn.__exit__ = Mock(return_value=None)
+            mock_get_connection.return_value = mock_conn
+
+            # Mock other dependencies
+            mock_load_universe.return_value = ["RELIANCE", "INFY"]
+            mock_run_backtests.return_value = []
 
             # Mock Path.write_text to raise OSError
             with patch("pathlib.Path.write_text") as mock_write:
