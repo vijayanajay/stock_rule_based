@@ -362,7 +362,8 @@ def _process_open_positions(
                 # Log if data is stale (last date != run_date)
                 last_data_date = price_data.index[-1].date()
                 if last_data_date < run_date:
-                    logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date}")
+                    days_behind = (run_date - last_data_date).days
+                    logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date} ({days_behind} day{'s' if days_behind != 1 else ''} behind)")
                 
                 # Calculate NIFTY return for the same period as available stock data
                 # This is important for comparing stock performance against the market benchmark

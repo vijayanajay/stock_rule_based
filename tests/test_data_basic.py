@@ -361,3 +361,240 @@ class TestDataBasicFunctions:
         
         # Verify that _fetch_symbol_data was called with the original symbol (no .NS suffix)
         mock_fetch.assert_called_once_with("^NSEI", 1)
+
+    def test_get_price_data_position_tracking_no_warning(self, temp_cache_dir, caplog):
+        """Test that get_price_data does NOT log warning during position tracking (start_date and end_date specified)."""
+        # Create limited data that would normally trigger a warning
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),  # Only 5 rows (< 50)
+            'open': [100, 101, 102, 103, 104], 
+            'high': [105, 106, 107, 108, 109], 
+            'low': [95, 96, 97, 98, 99], 
+            'close': [102, 103, 104, 105, 106],
+            'volume': [1000, 1100, 1200, 1300, 1400]
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        with caplog.at_level(logging.WARNING):
+            # Test position tracking scenario (both start_date and end_date specified)
+            caplog.clear()
+            result = data.get_price_data(
+                "TESTSTOCK", 
+                temp_cache_dir, 
+                start_date=date(2023, 1, 2),  # Filter to even smaller range
+                end_date=date(2023, 1, 4)
+            )
+            
+            # Should have 3 rows (2023-01-02, 2023-01-03, 2023-01-04)
+            assert len(result) == 3
+            
+            # Should NOT have WARNING message in logs
+            assert "Limited data for TESTSTOCK" not in caplog.text
+            
+            # Should have DEBUG message instead (though we're testing at WARNING level)
+            # Let's test at DEBUG level to verify the DEBUG message exists
+            
+        with caplog.at_level(logging.DEBUG):
+            caplog.clear()
+            result = data.get_price_data(
+                "TESTSTOCK", 
+                temp_cache_dir, 
+                start_date=date(2023, 1, 2),
+                end_date=date(2023, 1, 4)
+            )
+            
+            # Should have DEBUG message for position tracking
+            assert "Position tracking data for TESTSTOCK: 3 rows from 2023-01-02 to 2023-01-04" in caplog.text
+
+    def test_get_price_data_regular_loading_still_warns(self, temp_cache_dir, caplog):
+        """Test that get_price_data still logs warning for limited data during regular loading (no date filters)."""
+        # Create limited data that should trigger a warning
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),  # Only 5 rows (< 50)
+            'open': [100, 101, 102, 103, 104], 
+            'high': [105, 106, 107, 108, 109], 
+            'low': [95, 96, 97, 98, 99], 
+            'close': [102, 103, 104, 105, 106],
+            'volume': [1000, 1100, 1200, 1300, 1400]
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        with caplog.at_level(logging.WARNING):
+            # Test regular loading (no start_date or end_date)
+            caplog.clear()
+            result = data.get_price_data("TESTSTOCK", temp_cache_dir)
+            
+            assert len(result) == 5
+            # Should have WARNING message for limited data
+            assert "Limited data for TESTSTOCK: only 5 rows" in caplog.text
+
+    def test_get_price_data_position_tracking_with_only_start_date_warns(self, temp_cache_dir, caplog):
+        """Test that get_price_data warns when only start_date is specified (not position tracking)."""
+        # Create limited data that should trigger a warning
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),  # Only 5 rows (< 50)
+            'open': [100, 101, 102, 103, 104], 
+            'high': [105, 106, 107, 108, 109], 
+            'low': [95, 96, 97, 98, 99], 
+            'close': [102, 103, 104, 105, 106],
+            'volume': [1000, 1100, 1200, 1300, 1400]
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        with caplog.at_level(logging.WARNING):
+            # Test with only start_date (not position tracking)
+            caplog.clear()
+            result = data.get_price_data(
+                "TESTSTOCK", 
+                temp_cache_dir, 
+                start_date=date(2023, 1, 2)  # Only start_date, no end_date
+            )
+            
+            assert len(result) == 4  # 2023-01-02 to 2023-01-05
+            # Should have WARNING message since it's not position tracking
+            assert "Limited data for TESTSTOCK: only 4 rows" in caplog.text
+
+    def test_get_price_data_position_tracking_with_only_end_date_warns(self, temp_cache_dir, caplog):
+        """Test that get_price_data warns when only end_date is specified (not position tracking)."""
+        # Create limited data that should trigger a warning
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),  # Only 5 rows (< 50)
+            'open': [100, 101, 102, 103, 104], 
+            'high': [105, 106, 107, 108, 109], 
+            'low': [95, 96, 97, 98, 99], 
+            'close': [102, 103, 104, 105, 106],
+            'volume': [1000, 1100, 1200, 1300, 1400]
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        with caplog.at_level(logging.WARNING):
+            # Test with only end_date (not position tracking)
+            caplog.clear()
+            result = data.get_price_data(
+                "TESTSTOCK", 
+                temp_cache_dir, 
+                end_date=date(2023, 1, 3)  # Only end_date, no start_date
+            )
+            
+            assert len(result) == 3  # 2023-01-01 to 2023-01-03
+            # Should have WARNING message since it's not position tracking
+            assert "Limited data for TESTSTOCK: only 3 rows" in caplog.text
+
+    def test_get_price_data_sufficient_data_no_warning(self, temp_cache_dir, caplog):
+        """Test that get_price_data does not warn when there's sufficient data (>= 50 rows)."""
+        # Create sufficient data (>= 50 rows)
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=60)),  # 60 rows (>= 50)
+            'open': range(100, 160), 
+            'high': range(105, 165), 
+            'low': range(95, 155), 
+            'close': range(102, 162),
+            'volume': range(1000, 1060)
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        with caplog.at_level(logging.WARNING):
+            # Test regular loading with sufficient data
+            caplog.clear()
+            result = data.get_price_data("TESTSTOCK", temp_cache_dir)
+            
+            assert len(result) == 60
+            # Should NOT have any warning
+            assert "Limited data for TESTSTOCK" not in caplog.text
+
+            # Test position tracking with sufficient data
+            caplog.clear()
+            result = data.get_price_data(
+                "TESTSTOCK", 
+                temp_cache_dir, 
+                start_date=date(2023, 1, 1),
+                end_date=date(2023, 2, 28)  # Will get 59 rows (Jan 1-31 + Feb 1-28)
+            )
+            
+            assert len(result) == 59
+            # Should NOT have any warning
+            assert "Limited data for TESTSTOCK" not in caplog.text
+
+    def test_get_price_data_position_tracking_uses_debug_not_warning(self, temp_cache_dir, caplog):
+        """Test that position tracking with limited data shows DEBUG message, not WARNING."""
+        # Create test data with only a few rows
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),
+            'open': [100, 101, 102, 103, 104], 
+            'high': [105, 106, 107, 108, 109], 
+            'low': [95, 96, 97, 98, 99], 
+            'close': [102, 103, 104, 105, 106],
+            'volume': [1000, 1100, 1200, 1300, 1400]
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        # Test position tracking scenario (both start_date and end_date specified)
+        with caplog.at_level(logging.DEBUG):
+            caplog.clear()
+            result = data.get_price_data(
+                "TESTSTOCK", 
+                temp_cache_dir, 
+                start_date=date(2023, 1, 2),  # Will filter to even fewer rows
+                end_date=date(2023, 1, 4)
+            )
+            
+            # Should have limited data (3 rows: Jan 2, 3, 4)
+            assert len(result) == 3
+            
+            # Should NOT have WARNING message
+            assert "Limited data for TESTSTOCK" not in caplog.text
+            
+            # Should have DEBUG message for position tracking
+            assert "Position tracking data for TESTSTOCK: 3 rows from 2023-01-02 to 2023-01-04" in caplog.text
+
+    def test_get_price_data_limited_data_still_warns_for_regular_loading(self, temp_cache_dir, caplog):
+        """Test that regular data loading with limited data still shows WARNING."""
+        # Create test data with only a few rows
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),
+            'open': [100, 101, 102, 103, 104], 
+            'high': [105, 106, 107, 108, 109], 
+            'low': [95, 96, 97, 98, 99], 
+            'close': [102, 103, 104, 105, 106],
+            'volume': [1000, 1100, 1200, 1300, 1400]
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        # Test regular loading (no start_date/end_date filters)
+        with caplog.at_level(logging.WARNING):
+            caplog.clear()
+            result = data.get_price_data("TESTSTOCK", temp_cache_dir)
+            
+            # Should have all 5 rows (which is < 50)
+            assert len(result) == 5
+            
+            # Should have WARNING message for insufficient data
+            assert "Limited data for TESTSTOCK: only 5 rows" in caplog.text
+
+    def test_get_price_data_position_tracking_with_start_date_only_still_warns(self, temp_cache_dir, caplog):
+        """Test that only specifying start_date (not position tracking) still shows WARNING."""
+        # Create test data with only a few rows
+        test_data = pd.DataFrame({
+            'date': pd.to_datetime(pd.date_range('2023-01-01', periods=5)),
+            'open': [100, 101, 102, 103, 104], 
+            'high': [105, 106, 107, 108, 109], 
+            'low': [95, 96, 97, 98, 99], 
+            'close': [102, 103, 104, 105, 106],
+            'volume': [1000, 1100, 1200, 1300, 1400]
+        })
+        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        
+        # Test with only start_date (not position tracking)
+        with caplog.at_level(logging.WARNING):
+            caplog.clear()
+            result = data.get_price_data(
+                "TESTSTOCK", 
+                temp_cache_dir, 
+                start_date=date(2023, 1, 3)  # Only start_date, no end_date
+            )
+            
+            # Should have limited data (3 rows: Jan 3, 4, 5)
+            assert len(result) == 3
+            
+            # Should have WARNING message (not position tracking)
+            assert "Limited data for TESTSTOCK: only 3 rows" in caplog.text

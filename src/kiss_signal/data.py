@@ -113,8 +113,13 @@ def get_price_data(
     
     # Only log in verbose mode for individual symbol data serving
     # Skip warning for NIFTY index as it's used for benchmark calculations with short date ranges
-    if len(data) < 50 and not symbol.startswith('^NSEI'):
+    # Also skip warning during position tracking (when both start_date and end_date are specified)
+    # as limited rows are expected when filtering to position date ranges
+    is_position_tracking = start_date is not None and end_date is not None
+    if len(data) < 50 and not symbol.startswith('^NSEI') and not is_position_tracking:
         logger.warning(f"Limited data for {symbol}: only {len(data)} rows")
+    elif len(data) < 50 and is_position_tracking:
+        logger.debug(f"Position tracking data for {symbol}: {len(data)} rows from {start_date} to {end_date}")
     
     return data
 
@@ -275,6 +280,16 @@ def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
     else:
         # Fallback to treating first column as date index
         data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+    
+    # Ensure index is properly converted to DatetimeIndex
+    # This fixes the '>=' not supported between instances of 'numpy.ndarray' and 'Timestamp' error
+    if not isinstance(data.index, pd.DatetimeIndex):
+        try:
+            data.index = pd.to_datetime(data.index)
+        except Exception as e:
+            logger.warning(f"Failed to convert index to datetime for {symbol}: {e}")
+            # If conversion fails, try to parse the index as strings
+            data.index = pd.to_datetime(data.index, errors='coerce')
     
     # Enforce lowercase column names to ensure a consistent data contract
     data.columns = [str(col).lower() for col in data.columns]

@@ -350,3 +350,12 @@
     1.  Updated the migration test mock to properly return an integer value for the database version check by configuring `mock_result.__getitem__.return_value = 1`.
     2.  Extended the `side_effect` lists in both transaction rollback tests to include `None` for the `ROLLBACK` statement, ensuring the mock can handle the complete execution path including error recovery.
 - **Lesson**: Mock configurations must model the **complete execution path** including error handling and recovery scenarios. When testing transaction rollback behavior, the mock must account for all SQL statements that will be executed, not just the happy path. Incomplete mocks create a structural flaw where tests fail due to mock exhaustion rather than testing the actual application logic. Always trace through the full code path when setting up `side_effect` lists for database operations.
+
+## Test Specification Logic: Incorrect Date Range Mathematics (2025-07-19)
+- **Issue**: The test `test_get_price_data_sufficient_data_no_warning` failed with an assertion error expecting 60 rows but receiving 59 rows when filtering data from 2023-01-01 to 2023-02-28.
+- **Root Cause**: Test specification error - the test author incorrectly assumed that filtering 60 days of data (2023-01-01 to 2023-03-01) with an end date of 2023-02-28 would return all 60 rows. However, the date range 2023-01-01 to 2023-02-28 mathematically covers only 59 days (31 days in January + 28 days in February).
+- **Symptoms**: Test comment stated "Will get all 60 rows" but the specified date range could only return 59 rows, creating an impossible expectation.
+- **Fix**: Updated the test expectation from 60 to 59 rows and corrected the comment to reflect the actual mathematical range.
+- **Lesson**: Test specifications must be mathematically sound and logically consistent with the data they operate on. When creating date range tests, verify that expectations align with calendar mathematics. Failing tests may not always indicate code bugs - sometimes they reveal logical errors in test design itself. This type of specification error can appear as a "structural issue" but is actually a test design flaw that needs correction at the test level.
+    - **Prevention**: Double-check date arithmetic when writing tests involving time ranges
+    - **Detection Pattern**: Mathematical mismatches between expected and actual results in date filtering operations
