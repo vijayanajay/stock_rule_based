@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
-__all__ = ["get_price_data", "refresh_market_data", "load_universe"]
+__all__ = ["get_price_data", "refresh_market_data", "load_universe", "get_market_data"]
 
 logger = logging.getLogger(__name__)
 
@@ -96,16 +96,25 @@ def get_price_data(
         # Load from cache
         data = _load_symbol_cache(symbol, cache_dir)
     
-    # Apply date filtering
+    # Apply date filtering with robust index handling
     if start_date:
         start_timestamp = pd.to_datetime(start_date)
+        # Ensure index is datetime for proper comparison
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index)
         data = data[data.index >= start_timestamp]    
     if end_date:
         end_timestamp = pd.to_datetime(end_date)
+        # Ensure index is datetime for proper comparison
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index)
         data = data[data.index <= end_timestamp]
     
     # Apply freeze date restriction
     if freeze_date:
+        # Ensure index is datetime for proper comparison
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index)
         data = data[data.index <= pd.to_datetime(freeze_date)]
     
     if data.empty:
@@ -275,7 +284,12 @@ def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
     
     # Set the date column as index and parse as datetime
     if 'date' in data.columns:
-        data['date'] = pd.to_datetime(data['date'])
+        # Handle potentially invalid dates gracefully
+        data['date'] = pd.to_datetime(data['date'], format='%Y-%m-%d', errors='coerce')
+        # Drop rows with invalid dates (NaT values)
+        data = data.dropna(subset=['date'])
+        if data.empty:
+            raise ValueError(f"No valid date data found for {symbol}")
         data = data.set_index('date')
     else:
         # Fallback to treating first column as date index
@@ -288,8 +302,12 @@ def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
             data.index = pd.to_datetime(data.index)
         except Exception as e:
             logger.warning(f"Failed to convert index to datetime for {symbol}: {e}")
-            # If conversion fails, try to parse the index as strings
+            # If conversion fails, try to parse the index as strings with error handling
             data.index = pd.to_datetime(data.index, errors='coerce')
+            # Drop any rows with invalid dates
+            data = data.dropna()
+            if data.empty:
+                raise ValueError(f"No valid date data found for {symbol}")
     
     # Enforce lowercase column names to ensure a consistent data contract
     data.columns = [str(col).lower() for col in data.columns]
@@ -389,3 +407,72 @@ def refresh_market_data(
     results = _fetch_data_for_symbols(symbols_to_fetch, years, freeze_date, cache_path)
     _log_refresh_summary(results, len(symbols_to_fetch))
     return {symbol: results.get(symbol, True) for symbol in symbols}
+
+
+def get_market_data(
+    index_symbol: str,
+    cache_dir: Path,
+    years: int = 1,
+    freeze_date: Optional[date] = None,
+) -> pd.DataFrame:
+    """Get market index data for context filtering.
+    
+    Simplified version of get_price_data specifically for market indices.
+    
+    Args:
+        index_symbol: Market index symbol (e.g., '^NSEI')
+        cache_dir: Path to cache directory
+        years: Number of years of data
+        freeze_date: Optional freeze date for backtesting
+        
+    Returns:
+        DataFrame with market index OHLCV data
+        
+    Raises:
+        ValueError: If market data cannot be fetched
+        FileNotFoundError: If cache doesn't exist in freeze mode
+    """
+    # Use different cache filename pattern for indices
+    cache_file = cache_dir / f"{index_symbol.replace('^', 'INDEX_')}.csv"
+    
+    # Same logic as get_price_data but for market indices
+    if freeze_date or not _needs_refresh(index_symbol, cache_dir, 30):
+        if cache_file.exists():
+            return _load_market_cache(cache_file)
+    
+    if freeze_date:
+        # In freeze mode, don't download new data
+        if not cache_file.exists():
+            raise FileNotFoundError(f"Cached market data not found for {index_symbol} (freeze mode)")
+    
+    # Download fresh data
+    logger.info(f"Downloading market index data for {index_symbol}")
+    data = _fetch_symbol_data(index_symbol, years)
+    if data is not None:
+        _save_market_cache(data, cache_file)
+        return data
+    else:
+        raise ValueError(f"Failed to fetch market data for {index_symbol}")
+
+
+def _load_market_cache(cache_file: Path) -> pd.DataFrame:
+    """Load market index data from cache."""
+    try:
+        data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+    except Exception as e:
+        logger.error(f"Failed to load market cache from {cache_file}: {e}")
+        raise ValueError(f"Corrupted market cache file: {cache_file}") from e
+    if data.empty:
+        raise ValueError("Empty cache file")
+    return data
+
+
+def _save_market_cache(data: pd.DataFrame, cache_file: Path) -> None:
+    """Save market index data to cache."""
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        data.to_csv(cache_file)
+        logger.debug(f"Saved market cache to {cache_file}")
+    except Exception as e:
+        logger.error(f"Failed to save market cache to {cache_file}: {e}")
+        raise

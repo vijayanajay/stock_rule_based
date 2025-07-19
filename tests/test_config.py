@@ -111,3 +111,67 @@ def test_load_rules_empty_file(tmp_path: Path) -> None:
     rules_file_comment.write_text("# This is just a comment in rules")
     with pytest.raises(ValueError, match="Rules file is empty or contains only comments"):
         load_rules(rules_file_comment)
+
+
+def test_rules_config_with_context_filters(tmp_path: Path) -> None:
+    """Test that RulesConfig properly loads context_filters field."""
+    rules_content = """
+baseline:
+  name: "test_baseline"
+  type: "close_above_sma"
+  params:
+    period: 20
+layers:
+  - name: "test_layer"
+    type: "volume_above_sma"
+    params:
+      period: 10
+sell_conditions:
+  - name: "test_sell"
+    type: "close_below_sma"
+    params:
+      period: 5
+context_filters:
+  - name: "filter_market_is_bullish"
+    type: "market_above_sma"
+    description: "Context 1: Don't fight the tape. The NIFTY 50 index must be above its 50-day SMA."
+    params:
+      index_symbol: "^NSEI"
+      period: 50
+"""
+    rules_file = tmp_path / "test_rules.yaml"
+    rules_file.write_text(rules_content)
+    
+    rules_config = load_rules(rules_file)
+    
+    # Verify all fields are properly loaded
+    assert rules_config.baseline.name == "test_baseline"
+    assert len(rules_config.layers) == 1
+    assert len(rules_config.sell_conditions) == 1
+    assert len(rules_config.context_filters) == 1
+    
+    # Verify context_filters specific content
+    context_filter = rules_config.context_filters[0]
+    assert context_filter.name == "filter_market_is_bullish"
+    assert context_filter.type == "market_above_sma"
+    assert context_filter.params["index_symbol"] == "^NSEI"
+    assert context_filter.params["period"] == 50
+
+
+def test_rules_config_without_context_filters(tmp_path: Path) -> None:
+    """Test that RulesConfig works with empty context_filters (backward compatibility)."""
+    rules_content = """
+baseline:
+  name: "test_baseline"
+  type: "close_above_sma"
+  params:
+    period: 20
+"""
+    rules_file = tmp_path / "minimal_rules.yaml"
+    rules_file.write_text(rules_content)
+    
+    rules_config = load_rules(rules_file)
+    
+    # Verify context_filters defaults to empty list
+    assert rules_config.context_filters == []
+    assert len(rules_config.context_filters) == 0

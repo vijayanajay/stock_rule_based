@@ -150,6 +150,19 @@ sell_conditions:
       slow_period: 20
 
 # =============================================================================
+# CONTEXT FILTERS: Market Environment Filters (Story 019)
+# GOAL: Filter out signals during unfavorable market conditions
+# =============================================================================
+# Uncomment the following section to enable market context filtering:
+context_filters:
+  - name: "filter_market_is_bullish"
+    type: "market_above_sma"
+    description: "Context 1: Don't fight the tape. The NIFTY 50 index must be above its 50-day SMA."
+    params:
+      index_symbol: "^NSEI"
+      period: 50
+
+# =============================================================================
 # Rule Validation Constraints (for reference)
 # =============================================================================
 validation:

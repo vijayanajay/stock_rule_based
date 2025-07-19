@@ -75,6 +75,7 @@ class RulesConfig(BaseModel):
     baseline: RuleDef
     layers: List[RuleDef] = []
     sell_conditions: List[RuleDef] = Field(default_factory=list)
+    context_filters: List[RuleDef] = Field(default_factory=list)  # NEW SIMPLE FIELD
     validation: Optional[Dict[str, Any]] = None # Allow validation block
 
 # impure

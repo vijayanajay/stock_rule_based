@@ -47,6 +47,20 @@ class Backtester:
     ) -> Optional[Dict[str, Any]]:
         """Backtest a single rule combination and return its performance metrics."""
         try:
+            # NEW: Apply context filters first if any are defined
+            if rules_config.context_filters:
+                context_signals = self._apply_context_filters(
+                    price_data, rules_config.context_filters, symbol
+                )
+                
+                # If no favorable context periods, skip expensive rule evaluation
+                if not context_signals.any():
+                    logger.debug(f"No favorable context for {symbol}, skipping")
+                    return None
+            else:
+                # No context filters - allow all periods
+                context_signals = pd.Series(True, index=price_data.index)
+            
             # Generate combined signal for the rule combination
             entry_signals: Optional[pd.Series] = None
             for rule_def in combo:
@@ -61,26 +75,30 @@ class Backtester:
                 logger.warning(f"Could not generate entry signals for combo: {[r.name for r in combo]}")
                 return None
             
+            # Apply context filters to final signals
+            final_entry_signals = entry_signals & context_signals
+            
             # Generate exit signals from sell_conditions and time-based exits
             exit_signals, sl_stop, tp_stop = self._generate_exit_signals(
-                entry_signals, price_data, rules_config.sell_conditions
+                final_entry_signals, price_data, rules_config.sell_conditions
             )
             
             # Debug logging
             if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"Entry signals for {symbol}: {entry_signals.sum()} total")
+                logger.debug(f"Raw entry signals for {symbol}: {entry_signals.sum()} total")
+                logger.debug(f"Final entry signals for {symbol}: {final_entry_signals.sum()} total")
                 logger.debug(f"Exit signals for {symbol}: {exit_signals.sum()} total")
                 if sl_stop:
                     logger.debug(f"Stop loss: {sl_stop:.1%}")
                 if tp_stop:
                     logger.debug(f"Take profit: {tp_stop:.1%}")
-                if entry_signals.sum() > 0:
-                    logger.debug(f"First 3 entry dates: {entry_signals[entry_signals].index[:3].tolist()}")
-                    logger.debug(f"Last 3 entry dates: {entry_signals[entry_signals].index[-3:].tolist()}")
+                if final_entry_signals.sum() > 0:
+                    logger.debug(f"First 3 entry dates: {final_entry_signals[final_entry_signals].index[:3].tolist()}")
+                    logger.debug(f"Last 3 entry dates: {final_entry_signals[final_entry_signals].index[-3:].tolist()}")
             
             portfolio = vbt.Portfolio.from_signals(
                 close=price_data['close'],
-                entries=entry_signals,
+                entries=final_entry_signals,
                 exits=exit_signals,
                 sl_stop=sl_stop,
                 tp_stop=tp_stop,
@@ -95,8 +113,8 @@ class Backtester:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(f"Portfolio trades count for {symbol}: {total_trades}")
                 logger.debug(f"Trade count type: {type(total_trades)}")
-                if total_trades == 0 and entry_signals.sum() > 0:
-                    logger.debug(f"WARNING: {entry_signals.sum()} entry signals but 0 trades generated!")
+                if total_trades == 0 and final_entry_signals.sum() > 0:
+                    logger.debug(f"WARNING: {final_entry_signals.sum()} entry signals but 0 trades generated!")
             
             # Ensure total_trades is explicitly cast to Python int to avoid any vectorbt-specific type issues
             total_trades = int(total_trades)
@@ -378,3 +396,70 @@ class Backtester:
         
         logger.debug(f"Generated {exit_signals.sum()} ATR-based exit signals for {rule_def.name}")
         return exit_signals
+
+    def _apply_context_filters(
+        self,
+        stock_data: pd.DataFrame,
+        context_filters: List[Any],
+        symbol: str
+    ) -> pd.Series:
+        """Apply context filters and return combined boolean series."""
+        if not context_filters:
+            return pd.Series(True, index=stock_data.index)
+        
+        # Initialize with all True
+        combined_signals = pd.Series(True, index=stock_data.index)
+        
+        for filter_def in context_filters:
+            try:
+                if filter_def.type == "market_above_sma":
+                    # Get market data
+                    index_symbol = filter_def.params["index_symbol"]
+                    market_data = self._get_market_data_cached(index_symbol)
+                    
+                    # Apply the filter with only valid parameters for market_above_sma
+                    valid_params = {}
+                    if "period" in filter_def.params:
+                        valid_params["period"] = filter_def.params["period"]
+                    
+                    filter_signals = getattr(rules, filter_def.type)(market_data, **valid_params)
+                    
+                    # Align with stock data and apply AND logic
+                    aligned_filter = filter_signals.reindex(stock_data.index, method='ffill').fillna(False)
+                    combined_signals &= aligned_filter
+                    
+                    # Log filter effectiveness
+                    filter_count = aligned_filter.sum()
+                    logger.debug(f"Context filter '{filter_def.name}' for {symbol}: "
+                                f"{filter_count}/{len(aligned_filter)} days pass "
+                                f"({filter_count/len(aligned_filter)*100:.1f}%)")
+                else:
+                    raise ValueError(f"Unknown context filter type: {filter_def.type}")
+                    
+            except Exception as e:
+                logger.error(f"Error applying context filter '{filter_def.name}' to {symbol}: {e}")
+                # Fail-safe: if context filter fails, exclude all signals
+                return pd.Series(False, index=stock_data.index)
+        
+        combined_count = combined_signals.sum()
+        logger.info(f"Combined context filters for {symbol}: "
+                   f"{combined_count}/{len(combined_signals)} days pass "
+                   f"({combined_count/len(combined_signals)*100:.1f}%)")
+        
+        return combined_signals
+
+    def _get_market_data_cached(self, index_symbol: str) -> pd.DataFrame:
+        """Get market data with caching for backtesting."""
+        if not hasattr(self, '_market_cache'):
+            self._market_cache = {}
+        
+        if index_symbol not in self._market_cache:
+            from pathlib import Path
+            from .data import get_market_data
+            self._market_cache[index_symbol] = get_market_data(
+                index_symbol=index_symbol,
+                cache_dir=Path("data"),  # TODO: Get from config
+                years=2,  # Buffer for lookback calculations
+                freeze_date=getattr(self, 'freeze_date', None)
+            )
+        return self._market_cache[index_symbol]

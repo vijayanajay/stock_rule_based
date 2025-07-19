@@ -1,5 +1,23 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## CLI Argument Structure: Typer Global Option Positioning (2025-07-19)
+- **Issue**: Test failure in `test_run_command_backtest_generic_exception_verbose` where CLI test expected exit code 1 but received exit code 2.
+- **Structural Root Cause**: Mismatch between Typer's CLI argument parsing rules and test invocation. The test placed global option `--verbose` after the command name (`run --verbose`) instead of before (`--verbose run`), violating Typer's callback-based architecture where global options defined in `@app.callback()` must precede command names.
+- **Fix**: Moved `--verbose` to proper position before command name in test invocation, aligning with Typer's global option parsing requirements.
+- **Lesson**: CLI framework conventions must be strictly followed in tests. Typer's global options (defined in callbacks) have different positioning rules than command-specific options. Test invocations must mirror valid user command patterns exactly.
+
+## Test Harness Integrity: Test Suite Pollution and Error Masking (2025-07-29)
+- **Issue**: Multiple test failures were caused by structural flaws in the test suite itself.
+    1.  **Test Suite Pollution**: Script files (`test_context_filter*.py`) that were not valid `pytest` tests were being discovered and executed, causing spurious failures and noise.
+    2.  **Error Masking**: A core data function (`_load_market_cache`) used a broad `except Exception:` clause that caught a specific `ValueError` ("Empty cache file") and re-wrapped it in a generic one ("Corrupted market cache file"), breaking tests that asserted on the specific error message.
+- **Fix**:
+    1.  **Deletion**: The invalid script files were deleted from the test directory, cleaning the test suite.
+    2.  **Refactoring**: The error handling in `_load_market_cache` was refactored to separate I/O/parsing error handling from business logic validation, allowing specific exceptions to propagate correctly.
+- **Lesson**: The test harness is a critical part of the application's structure.
+    -   The test suite must be kept clean of non-test scripts to ensure reliable results.
+    -   Error handling logic should be precise, avoiding broad `except` clauses that mask specific, meaningful exceptions that tests or callers might need to act upon.
+
+
 ## Error Handling Hierarchy: Inconsistent Exception Flow (2025-07-18)
 - **Issue**: The `clear_and_recalculate_strategies()` function had inconsistent error handling where data-related exceptions were being swallowed by a catch-all handler instead of propagating to the CLI level as intended.
 - **Structural Flaw**: Two-tier exception handling with overlapping responsibilities - specific exceptions (`ValueError`, `FileNotFoundError`, `ConnectionError`) had conditional re-raising logic, but generic `Exception` handler was catching data errors before the string-based detection could work.

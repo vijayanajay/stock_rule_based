@@ -25,12 +25,11 @@ baseline:
 runner = CliRunner()
 
 def test_run_command_help() -> None:
-    """Test main command help is resilient and shows expected content."""
-    # Testing subcommand help can be brittle if the main callback has dependencies.
-    # This test is simplified to check the main help, which is more robust.
-    result = runner.invoke(app, ["--help"])
+    """Test run command help shows expected content."""
+    result = runner.invoke(app, ["run", "--help"])
     assert result.exit_code == 0
-    assert "run" in result.stdout
+    assert "Usage: " in result.stdout
+    assert "--freeze-data" in result.stdout
 
 
 def test_display_results_empty():
