@@ -11,6 +11,9 @@ import numpy as np
 import pandas as pd
 import vectorbt as vbt
 
+# Configure pandas to opt into future behavior for downcasting
+pd.set_option('future.no_silent_downcasting', True)
+
 from . import rules
 from .config import RulesConfig, EdgeScoreWeights
 from .performance import performance_monitor
@@ -426,7 +429,8 @@ class Backtester:
                     
                     # Align with stock data and apply AND logic
                     stock_index = stock_data.index
-                    aligned_filter = filter_signals.reindex(stock_index, method='ffill').fillna(False).infer_objects(copy=False)
+                    aligned_filter = filter_signals.reindex(stock_index)
+                    aligned_filter = aligned_filter.ffill().fillna(False).infer_objects(copy=False)
                     combined_signals &= aligned_filter
                     
                     # Log filter effectiveness
