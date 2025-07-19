@@ -1,159 +1,15 @@
 # =============================================================================
-# KISS Signal - Master Rules Configuration
+# PROPOSED STRATEGY: High-Conviction Pullback in a Bull Market
 #
-# This file contains definitions for ALL implemented indicators, grouped into
-# logical strategies.
-#
-# HOW TO USE:
-# To test a strategy, make sure ONLY ONE 'baseline' and its corresponding
-# 'layers' section are uncommented. The file is pre-configured to test
-# Strategy 1 by default.
+# THESIS: Buy a strong bullish reversal pattern during a short-term pullback,
+# but only when the broader market and stock trend are bullish and stable.
+# Every rule here serves to confirm this single, clear thesis.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# STRATEGY 1: Candlestick Reversal Strategy (Recommended for Candlestick Testing)
-# GOAL: Find a strong reversal pattern and confirm it's happening in favorable conditions.
-# This is the CORRECT way to test candlestick patterns.
+# CONTEXT FILTERS: Is the overall market environment favorable for long trades?
+# We check this first to avoid wasting time on analysis during bear markets.
 # -----------------------------------------------------------------------------
-baseline:
-  name: "bullish_engulfing_reversal"
-  type: "engulfing_pattern"
-  description: "Baseline: Enter on a bullish engulfing pattern, a strong 2-day reversal signal."
-  params:
-    min_body_ratio: 1.2  # Reduced from 1.5 to allow more signals
-
-layers:
-  - name: "filter_with_rsi_oversold"
-    type: "rsi_oversold"
-    description: "Filter: Ensure momentum is healthy (RSI > 40) or just recovering from oversold (crossing 30)."
-    params:
-      period: 14
-      oversold_threshold: 30.0
-
-  - name: "filter_with_volume_spike"
-    type: "volume_spike"
-    description: "Filter: Confirm the reversal is backed by a significant volume increase."
-    params:
-      period: 20
-      spike_multiplier: 1.5  # Reduced from 2.0 to allow more signals
-      price_change_threshold: 0.01
-
-  - name: "filter_with_uptrend_context"
-    type: "price_above_sma"
-    description: "Filter: Ensure the reversal is happening in a broader uptrend (Price > 20-day SMA)."
-    params:
-      period: 20  # Reduced from 50 to allow more signals
-
-
-# -----------------------------------------------------------------------------
-# STRATEGY 2: Trend-Following Momentum Strategy
-# GOAL: Enter a stock that is already in a confirmed uptrend.
-# To use this, comment out Strategy 1 and uncomment this section.
-# -----------------------------------------------------------------------------
-# baseline:
-#   name: "sma_10_20_crossover"
-#   type: "sma_crossover"
-#   description: "Baseline: Enter when the 10-day SMA crosses above the 20-day SMA."
-#   params:
-#     fast_period: 10
-#     slow_period: 20
-#
-# layers:
-#   - name: "confirm_with_ema_crossover"
-#     type: "ema_crossover"
-#     description: "Layer: Confirm with a nearly simultaneous 12/26 EMA crossover."
-#     params:
-#       fast_period: 12
-#       slow_period: 26
-#
-#   - name: "confirm_with_macd_momentum"
-#     type: "macd_crossover"
-#     description: "Layer: Confirm that MACD is also showing bullish momentum."
-#     params:
-#       fast_period: 12
-#       slow_period: 26
-#       signal_period: 9
-
-
-# -----------------------------------------------------------------------------
-# STRATEGY 3: Volatility Breakout Strategy
-# GOAL: Enter when a stock breaks out of a low-volatility period.
-# To use this, comment out other strategies and uncomment this section.
-# -----------------------------------------------------------------------------
-# baseline:
-#   name: "bollinger_breakout"
-#   type: "bollinger_squeeze"
-#   description: "Baseline: Enter on a price breakout after a Bollinger Band squeeze."
-#   params:
-#     period: 20
-#     std_dev: 2.0
-#     squeeze_threshold: 0.1
-#
-# layers:
-#   - name: "confirm_with_breakout_volume"
-#     type: "volume_spike"
-#     description: "Layer: Confirm the breakout occurred on high volume."
-#     params:
-#       period: 20
-#       spike_multiplier: 2.0
-#       price_change_threshold: 0.01
-#
-#   - name: "confirm_with_macd_turn"
-#     type: "macd_crossover"
-#     description: "Layer: Confirm momentum is turning positive with the breakout."
-#     params:
-#       fast_period: 12
-#       slow_period: 26
-#       signal_period: 9
-
-
-# -----------------------------------------------------------------------------
-# SELL CONDITIONS: Dynamic Exit Rules (Story 015 + Story 018)
-# GOAL: Define systematic exit conditions beyond simple time-based holds
-# -----------------------------------------------------------------------------
-sell_conditions:
-  # ATR-Based Exits (Story 018) - Volatility-adaptive risk management
-  - name: "atr_stop_loss_2x"
-    type: "stop_loss_atr"
-    description: "Primary Risk Control: Exit if price drops 2x the 14-day ATR from entry. This adapts to each stock's volatility."
-    params:
-      period: 14
-      multiplier: 2.0
-
-  - name: "atr_take_profit_4x"
-    type: "take_profit_atr"
-    description: "Profit Target: Exit if price rises 4x the 14-day ATR from entry. Enforces a 2:1 Reward/Risk ratio."
-    params:
-      period: 14
-      multiplier: 4.0
-
-  # Percentage-Based Exits (Story 015) - Traditional fixed-percentage exits
-  # Note: These are disabled by default when ATR exits are active, but kept for comparison
-  # - name: "stop_loss_5_pct"
-  #   type: "stop_loss_pct"
-  #   description: "Exit if price drops 5% from entry."
-  #   params:
-  #     percentage: 0.05
-
-  # - name: "take_profit_15_pct" 
-  #   type: "take_profit_pct"
-  #   description: "Exit if price rises 15% from entry."
-  #   params:
-  #     percentage: 0.15
-
-  # Trend-Based Exit (Story 015) - Dynamic exit when trend breaks
-  - name: "sma_cross_under_exit"
-    type: "sma_cross_under"
-    description: "Dynamic Exit: Exit if the short-term trend breaks (10-day SMA crosses below 20-day SMA)."
-    params:
-      fast_period: 10
-      slow_period: 20
-
-# =============================================================================
-# CONTEXT FILTERS: Market Environment Filters (Story 019)
-# GOAL: Filter out signals during unfavorable market conditions
-# =============================================================================
-# Uncomment the following section to enable market context filtering:
 context_filters:
   - name: "filter_market_is_bullish"
     type: "market_above_sma"
@@ -162,40 +18,74 @@ context_filters:
       index_symbol: "^NSEI"
       period: 50
 
-# =============================================================================
-# Rule Validation Constraints (for reference)
-# =============================================================================
-validation:
-  sma_crossover:
-    fast_period: {min: 2, max: 50}
-    slow_period: {min: 5, max: 200}
-  rsi_oversold:
-    period: {min: 2, max: 50}
-    oversold_threshold: {min: 10, max: 40}
-  ema_crossover:
-    fast_period: {min: 2, max: 50}
-    slow_period: {min: 5, max: 200}
-  volume_spike:
-    period: {min: 5, max: 50}
-    spike_multiplier: {min: 1.5, max: 5.0}
-    price_change_threshold: {min: 0.005, max: 0.05}
-  hammer_pattern:
-    body_ratio: {min: 0.1, max: 0.5}
-    shadow_ratio: {min: 1.5, max: 3.0}
-  engulfing_pattern:
-    min_body_ratio: {min: 1.1, max: 2.0}
-  macd_crossover:
-    fast_period: {min: 5, max: 20}
-    slow_period: {min: 15, max: 50}
-    signal_period: {min: 5, max: 15}
-  bollinger_squeeze:
-    period: {min: 10, max: 50}
-    std_dev: {min: 1.0, max: 3.0}
-    squeeze_threshold: {min: 0.05, max: 0.2}
-  # ATR-Based Exit Validation (Story 018)
-  stop_loss_atr:
-    period: {min: 5, max: 50}
-    multiplier: {min: 0.5, max: 5.0}
-  take_profit_atr:
-    period: {min: 5, max: 50}
-    multiplier: {min: 1.0, max: 10.0}
+# -----------------------------------------------------------------------------
+# BASELINE SIGNAL: What is the core entry pattern?
+# -----------------------------------------------------------------------------
+baseline:
+  name: "strong_bullish_engulfing"
+  type: "engulfing_pattern"
+  description: "Baseline: Enter on a STRONG bullish engulfing pattern. No weak signals."
+  params:
+    min_body_ratio: 1.5  # TIGHTENED from 1.2. We only want powerful reversals.
+
+# -----------------------------------------------------------------------------
+# LAYERS: What evidence confirms this is a high-probability setup?
+# -----------------------------------------------------------------------------
+layers:
+  - name: "confirm_with_rsi_recovering"
+    type: "rsi_oversold"
+    description: "Confirmation 1: Ensure momentum is recovering from a dip (RSI crossing above 40)."
+    params:
+      period: 14
+      oversold_threshold: 40.0 # MODIFIED: We want recovery, not deep oversold conditions.
+
+  - name: "confirm_with_strong_volume"
+    type: "volume_spike"
+    description: "Confirmation 2: The reversal must be backed by significant volume (2x average)."
+    params:
+      period: 20
+      spike_multiplier: 2.0  # TIGHTENED from 1.5. We need real conviction.
+      price_change_threshold: 0.01
+
+  - name: "confirm_with_medium_term_uptrend"
+    type: "price_above_sma"
+    description: "Confirmation 3: The stock itself must be in a medium-term uptrend (Price > 50-day SMA)."
+    params:
+      period: 50  # MODIFIED from 20. Aligns with a more robust trend.
+
+# -----------------------------------------------------------------------------
+# SELL CONDITIONS: How do we manage the trade and protect capital?
+# -----------------------------------------------------------------------------
+sell_conditions:
+  # --- Primary Risk Management ---
+  - name: "atr_stop_loss_2x"
+    type: "stop_loss_atr"
+    description: "RISK 1 (Catastrophic Stop): Exit if price drops 2x ATR. This is our disaster stop."
+    params:
+      period: 14
+      multiplier: 2.0
+
+  # --- Pattern Failure Exit ---
+  # NEW: This is a crucial addition. If the reversal fails, we get out fast.
+  # This assumes a rule `price_below_pattern_low` exists. If not, this is a concept to implement.
+  # - name: "pattern_failed_exit"
+  #   type: "price_below_pattern_low"
+  #   description: "RISK 2 (Pattern Failure): Exit if price closes below the low of the engulfing pattern."
+  #   params:
+  #     lookback: 2 # For a 2-candle pattern
+
+  # --- Trend Failure Exit ---
+  - name: "trend_reversal_exit"
+    type: "sma_cross_under"
+    description: "RISK 3 (Trend Failure): Exit if the short-term trend breaks (10d SMA < 20d SMA)."
+    params:
+      fast_period: 10
+      slow_period: 20
+
+  # --- Profit Target ---
+  - name: "atr_take_profit_4x"
+    type: "take_profit_atr"
+    description: "PROFIT TARGET: Exit if price rises 4x ATR, ensuring a 2:1 Reward/Risk ratio."
+    params:
+      period: 14
+      multiplier: 4.0
