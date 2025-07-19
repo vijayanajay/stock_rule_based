@@ -425,7 +425,8 @@ class Backtester:
                     filter_signals = getattr(rules, filter_def.type)(market_data, **valid_params)
                     
                     # Align with stock data and apply AND logic
-                    aligned_filter = filter_signals.reindex(stock_data.index, method='ffill').fillna(False)
+                    stock_index = stock_data.index
+                    aligned_filter = filter_signals.reindex(stock_index, method='ffill').fillna(False).infer_objects(copy=False)
                     combined_signals &= aligned_filter
                     
                     # Log filter effectiveness
@@ -451,7 +452,7 @@ class Backtester:
     def _get_market_data_cached(self, index_symbol: str) -> pd.DataFrame:
         """Get market data with caching for backtesting."""
         if not hasattr(self, '_market_cache'):
-            self._market_cache = {}
+            self._market_cache: Dict[str, pd.DataFrame] = {}
         
         if index_symbol not in self._market_cache:
             from pathlib import Path

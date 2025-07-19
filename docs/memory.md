@@ -1,5 +1,11 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Data Serialization Integrity: Asymmetric Save/Load Operations (2025-07-19)
+- **Issue**: Test failure in `test_market_cache_save_load_cycle` where loaded DataFrame had shape (5,4) instead of original (5,5), indicating loss of DateTime index during cache save/load cycle.
+- **Structural Root Cause**: Asymmetric serialization logic between `_save_market_cache()` and `_load_market_cache()` functions. Save operation used `index=False` discarding the DateTime index, while load operation expected either a 'date' column or fallback index parsing, creating a data integrity violation across module boundaries.
+- **Fix**: Modified `_save_market_cache()` to preserve DateTime index as 'date' column using `reset_index()`, ensuring symmetric save/load operations that maintain DataFrame structural contracts.
+- **Lesson**: Paired serialization/deserialization operations must have consistent data format assumptions. When designing cache or persistence layers, the save and load operations must preserve complete data structure integrity, especially for time-series data where the index is semantically important.
+
 ## CLI Argument Structure: Typer Global Option Positioning (2025-07-19)
 - **Issue**: Test failure in `test_run_command_backtest_generic_exception_verbose` where CLI test expected exit code 1 but received exit code 2.
 - **Structural Root Cause**: Mismatch between Typer's CLI argument parsing rules and test invocation. The test placed global option `--verbose` after the command name (`run --verbose`) instead of before (`--verbose run`), violating Typer's callback-based architecture where global options defined in `@app.callback()` must precede command names.

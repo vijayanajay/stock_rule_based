@@ -423,14 +423,14 @@ Name                                   Stmts   Miss  Cover
 src\kiss_signal\__init__.py                5      0   100%
 src\kiss_signal\adapters\__init__.py       1      0   100%
 src\kiss_signal\adapters\yfinance.py      50      0   100%
-src\kiss_signal\backtester.py            223     22    90%
+src\kiss_signal\backtester.py            224     22    90%
 src\kiss_signal\cli.py                   269     12    96%
 src\kiss_signal\config.py                 87      3    97%
-src\kiss_signal\data.py                  221     33    85%
+src\kiss_signal\data.py                  228     34    85%
 src\kiss_signal\performance.py            41      0   100%
-src\kiss_signal\persistence.py           244     17    93%
+src\kiss_signal\persistence.py           244     15    94%
 src\kiss_signal\reporter.py              386     23    94%
 src\kiss_signal\rules.py                 255     12    95%
 ----------------------------------------------------------
-TOTAL                                   1782    122    93%
-======================= 408 passed in 69.62s (0:01:09) ========================
+TOTAL                                   1790    121    93%
+======================= 408 passed in 63.16s (0:01:03) ========================

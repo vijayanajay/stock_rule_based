@@ -494,14 +494,13 @@ def _run_fresh_backtests(
     symbols = data.load_universe(app_config.universe_path)
     
     bt = backtester.Backtester(
-        min_trades_threshold=app_config.min_trades_threshold,
-        edge_score_weights=app_config.edge_score_weights
+        min_trades_threshold=app_config.min_trades_threshold
     )
     
     all_results = []
     for symbol in symbols:
         try:
-            price_data = data.get_price_data(symbol, app_config.cache_dir, freeze_date=freeze_date_obj)
+            price_data = data.get_price_data(symbol, Path(app_config.cache_dir), freeze_date=freeze_date_obj)
             if price_data is not None and len(price_data) > 0:
                 strategies = bt.find_optimal_strategies(price_data, rules_config, symbol, freeze_date=freeze_date_obj, edge_score_weights=app_config.edge_score_weights)
                 all_results.extend(strategies)
@@ -567,7 +566,7 @@ def clear_and_recalculate_strategies(
         # Save new results
         if all_results:
             with get_connection(db_path) as conn:
-                save_strategies_batch(conn, all_results, app_config, rules_config)
+                save_strategies_batch(conn, all_results, datetime.now().isoformat())
                 results['new_strategies'] = len(all_results)
                 logger.info(f"Saved {len(all_results)} new strategies")
 

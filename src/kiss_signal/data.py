@@ -458,12 +458,18 @@ def get_market_data(
 def _load_market_cache(cache_file: Path) -> pd.DataFrame:
     """Load market index data from cache."""
     try:
-        data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        data = pd.read_csv(cache_file)
+        if 'date' in data.columns:
+            data['date'] = pd.to_datetime(data['date'], errors='coerce')
+            data = data.dropna(subset=['date']).set_index('date')
+        else:
+            # Fallback for old format where date was the index
+            data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
     except Exception as e:
         logger.error(f"Failed to load market cache from {cache_file}: {e}")
         raise ValueError(f"Corrupted market cache file: {cache_file}") from e
     if data.empty:
-        raise ValueError("Empty cache file")
+        raise ValueError(f"Empty or invalid cache file: {cache_file}")
     return data
 
 
@@ -471,7 +477,11 @@ def _save_market_cache(data: pd.DataFrame, cache_file: Path) -> None:
     """Save market index data to cache."""
     try:
         cache_file.parent.mkdir(parents=True, exist_ok=True)
-        data.to_csv(cache_file)
+        # Reset index to save datetime index as 'date' column to match load expectations
+        data_to_save = data.reset_index()
+        if data_to_save.index.name or 'date' not in data_to_save.columns:
+            data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
+        data_to_save.to_csv(cache_file, index=False)
         logger.debug(f"Saved market cache to {cache_file}")
     except Exception as e:
         logger.error(f"Failed to save market cache to {cache_file}: {e}")

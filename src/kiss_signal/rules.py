@@ -630,7 +630,7 @@ def stop_loss_atr(
     current_atr = atr.iloc[-1]
     stop_level = entry_price - (multiplier * current_atr)
     
-    triggered = current_price <= stop_level
+    triggered = bool(current_price <= stop_level)
     
     if triggered:
         logger.debug(f"ATR stop loss triggered: price={current_price:.2f}, "
@@ -688,7 +688,7 @@ def take_profit_atr(
     current_atr = atr.iloc[-1]
     profit_level = entry_price + (multiplier * current_atr)
     
-    triggered = current_price >= profit_level
+    triggered = bool(current_price >= profit_level)
     
     if triggered:
         logger.debug(f"ATR take profit triggered: price={current_price:.2f}, "

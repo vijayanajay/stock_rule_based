@@ -132,7 +132,7 @@ def _identify_new_signals(
             price_data = data.get_price_data(
                 symbol=symbol,
                 cache_dir=Path(config.cache_dir),
-                refresh_days=config.cache_refresh_days,
+                refresh_days=config.cache_refresh_days or 1,
                 years=config.historical_data_years,
                 freeze_date=config.freeze_date,
             )
