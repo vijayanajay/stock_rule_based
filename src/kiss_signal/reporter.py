@@ -670,18 +670,24 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
         db_path: Path to SQLite database
         
     Returns:
-        List of individual strategy performance records
+        List of individual strategy performance records (deduplicated)
     """
     try:
         with sqlite3.connect(str(db_path)) as conn:
             conn.row_factory = sqlite3.Row
             
+            # Deduplication query: get latest strategy per symbol-rule_stack combination
             cursor = conn.execute("""
-                SELECT symbol, rule_stack, edge_score, win_pct, sharpe,
-                       avg_return as total_return, total_trades, config_hash, run_timestamp,
-                       config_snapshot
-                FROM strategies 
-                ORDER BY symbol, edge_score DESC
+                SELECT s.symbol, s.rule_stack, s.edge_score, s.win_pct, s.sharpe,
+                       s.avg_return as total_return, s.total_trades, s.config_hash, s.run_timestamp,
+                       s.config_snapshot
+                FROM strategies s
+                INNER JOIN (
+                    SELECT symbol, rule_stack, MAX(id) as max_id
+                    FROM strategies 
+                    GROUP BY symbol, rule_stack
+                ) latest ON s.id = latest.max_id
+                ORDER BY s.symbol, s.edge_score DESC
             """)
             
             results = []

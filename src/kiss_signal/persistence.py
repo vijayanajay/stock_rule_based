@@ -272,7 +272,7 @@ def save_strategies_batch(
     logger.info(f"Saving {len(strategies)} strategies to the database.")
     
     insert_sql = """
-    INSERT INTO strategies (
+    INSERT OR REPLACE INTO strategies (
         run_timestamp, symbol, rule_stack, edge_score, 
         win_pct, sharpe, total_trades, avg_return, config_snapshot, config_hash
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -575,3 +575,80 @@ def clear_and_recalculate_strategies(
     except (sqlite3.Error, ValueError, FileNotFoundError) as e:
         logger.error(f"Error in clear_and_recalculate_strategies: {e}")
         raise
+
+
+def clean_duplicate_strategies(db_path: Path, dry_run: bool = False) -> Dict[str, Any]:
+    """Remove duplicate strategies and add unique constraint to prevent future duplicates.
+    
+    Args:
+        db_path: Path to SQLite database
+        dry_run: If True, only preview what would be deleted without making changes
+        
+    Returns:
+        Dict with operation results: duplicates_found, duplicates_removed, error
+    """
+    logger.info(f"{'Preview' if dry_run else 'Running'} duplicate strategy cleanup")
+    
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            # First, count duplicates
+            cursor = conn.execute("""
+                SELECT COUNT(*) - COUNT(DISTINCT symbol, rule_stack, config_hash) as duplicate_count
+                FROM strategies
+            """)
+            duplicate_count = cursor.fetchone()[0]
+            
+            if duplicate_count == 0:
+                logger.info("No duplicate strategies found")
+                return {'duplicates_found': 0, 'duplicates_removed': 0, 'error': None}
+            
+            # Preview what would be deleted
+            cursor = conn.execute("""
+                SELECT symbol, rule_stack, config_hash, COUNT(*) as count, 
+                       MIN(id) as keep_id, GROUP_CONCAT(id) as all_ids
+                FROM strategies 
+                GROUP BY symbol, rule_stack, config_hash
+                HAVING COUNT(*) > 1
+                ORDER BY symbol
+            """)
+            
+            duplicates = cursor.fetchall()
+            logger.info(f"Found {duplicate_count} duplicate strategies across {len(duplicates)} strategy combinations")
+            
+            if dry_run:
+                for dup in duplicates:
+                    logger.info(f"Would keep latest for {dup[0]} (IDs: {dup[4]}, duplicates: {dup[3]})")
+                return {'duplicates_found': duplicate_count, 'duplicates_removed': 0, 'error': None}
+            
+            # Remove duplicates: keep only the latest (highest ID) for each combination
+            cursor = conn.execute("""
+                DELETE FROM strategies WHERE id NOT IN (
+                    SELECT MAX(id) FROM strategies 
+                    GROUP BY symbol, rule_stack, config_hash
+                )
+            """)
+            removed_count = cursor.rowcount
+            
+            # Add unique constraint to prevent future duplicates
+            try:
+                cursor.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_strategies_unique 
+                    ON strategies(symbol, rule_stack, config_hash)
+                """)
+                logger.info("Added unique constraint to prevent future duplicates")
+            except sqlite3.IntegrityError as e:
+                logger.warning(f"Unique constraint already exists or couldn't be added: {e}")
+            
+            conn.commit()
+            logger.info(f"Successfully removed {removed_count} duplicate strategies")
+            
+            return {
+                'duplicates_found': duplicate_count,
+                'duplicates_removed': removed_count, 
+                'error': None
+            }
+            
+    except sqlite3.Error as e:
+        error_msg = f"Database error during cleanup: {e}"
+        logger.error(error_msg)
+        return {'duplicates_found': 0, 'duplicates_removed': 0, 'error': error_msg}

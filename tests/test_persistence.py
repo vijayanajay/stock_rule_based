@@ -201,28 +201,28 @@ class TestSaveStrategiesBatch:
         result = save_strategies_batch(conn, sample_strategies, "2025-06-24T10:00:00")
         assert result is False
 
-    def test_save_strategies_batch_insert_error(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]):
-        """Test transaction rollback on unique constraint violation."""
+    def test_save_strategies_batch_upsert_behavior(self, temp_db_path: Path, sample_strategies: List[Dict[str, Any]]):
+        """Test that duplicate strategies are replaced (upsert behavior) rather than causing failures."""
         create_database(temp_db_path)
         
-        # Add a duplicate strategy to the list to cause a UNIQUE constraint failure
+        # Add a duplicate strategy to test OR REPLACE behavior
         strategies_with_duplicate = sample_strategies + [sample_strategies[0]]
         
         run_timestamp = "2025-07-15T10:00:00"
         
         with sqlite3.connect(str(temp_db_path)) as conn:
-            # The batch save should fail because of the unique constraint violation on the last item.
-            # The transaction should be rolled back, leaving the table empty.
+            # The batch save should succeed because OR REPLACE handles duplicates
             result = save_strategies_batch(conn, strategies_with_duplicate, run_timestamp)
 
-        assert result is False
+        assert result is True
         
-        # Verify no data was saved due to rollback
+        # Verify that only unique strategies are saved (duplicate was replaced)
         with sqlite3.connect(str(temp_db_path)) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM strategies")
             count = cursor.fetchone()[0]
-            assert count == 0
+            # Should equal original sample_strategies length, not length + 1
+            assert count == len(sample_strategies)
 
     def test_save_strategies_batch_with_numpy_int(self, temp_db_path: Path) -> None:
         """Test that numpy integer types are correctly stored as standard integers."""
