@@ -452,13 +452,19 @@ def clear_and_recalculate(
         console.print(f"[red]Error: Database file not found at {db_path}[/red]")
         raise typer.Exit(1)
 
+    db_connection = None
     try:
-        # Show preview information before confirmation
-        if not preserve_all:
+        freeze_date_obj = freeze_data  # Keep as string for persistence layer compatibility
+        
+        if not preserve_all and not force:
+            # Show preview information before confirmation
+            from .config import get_active_strategy_combinations
+            import json
+            
             with persistence.get_connection(db_path) as conn:
                 rules_dict = rules_config.model_dump()
                 current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
-                from .config import get_active_strategy_combinations
+                
                 active_strategies = get_active_strategy_combinations(rules_config)
 
                 total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
@@ -478,21 +484,17 @@ def clear_and_recalculate(
                     if not typer.confirm("Continue with intelligent clearing?"):
                         console.print("[blue]Operation cancelled.[/blue]")
                         raise typer.Exit(0)
-        else:
-            console.print("[blue]Preserve-all mode: Skipping clearing phase[/blue]")
 
-        console.print("[bold blue]Starting clear and recalculate operation...[/bold blue]")
-        
-        # Use the new persistence function
-        results = persistence.clear_and_recalculate_strategies(
+        # Use the extracted business logic function
+        result = persistence.clear_and_recalculate_strategies(
             db_path, app_config, rules_config, 
-            force=force, preserve_all=preserve_all, freeze_date=freeze_data
+            force=force, preserve_all=preserve_all, freeze_date=freeze_date_obj
         )
-        
-        console.print(f"✅ [bold green]Recalculation complete![/bold green]")
-        console.print(f"[green]Cleared: {results['cleared_count']} strategies[/green]")
-        console.print(f"[green]Preserved: {results['preserved_count']} historical strategies[/green]")
-        console.print(f"[green]New strategies found: {results['new_strategies']}[/green]")
+
+        console.print(f"✅ [bold green]Operation complete![/bold green]")
+        console.print(f"[green]Cleared: {result['cleared_count']} strategies[/green]")
+        console.print(f"[green]Preserved: {result['preserved_count']} historical strategies[/green]")
+        console.print(f"[green]New strategies found: {result['new_strategies']}[/green]")
 
     except Exception as e:
         console.print(f"[red]An unexpected error occurred: {e}[/red]")

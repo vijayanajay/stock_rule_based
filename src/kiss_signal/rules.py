@@ -236,6 +236,13 @@ def hammer_pattern(price_data: pd.DataFrame,
     Raises:
         ValueError: If missing required columns or invalid parameters
     """
+    # Defensive type conversion for parameters that might come as strings from YAML
+    try:
+        body_ratio = float(body_ratio)
+        shadow_ratio = float(shadow_ratio)
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Parameters must be numeric: body_ratio={body_ratio}, shadow_ratio={shadow_ratio}") from e
+        
     if not (0 < body_ratio < 1):
         raise ValueError(f"body_ratio ({body_ratio}) must be between 0 and 1")
     if shadow_ratio <= 0:

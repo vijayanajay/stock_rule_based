@@ -115,24 +115,15 @@ def load_rules(rules_path: Path) -> RulesConfig:
         raise ValueError(f"Invalid rules configuration in {rules_path}: {e}") from e
 
 
-def get_active_strategy_combinations(rules_config: "RulesConfig") -> List[str]:
-    """Parse RulesConfig to extract all possible strategy combinations.
-    
-    Args:
-        rules_config: RulesConfig object with baseline and layers
-        
-    Returns:
-        List of JSON-serialized rule stacks that match current configuration
-    """
-    combinations: List[List[RuleDef]] = []
-    
-    # Generate baseline strategy
+def get_active_strategy_combinations(rules_config: RulesConfig) -> List[str]:
+    """Generate all active strategy combinations from rules configuration as JSON strings."""
+    import json
+    combinations: List[str] = []
     if rules_config.baseline:
-        combinations.append([rules_config.baseline])
-        
-        # Generate baseline + each layer combination
+        # Baseline alone
+        combinations.append(json.dumps([rules_config.baseline.model_dump()]))
+        # Baseline + each layer
         for layer in rules_config.layers:
-            combinations.append([rules_config.baseline, layer])
-    
-    # Convert each combination to JSON string
-    return [json.dumps([r.model_dump() for r in combo]) for combo in combinations]
+            combo = [rules_config.baseline.model_dump(), layer.model_dump()]
+            combinations.append(json.dumps(combo))
+    return combinations

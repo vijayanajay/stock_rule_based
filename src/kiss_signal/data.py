@@ -312,6 +312,18 @@ def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
     # Enforce lowercase column names to ensure a consistent data contract
     data.columns = [str(col).lower() for col in data.columns]
     
+    # Ensure numeric columns are properly typed (fix for string division errors)
+    numeric_columns = ['open', 'high', 'low', 'close', 'volume']
+    for col in numeric_columns:
+        if col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+    
+    # Drop any rows where all numeric columns are NaN (invalid data)
+    data = data.dropna(subset=[col for col in numeric_columns if col in data.columns], how='all')
+    
+    if data.empty:
+        raise ValueError(f"No valid numeric data found for {symbol}")
+    
     return data
 
 

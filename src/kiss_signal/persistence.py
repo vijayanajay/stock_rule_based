@@ -11,7 +11,11 @@ import shutil
 from datetime import datetime, date
 
 if TYPE_CHECKING:
-    from .config import RulesConfig, Config
+    from .config import RulesConfig, Config, RuleDef
+
+# Add imports for orchestration logic
+from . import data, backtester
+from .config import get_active_strategy_combinations
 
 __all__ = [
     "create_database",
@@ -24,6 +28,7 @@ __all__ = [
     "migrate_strategies_table_v2",
     "generate_config_hash",
     "create_config_snapshot",
+    "clear_strategies_for_config",
     "clear_and_recalculate_strategies",
 ]
 
@@ -209,7 +214,13 @@ def get_open_positions(db_path: Path) -> List[Dict[str, Any]]:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(query)
-            positions = [dict(row) for row in cursor.fetchall()]
+            positions = []
+            for row in cursor.fetchall():
+                pos = dict(row)
+                # Ensure numeric columns are properly typed (fix for string division errors)
+                if 'entry_price' in pos:
+                    pos['entry_price'] = float(pos['entry_price']) if pos['entry_price'] is not None else 0.0
+                positions.append(pos)
             logger.info(f"Fetched {len(positions)} open positions.")
             return positions
     except sqlite3.Error as e:
@@ -447,17 +458,17 @@ def create_config_snapshot(rules_config: Dict[str, Any], app_config: "Config", f
 
 
 
-def _clear_existing_strategies(
-    conn: Connection, 
-    rules_config: "RulesConfig", 
-    app_config: "Config"
+def clear_strategies_for_config(
+    conn: Connection, app_config: "Config", rules_config: "RulesConfig"
 ) -> Dict[str, int]:
-    """Clear existing strategies for current configuration."""
-    from .config import get_active_strategy_combinations  # Avoid circular import
-    
+    """Clear existing strategies for the current configuration and return counts."""
     rules_dict = rules_config.model_dump()
     current_config_hash = generate_config_hash(rules_dict, app_config)
-    active_strategies = get_active_strategy_combinations(rules_config)
+
+    combinations = [[rules_config.baseline]] + [
+        [rules_config.baseline, layer] for layer in rules_config.layers
+    ]
+    active_strategies = [json.dumps([r.model_dump() for r in combo]) for combo in combinations]
 
     total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
     
@@ -465,118 +476,24 @@ def _clear_existing_strategies(
         SELECT COUNT(*) FROM strategies
         WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
     """
-    will_delete = conn.execute(delete_count_query, [current_config_hash] + active_strategies).fetchone()[0]
-    preserved_count = total_count - will_delete
-    
-    cleared_count = 0
+    params = [current_config_hash] + active_strategies
+    will_delete = conn.execute(delete_count_query, params).fetchone()[0]
+
     if will_delete > 0:
         delete_query = f"""
             DELETE FROM strategies
             WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
         """
-        cursor = conn.execute(delete_query, [current_config_hash] + active_strategies)
+        cursor = conn.execute(delete_query, params)
         conn.commit()
         cleared_count = cursor.rowcount
         logger.info(f"Cleared {cleared_count} current strategy records")
-    
-    return {'cleared_count': cleared_count, 'preserved_count': preserved_count}
+        return {"cleared_count": cleared_count, "preserved_count": total_count - cleared_count}
 
-
-def _run_fresh_backtests(
-    app_config: "Config", 
-    rules_config: "RulesConfig", 
-    freeze_date_obj: Optional[date]
-) -> List[Dict[str, Any]]:
-    """Run fresh backtesting for all symbols."""
-    from . import data, backtester  # Avoid circular import with persistence
-    
-    logger.info("Starting fresh backtesting run...")
-    symbols = data.load_universe(app_config.universe_path)
-    
-    bt = backtester.Backtester(
-        min_trades_threshold=app_config.min_trades_threshold
-    )
-    
-    all_results = []
-    for symbol in symbols:
-        try:
-            price_data = data.get_price_data(symbol, Path(app_config.cache_dir), freeze_date=freeze_date_obj)
-            if price_data is not None and len(price_data) > 0:
-                strategies = bt.find_optimal_strategies(price_data, rules_config, symbol, freeze_date=freeze_date_obj, edge_score_weights=app_config.edge_score_weights)
-                all_results.extend(strategies)
-        except (ValueError, FileNotFoundError, ConnectionError) as e:
-            # Critical data infrastructure errors should propagate
-            if "fetch" in str(e).lower() or "data" in str(e).lower():
-                logger.error(f"Critical data error for {symbol}: {e}")
-                raise
-            logger.warning(f"Data quality issue for {symbol}: {e}")
-            continue
-        except Exception as e:
-            # Check if this is a data-related error that should propagate
-            if "fetch" in str(e).lower() or "data" in str(e).lower():
-                logger.error(f"Critical data error for {symbol}: {e}")
-                raise
-            # Other processing errors can be handled gracefully
-            logger.warning(f"Error processing {symbol}: {e}")
-            continue
-    
-    return all_results
+    return {"cleared_count": 0, "preserved_count": total_count}
 
 
 # impure
-def clear_and_recalculate_strategies(
-    db_path: Path, 
-    app_config: "Config", 
-    rules_config: "RulesConfig", 
-    force: bool = False, 
-    preserve_all: bool = False,
-    freeze_date: Optional[str] = None
-) -> Dict[str, Any]:
-    """Clear current strategies and recalculate with preservation of historical data.
-    
-    Args:
-        db_path: Path to the database file
-        app_config: Application configuration object
-        rules_config: Rules configuration object
-        force: Skip confirmation prompt if True
-        preserve_all: Skip clearing phase if True
-        freeze_date: Optional freeze date for data
-        
-    Returns:
-        Dictionary with operation results
-    """
-    from datetime import date  # For freeze_date parsing
-    
-    if not db_path.exists():
-        raise FileNotFoundError(f"Database file not found at {db_path}")
-
-    try:
-        freeze_date_obj = date.fromisoformat(freeze_date) if freeze_date else None
-        results = {'cleared_count': 0, 'new_strategies': 0, 'preserved_count': 0}
-        
-        # Clear existing strategies if not preserving all
-        if not preserve_all:
-            with get_connection(db_path) as conn:
-                clear_results = _clear_existing_strategies(conn, rules_config, app_config)
-                results.update(clear_results)
-        
-        # Run fresh backtests
-        all_results = _run_fresh_backtests(app_config, rules_config, freeze_date_obj)
-        
-        # Save new results
-        if all_results:
-            with get_connection(db_path) as conn:
-                save_strategies_batch(conn, all_results, datetime.now().isoformat())
-                results['new_strategies'] = len(all_results)
-                logger.info(f"Saved {len(all_results)} new strategies")
-
-        return results
-
-    except (sqlite3.Error, ValueError, FileNotFoundError) as e:
-        logger.error(f"Error in clear_and_recalculate_strategies: {e}")
-        raise
-
-
 def clean_duplicate_strategies(db_path: Path, dry_run: bool = False) -> Dict[str, Any]:
     """Remove duplicate strategies and add unique constraint to prevent future duplicates.
     
@@ -651,4 +568,82 @@ def clean_duplicate_strategies(db_path: Path, dry_run: bool = False) -> Dict[str
     except sqlite3.Error as e:
         error_msg = f"Database error during cleanup: {e}"
         logger.error(error_msg)
-        return {'duplicates_found': 0, 'duplicates_removed': 0, 'error': error_msg}
+        return {
+            'status': 'error',
+            'duplicates_found': 0,
+            'duplicates_removed': 0,
+            'error': error_msg
+        }
+
+
+def clear_and_recalculate_strategies(
+    db_path: Path,
+    app_config: "Config",
+    rules_config: "RulesConfig", 
+    force: bool = False,
+    preserve_all: bool = False,
+    freeze_date: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Orchestrates the intelligent clearing and recalculation of strategies.
+    This function centralizes the business logic for this command.
+    """
+    cleared_count = 0
+    preserved_count = 0
+    new_strategies_count = 0
+
+    with get_connection(db_path) as conn:
+        if not preserve_all:
+            clear_result = clear_strategies_for_config(conn, app_config, rules_config)
+            cleared_count = clear_result.get('cleared_count', 0)
+            preserved_count = clear_result.get('preserved_count', 0)
+        else:
+            # If preserving all, just get the current count for the summary
+            total_count_result = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()
+            preserved_count = total_count_result[0] if total_count_result else 0
+
+        # Recalculate
+        symbols = data.load_universe(app_config.universe_path)
+
+        bt = backtester.Backtester(
+            hold_period=app_config.hold_period,
+            min_trades_threshold=app_config.min_trades_threshold,
+        )
+
+        freeze_date_obj = date.fromisoformat(freeze_date) if freeze_date else None
+
+        all_results = []
+        for symbol in symbols:
+            try:
+                price_data = data.get_price_data(
+                    symbol=symbol,
+                    cache_dir=Path(app_config.cache_dir),
+                    refresh_days=app_config.cache_refresh_days or 1,
+                    years=app_config.historical_data_years,
+                    freeze_date=freeze_date_obj,
+                )
+                if price_data is None or len(price_data) < 100:
+                    logger.warning(f"Insufficient data for {symbol} during recalculation, skipping.")
+                    continue
+
+                strategies = bt.find_optimal_strategies(
+                    rules_config=rules_config, price_data=price_data, symbol=symbol,
+                    freeze_date=freeze_date_obj, edge_score_weights=app_config.edge_score_weights,
+                )
+                all_results.extend(strategies)
+            except Exception as e:
+                logger.error(f"Error recalculating for {symbol}: {e}")
+
+        if all_results:
+            run_timestamp = datetime.now().isoformat()
+            rules_dict = rules_config.model_dump()
+            config_snapshot = create_config_snapshot(rules_dict, app_config, freeze_date)
+            config_hash = generate_config_hash(rules_dict, app_config)
+            save_strategies_batch(conn, all_results, run_timestamp, config_snapshot, config_hash)
+            new_strategies_count = len(all_results)
+
+    return {
+        "cleared_count": cleared_count,
+        "preserved_count": preserved_count,
+        "new_strategies": new_strategies_count,
+    }

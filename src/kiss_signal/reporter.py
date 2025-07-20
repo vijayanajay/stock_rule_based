@@ -21,7 +21,6 @@ from .config import Config
 
 # Import config functions from persistence for convenience
 from .persistence import generate_config_hash, create_config_snapshot
-from .config import get_active_strategy_combinations
 
 __all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot"]
 
@@ -92,11 +91,31 @@ def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict
         # Start with the first rule's signals, then AND subsequent rules
         first_rule = rule_stack_defs[0]
         rule_func = getattr(rules, first_rule['type'])
-        combined_signals = rule_func(price_data, **first_rule.get('params', {}))
+        
+        # Convert string parameters to appropriate types (defensive programming)
+        first_params = first_rule.get('params', {})
+        converted_first_params = {}
+        for key, value in first_params.items():
+            if isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit():
+                converted_first_params[key] = float(value) if '.' in value else int(value)
+            else:
+                converted_first_params[key] = value
+        
+        combined_signals = rule_func(price_data, **converted_first_params)
 
         for rule_def in rule_stack_defs[1:]:
             rule_func = getattr(rules, rule_def['type'])
-            combined_signals &= rule_func(price_data, **rule_def.get('params', {}))
+            
+            # Convert string parameters to appropriate types (defensive programming)
+            rule_params = rule_def.get('params', {})
+            converted_rule_params = {}
+            for key, value in rule_params.items():
+                if isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit():
+                    converted_rule_params[key] = float(value) if '.' in value else int(value)
+                else:
+                    converted_rule_params[key] = value
+            
+            combined_signals &= rule_func(price_data, **converted_rule_params)
 
         return combined_signals.fillna(False)
     except Exception as e:
@@ -348,15 +367,15 @@ def _process_open_positions(
 
             if price_data.empty:
                 logger.warning(f"No price data available for {pos['symbol']} from {entry_date} to {run_date}")
-                current_price = pos['entry_price']
+                current_price = float(pos['entry_price'])
                 current_low = current_high = current_price
                 return_pct = 0.0
                 nifty_return_pct = 0.0
             else:
                 # Use the latest available price (which may be older than run_date)
-                current_price = price_data['close'].iloc[-1]
-                current_low = price_data['low'].iloc[-1]  
-                current_high = price_data['high'].iloc[-1]
+                current_price = float(price_data['close'].iloc[-1])
+                current_low = float(price_data['low'].iloc[-1])  
+                current_high = float(price_data['high'].iloc[-1])
                 return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
                 
                 # Log if data is stale (last date != run_date)
@@ -649,12 +668,20 @@ def _check_exit_conditions(
             try:
                 rule_func = getattr(rules, rule_type, None)
                 if rule_func:
+                    # Convert string parameters to appropriate types (defensive programming)
+                    converted_params = {}
+                    for key, value in params.items():
+                        if isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit():
+                            converted_params[key] = float(value) if '.' in value else int(value)
+                        else:
+                            converted_params[key] = value
+                    
                     # Special handling for ATR-based exit functions that require entry_price
                     if rule_type in ['stop_loss_atr', 'take_profit_atr']:
-                        if rule_func(price_data, entry_price, **params):
+                        if rule_func(price_data, entry_price, **converted_params):
                             return f"Rule: {condition_name}"
                     else:
-                        if rule_func(price_data, **params).iloc[-1]:
+                        if rule_func(price_data, **converted_params).iloc[-1]:
                             return f"Rule: {condition_name}"
             except Exception as e:
                 logger.warning(f"Error checking exit rule {rule_type}: {e}")

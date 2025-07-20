@@ -416,11 +416,10 @@ class TestClearAndRecalculateErrorHandling:
             assert result.exit_code == 1
             assert "An unexpected error occurred" in result.stdout
 
-    @patch("kiss_signal.cli._run_backtests")
-    @patch("kiss_signal.cli.data.load_universe")
+    @patch("kiss_signal.cli.persistence.clear_and_recalculate_strategies")
     @patch("kiss_signal.cli.persistence.get_connection")
     @patch("kiss_signal.cli.console.export_text")
-    def test_clear_and_recalculate_log_file_error(self, mock_export_text, mock_get_connection, mock_load_universe, mock_run_backtests, sample_config):
+    def test_clear_and_recalculate_log_file_error(self, mock_export_text, mock_get_connection, mock_clear_recalc, sample_config):
         """Test clear-and-recalculate log file error handling."""
         with runner.isolated_filesystem() as fs:
             mock_export_text.return_value = "Test log content"
@@ -431,11 +430,11 @@ class TestClearAndRecalculateErrorHandling:
 
             config_path = Path(fs) / "config.yaml"
             config_path.write_text(get_valid_config_content(str(universe_path)))
-            
+
             rules_path = Path(fs) / "config" / "rules.yaml"
             rules_path.parent.mkdir(exist_ok=True)
             rules_path.write_text("baseline:\n  name: test\n  type: sma_crossover\n  params: {fast: 5, slow: 10}")
-            
+
             db_path = Path(fs) / "data" / "test.db"
             db_path.parent.mkdir(exist_ok=True)
             from kiss_signal import persistence
@@ -450,11 +449,12 @@ class TestClearAndRecalculateErrorHandling:
             mock_conn.__exit__ = Mock(return_value=None)
             mock_get_connection.return_value = mock_conn
 
-            # Mock other dependencies
-            mock_load_universe.return_value = ["RELIANCE", "INFY"]
-            mock_run_backtests.return_value = []
-
-            # Mock Path.write_text to raise OSError
+            # Mock persistence clear_and_recalculate_strategies to return success
+            mock_clear_recalc.return_value = {
+                'cleared_count': 0,
+                'preserved_count': 0,
+                'new_strategies': 0
+            }            # Mock Path.write_text to raise OSError
             with patch("pathlib.Path.write_text") as mock_write:
                 mock_write.side_effect = OSError("No space left")
                 

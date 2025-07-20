@@ -110,65 +110,55 @@ class Backtester:
                 init_cash=self.initial_capital,
                 size=np.inf,
             )
-            total_trades = portfolio.trades.count()
             
             # More debug logging
+            total_trades = portfolio.trades.count()
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(f"Portfolio trades count for {symbol}: {total_trades}")
                 logger.debug(f"Trade count type: {type(total_trades)}")
                 if total_trades == 0 and final_entry_signals.sum() > 0:
                     logger.debug(f"WARNING: {final_entry_signals.sum()} entry signals but 0 trades generated!")
             
-            # Ensure total_trades is explicitly cast to Python int to avoid any vectorbt-specific type issues
-            total_trades = int(total_trades)
-            
-            rule_names = " + ".join([r.name for r in combo])
-            
-            # Calculate performance metrics regardless of threshold for completeness
-            if total_trades > 0:
-                win_pct = portfolio.trades.win_rate()  # Already returns decimal ratio (e.g., 0.65 for 65%)
-                sharpe = portfolio.sharpe_ratio()
-                avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
-                
-                # Debug logging for suspiciously low win rates
-                if win_pct < 0.2:  # Less than 20% win rate is suspicious
-                    logger.warning(f"Low win rate detected for {symbol}: {win_pct:.1%} with {total_trades} trades")
-                    logger.warning(f"Rule combination: {rule_names}")
-                    logger.warning(f"Average PnL: {avg_return:.2f}, Sharpe: {sharpe:.2f}")
-                    
-                    # Additional debug info
-                    if logger.isEnabledFor(logging.DEBUG):
-                        winning_trades = portfolio.trades.count_winning()
-                        losing_trades = portfolio.trades.count_losing()
-                        avg_win = portfolio.trades.pnl[portfolio.trades.pnl > 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl > 0]) > 0 else 0
-                        avg_loss = portfolio.trades.pnl[portfolio.trades.pnl < 0].mean() if len(portfolio.trades.pnl[portfolio.trades.pnl < 0]) > 0 else 0
-                        logger.debug(f"Winning trades: {winning_trades}, Losing trades: {losing_trades}")
-                        logger.debug(f"Average win: {avg_win:.2f}, Average loss: {avg_loss:.2f}")
-            else:
-                win_pct = 0.0
-                sharpe = 0.0
-                avg_return = 0.0
-            
-            # Skip strategies that don't meet the minimum trades threshold
-            if total_trades < self.min_trades_threshold:
-                logger.warning(f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, which is below the threshold of {self.min_trades_threshold}.")
-                return None
-            
-            edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
-            strategy = {
-                'symbol': symbol,  # Add symbol to strategy data for persistence
-                'rule_stack': combo,  # Persist the entire rule combination
-                'edge_score': edge_score,
-                'win_pct': win_pct,
-                'sharpe': sharpe,
-                'total_trades': int(total_trades),  # Ensure this is always an integer
-                'avg_return': avg_return,
-            }
-            
-            return strategy
+            return self._calculate_performance_metrics(
+                portfolio, combo, symbol, edge_score_weights, self.min_trades_threshold
+            )
         except Exception as e:
             logger.error(f"Error processing rule combination {[r.name for r in combo]}: {e}")
             return None
+
+    def _calculate_performance_metrics(
+        self,
+        portfolio: vbt.Portfolio,
+        combo: List[Any],
+        symbol: str,
+        edge_score_weights: EdgeScoreWeights,
+        min_trades_threshold: int,
+    ) -> Optional[Dict[str, Any]]:
+        """Calculate performance metrics for a backtest portfolio."""
+        total_trades = int(portfolio.trades.count())
+        rule_names = " + ".join([r.name for r in combo])
+
+        if total_trades < min_trades_threshold:
+            logger.warning(
+                f"Strategy '{rule_names}' on '{symbol}' generated only {total_trades} trades, "
+                f"below threshold of {min_trades_threshold}."
+            )
+            return None
+
+        win_pct = portfolio.trades.win_rate()
+        sharpe = portfolio.sharpe_ratio()
+        avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
+
+        edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
+        return {
+            "symbol": symbol,
+            "rule_stack": combo,
+            "edge_score": edge_score,
+            "win_pct": win_pct,
+            "sharpe": sharpe,
+            "total_trades": total_trades,
+            "avg_return": avg_return,
+        }
 
     @performance_monitor.profile_performance
     def find_optimal_strategies(
@@ -260,8 +250,24 @@ class Backtester:
             raise ValueError(f"Missing parameters for rule '{rule_type}'") # This is the new, better message
 
         try:
+            # Defensive parameter type conversion - ensure numeric strings become numbers
+            converted_params = {}
+            for key, value in rule_params.items():
+                if isinstance(value, str):
+                    # Try to convert string to number if it looks numeric
+                    try:
+                        if '.' in value:
+                            converted_params[key] = float(value)
+                        else:
+                            converted_params[key] = int(value)
+                    except ValueError:
+                        # If conversion fails, keep as string (might be a symbol/name)
+                        converted_params[key] = value
+                else:
+                    converted_params[key] = value
+                    
             # Call the actual rule function from the rules module
-            entry_signals = rule_func(price_data, **rule_params)
+            entry_signals = rule_func(price_data, **converted_params)
         except Exception as e:
             logger.error(f"Error executing rule '{rule_type}' with params {rule_params}: {e}")
             raise ValueError(f"Rule '{rule_type}' failed execution") from e
@@ -425,7 +431,15 @@ class Backtester:
                     if "period" in filter_def.params:
                         valid_params["period"] = filter_def.params["period"]
                     
-                    filter_signals = getattr(rules, filter_def.type)(market_data, **valid_params)
+                    # Convert string parameters to appropriate types (defensive programming)
+                    converted_valid_params = {}
+                    for key, value in valid_params.items():
+                        if isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit():
+                            converted_valid_params[key] = float(value) if '.' in value else int(value)
+                        else:
+                            converted_valid_params[key] = value
+                    
+                    filter_signals = getattr(rules, filter_def.type)(market_data, **converted_valid_params)
                     
                     # Align with stock data and apply AND logic
                     stock_index = stock_data.index
@@ -434,7 +448,7 @@ class Backtester:
                     combined_signals &= aligned_filter
                     
                     # Log filter effectiveness
-                    filter_count = aligned_filter.sum()
+                    filter_count = int(aligned_filter.sum())  # Ensure numeric type for arithmetic
                     logger.debug(f"Context filter '{filter_def.name}' for {symbol}: "
                                 f"{filter_count}/{len(aligned_filter)} days pass "
                                 f"({filter_count/len(aligned_filter)*100:.1f}%)")
@@ -446,7 +460,7 @@ class Backtester:
                 # Fail-safe: if context filter fails, exclude all signals
                 return pd.Series(False, index=stock_data.index)
         
-        combined_count = combined_signals.sum()
+        combined_count = int(combined_signals.sum())  # Ensure numeric type for arithmetic
         logger.info(f"Combined context filters for {symbol}: "
                    f"{combined_count}/{len(combined_signals)} days pass "
                    f"({combined_count/len(combined_signals)*100:.1f}%)")

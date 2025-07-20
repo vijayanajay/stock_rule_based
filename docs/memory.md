@@ -1,5 +1,17 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## API Contract Desynchronization: Incomplete Refactoring (2025-07-22)
+- **Issue**: Multiple tests for the `clear-and-recalculate` command failed with `AttributeError`, indicating a mocked function (`persistence.clear_and_recalculate_strategies`) did not exist. The application was also broken at runtime.
+- **Structural Root Cause**: An incomplete refactoring had removed a key orchestrator function from the `persistence.py` module, but its primary consumer (`cli.py`) and the test suite were not updated. This broke the API contract between the two modules, leaving the system in a non-functional state.
+- **Fix**: The missing `clear_and_recalculate_strategies` function was restored in `persistence.py` to fulfill the API contract expected by the CLI and the test suite. This restored the broken control flow and fixed both the application and the tests.
+- **Lesson**: Refactoring is not complete until all consumers of the refactored code—including the application's own modules and its test suite—are updated to match the new API contract. A missing public function that breaks a module boundary is a critical structural failure that must be addressed by either restoring the component or updating all consumers to use the new design.
+
+## SQLite Data Type Integrity: String Division Errors from Numeric Operations (2025-07-20)
+- **Issue**: Test failures in `test_clear_and_recalculate_basic_flow` and related tests with error "unsupported operand type(s) for /: 'str' and 'str'" during symbol processing.
+- **Structural Root Cause**: Data type integrity failure across module boundaries between persistence layer (`persistence.py`) and business logic (`backtester.py`). SQLite stores REAL numbers but Python's `sqlite3` module can return them as strings under certain conditions. The codebase assumed pandas `.sum()` operations on boolean Series would always return integers, but when underlying data originated from SQLite as strings, these operations returned string values that failed in division operations.
+- **Fix**: Added explicit `int()` conversion to `.sum()` results before arithmetic operations in `backtester.py` lines 453 and 464: `filter_count = int(aligned_filter.sum())` and `combined_count = int(combined_signals.sum())`.
+- **Lesson**: SQLite data type integrity must be enforced at persistence boundaries. Numeric operations should always include explicit type conversion when data originates from SQLite. Assume that pandas operations on SQLite-derived data may return strings and guard accordingly.
+
 ## Data Serialization Integrity: Asymmetric Save/Load Operations (2025-07-19)
 - **Issue**: Test failure in `test_market_cache_save_load_cycle` where loaded DataFrame had shape (5,4) instead of original (5,5), indicating loss of DateTime index during cache save/load cycle.
 - **Structural Root Cause**: Asymmetric serialization logic between `_save_market_cache()` and `_load_market_cache()` functions. Save operation used `index=False` discarding the DateTime index, while load operation expected either a 'date' column or fallback index parsing, creating a data integrity violation across module boundaries.
