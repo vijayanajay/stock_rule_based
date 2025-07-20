@@ -210,15 +210,30 @@ def _validate_data_quality(data: pd.DataFrame, symbol: str) -> bool:
     
     # Check for negative prices
     price_cols = ['open', 'high', 'low', 'close']
-    negative_prices = (data[price_cols] < 0).any().any()
+    negative_prices = (data[price_cols] < 0).any(axis=None)
     if negative_prices:
         logger.warning(f"Negative prices detected for {symbol}")
         return False
     
-    # Check for zero volume days
-    if (data['volume'] == 0).sum() > len(data) * 0.1:
-        logger.warning(f"High zero-volume days for {symbol}")
-        return False
+    # Check for zero volume days - handle potential nullable integers
+    try:
+        volume_column = data['volume']
+        # Handle both regular and nullable integer columns
+        if hasattr(volume_column, 'isna'):
+            # For nullable integer columns, handle NA values
+            zero_volume_mask = (volume_column == 0) & (~volume_column.isna())
+            zero_volume_count = int(zero_volume_mask.sum())
+        else:
+            # For regular columns
+            zero_volume_count = int((volume_column == 0).sum())
+        
+        if zero_volume_count > len(data) * 0.1:
+            logger.warning(f"High zero-volume days for {symbol}")
+            return False
+    except (TypeError, ValueError) as e:
+        logger.warning(f"Could not validate volume data for {symbol}: {e}")
+        # Continue validation even if volume check fails
+        pass
     
     # Check for large data gaps
     if 'date' in data.columns:
@@ -262,6 +277,22 @@ def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool
                 data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
         else:
             data_to_save = data.copy()
+        
+        # Convert nullable Int64 volume to regular int to avoid CSV save issues
+        if 'volume' in data_to_save.columns:
+            volume_col = data_to_save['volume']
+            if hasattr(volume_col, 'dtype') and str(volume_col.dtype) == 'Int64':
+                data_to_save['volume'] = volume_col.fillna(0).astype(int)
+            elif hasattr(volume_col, 'isna') and volume_col.isna().any(axis=None):
+                # Handle any nullable columns that might have NA values
+                data_to_save['volume'] = volume_col.fillna(0).astype(int)
+        
+        # Also ensure all numeric columns are regular types for CSV compatibility
+        for col in ['open', 'high', 'low', 'close']:
+            if col in data_to_save.columns:
+                col_data = data_to_save[col]
+                if hasattr(col_data, 'isna') and col_data.isna().any(axis=None):
+                    data_to_save[col] = col_data.fillna(0).astype(float)
         
         # Save without index to avoid "Unnamed: 0" columns
         data_to_save.to_csv(cache_file, index=False)

@@ -356,12 +356,13 @@ def _process_open_positions(
         days_held = (run_date - entry_date).days
 
         try:
+            # For live position tracking, ignore freeze_date to get current market data
             price_data = data.get_price_data(
                 symbol=pos["symbol"], 
                 cache_dir=Path(config.cache_dir), 
                 start_date=entry_date, 
                 end_date=run_date, 
-                freeze_date=config.freeze_date, 
+                freeze_date=None,  # Don't apply freeze_date for live positions
                 years=config.historical_data_years
             )
 
@@ -393,12 +394,13 @@ def _process_open_positions(
                     logger.info(f"Fetching NIFTY data for {pos['symbol']} from {entry_date} to {actual_end_date}")
                     
                     # Get Nifty index data for the same period as the stock position
+                    # Also disable freeze_date for Nifty to ensure consistent comparison
                     nifty_data = data.get_price_data(
                         symbol="^NSEI", 
                         cache_dir=Path(config.cache_dir), 
                         start_date=entry_date,  # Use the same entry date as the stock position
                         end_date=actual_end_date,  # Use the same end date as available for the stock
-                        freeze_date=config.freeze_date,
+                        freeze_date=None,  # Don't apply freeze_date for live benchmark data
                         years=config.historical_data_years
                     )
                     

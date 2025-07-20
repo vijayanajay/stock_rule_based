@@ -206,7 +206,7 @@ class Backtester:
                 logger.warning(f"Could not infer frequency for {symbol}. Forcing daily frequency ('D').")
             
             # Handle NaN values created by asfreq - forward fill to preserve trading data
-            if price_data.isnull().any().any():
+            if price_data.isnull().any(axis=None):
                 price_data = price_data.ffill()
                 logger.debug(f"Forward-filled NaN values after frequency adjustment for {symbol}")
 

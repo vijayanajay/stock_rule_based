@@ -58,10 +58,14 @@ def fetch_symbol_data(symbol: str, years: int, freeze_date: Optional[date] = Non
             # Standardize columns: reset index to get 'Date', then lowercase all columns.
             data = data.reset_index()
             # Handle potential MultiIndex or tuple columns from yfinance by checking each column name
-            data.columns = [
-                col[0].lower() if isinstance(col, tuple) else str(col).lower()
-                for col in data.columns
-            ]
+            new_columns = []
+            for col in data.columns:
+                if isinstance(col, tuple):
+                    # For MultiIndex, take the first level
+                    new_columns.append(col[0].lower())
+                else:
+                    new_columns.append(str(col).lower())
+            data.columns = new_columns
             
             required_columns = ['date', 'open', 'high', 'low', 'close', 'volume']
             if not all(col in data.columns for col in required_columns):
@@ -75,6 +79,7 @@ def fetch_symbol_data(symbol: str, years: int, freeze_date: Optional[date] = Non
             data['date'] = pd.to_datetime(data['date'])
             for col in ['open', 'high', 'low', 'close']:
                 data[col] = pd.to_numeric(data[col], errors='coerce')
+            # Handle volume conversion with consistent NA handling (same as price data)
             data['volume'] = pd.to_numeric(data['volume'], errors='coerce').astype('Int64')
             
             return data

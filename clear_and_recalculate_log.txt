@@ -1,0 +1,333 @@
+[2025-07-20 17:22:16] INFO     === KISS Signal CLI Run Started ===                                                      
+Current database contains 2325 strategies
+Will preserve 2325 historical strategies
+Will clear 0 current strategy records
+                      INFO     Loaded 13 symbols from universe                                                          
+                      INFO     Backtester initialized: hold_period=20, min_trades=10                                    
+                      WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
+                      INFO     Backtesting 4 rule combinations for RELIANCE                                             
+                      INFO     Combined context filters for RELIANCE: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+[2025-07-20 17:22:25] WARNING  Strategy 'strong_bullish_engulfing' on 'RELIANCE' generated only 8 trades, below         
+                               threshold of 10.                                                                         
+[2025-07-20 18:00:32] INFO     Combined context filters for RELIANCE: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 832 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+[2025-07-20 18:00:33] WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'RELIANCE' generated
+                               only 8 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for RELIANCE: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 16 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'RELIANCE' generated 
+                               only 0 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for RELIANCE: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 578 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'RELIANCE'     
+                               generated only 5 trades, below threshold of 10.                                          
+                      WARNING  find_optimal_strategies exceeded duration threshold: 2296.93s > 30.0s                    
+                      INFO     find_optimal_strategies completed in 2296.93s                                            
+                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
+                      INFO     Backtesting 4 rule combinations for INFY                                                 
+                      INFO     Combined context filters for INFY: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 16 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'INFY' generated only 5 trades, below threshold of
+                               10.                                                                                      
+                      INFO     Combined context filters for INFY: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 16 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 802 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'INFY' generated    
+                               only 4 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for INFY: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 16 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 20 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'INFY' generated only
+                               0 trades, below threshold of 10.                                                         
+                      INFO     Combined context filters for INFY: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 16 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 608 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'INFY'         
+                               generated only 4 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.10s                                               
+                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
+                      INFO     Backtesting 4 rule combinations for TCS                                                  
+                      INFO     Combined context filters for TCS: 444/1094 days pass (40.6%)                             
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+[2025-07-20 18:00:34] INFO     Combined context filters for TCS: 444/1094 days pass (40.6%)                             
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 791 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      INFO     Combined context filters for TCS: 444/1094 days pass (40.6%)                             
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 23 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'TCS' generated only 
+                               0 trades, below threshold of 10.                                                         
+                      INFO     Combined context filters for TCS: 444/1094 days pass (40.6%)                             
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 549 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'TCS' generated
+                               only 9 trades, below threshold of 10.                                                    
+                      INFO     find_optimal_strategies completed in 0.89s                                               
+                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
+                      INFO     Backtesting 4 rule combinations for HDFCBANK                                             
+                      INFO     Combined context filters for HDFCBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 34 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 37 signals on 1094 data points                          
+                      INFO     Combined context filters for HDFCBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 34 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 897 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 37 signals on 1094 data points                          
+                      INFO     Combined context filters for HDFCBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 34 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 16 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 37 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'HDFCBANK' generated 
+                               only 0 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for HDFCBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 34 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 638 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 37 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'HDFCBANK'     
+                               generated only 8 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.10s                                               
+                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
+                      INFO     Backtesting 4 rule combinations for ICICIBANK                                            
+                      INFO     Combined context filters for ICICIBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 31 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'ICICIBANK' generated only 9 trades, below        
+                               threshold of 10.                                                                         
+                      INFO     Combined context filters for ICICIBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 31 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 931 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'ICICIBANK'         
+                               generated only 9 trades, below threshold of 10.                                          
+                      INFO     Combined context filters for ICICIBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 31 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 15 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'ICICIBANK' generated
+                               only 0 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for ICICIBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 31 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 658 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 29 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'ICICIBANK'    
+                               generated only 8 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.09s                                               
+                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
+                      INFO     Backtesting 4 rule combinations for SBIN                                                 
+                      INFO     Combined context filters for SBIN: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'SBIN' generated only 6 trades, below threshold of
+                               10.                                                                                      
+                      INFO     Combined context filters for SBIN: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 888 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'SBIN' generated    
+                               only 6 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for SBIN: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 26 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'SBIN' generated only
+                               1 trades, below threshold of 10.                                                         
+                      INFO     Combined context filters for SBIN: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 17 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 623 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'SBIN'         
+                               generated only 6 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.09s                                               
+                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
+                      INFO     Backtesting 4 rule combinations for WIPRO                                                
+                      INFO     Combined context filters for WIPRO: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 19 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'WIPRO' generated only 9 trades, below threshold  
+                               of 10.                                                                                   
+                      INFO     Combined context filters for WIPRO: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 19 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 794 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'WIPRO' generated   
+                               only 8 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for WIPRO: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 19 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 37 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'WIPRO' generated    
+                               only 0 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for WIPRO: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 19 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 593 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 30 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'WIPRO'        
+                               generated only 7 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.09s                                               
+                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
+                      INFO     Backtesting 4 rule combinations for HCLTECH                                              
+                      INFO     Combined context filters for HCLTECH: 444/1094 days pass (40.6%)                         
+                      INFO     Rule 'engulfing_pattern' generated 37 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      INFO     Combined context filters for HCLTECH: 444/1094 days pass (40.6%)                         
+                      INFO     Rule 'engulfing_pattern' generated 37 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 872 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      INFO     Combined context filters for HCLTECH: 444/1094 days pass (40.6%)                         
+                      INFO     Rule 'engulfing_pattern' generated 37 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 26 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'HCLTECH' generated  
+                               only 1 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for HCLTECH: 444/1094 days pass (40.6%)                         
+                      INFO     Rule 'engulfing_pattern' generated 37 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 712 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      INFO     find_optimal_strategies completed in 0.14s                                               
+                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
+                      INFO     Backtesting 4 rule combinations for TECHM                                                
+                      INFO     Combined context filters for TECHM: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 11 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 31 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'TECHM' generated only 2 trades, below threshold  
+                               of 10.                                                                                   
+                      INFO     Combined context filters for TECHM: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 11 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 887 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 31 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'TECHM' generated   
+                               only 2 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for TECHM: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 11 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 32 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 31 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'TECHM' generated    
+                               only 0 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for TECHM: 444/1094 days pass (40.6%)                           
+                      INFO     Rule 'engulfing_pattern' generated 11 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 638 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 31 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'TECHM'        
+                               generated only 2 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.11s                                               
+                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
+                      INFO     Backtesting 4 rule combinations for LTIM                                                 
+                      INFO     Combined context filters for LTIM: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'LTIM' generated only 5 trades, below threshold of
+                               10.                                                                                      
+                      INFO     Combined context filters for LTIM: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 799 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'LTIM' generated    
+                               only 5 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for LTIM: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 36 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'LTIM' generated only
+                               0 trades, below threshold of 10.                                                         
+                      INFO     Combined context filters for LTIM: 444/1094 days pass (40.6%)                            
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 566 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'LTIM'         
+                               generated only 3 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.09s                                               
+                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
+                      INFO     Backtesting 4 rule combinations for BHARTIARTL                                           
+                      INFO     Combined context filters for BHARTIARTL: 444/1094 days pass (40.6%)                      
+                      INFO     Rule 'engulfing_pattern' generated 32 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 32 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'BHARTIARTL' generated only 6 trades, below       
+                               threshold of 10.                                                                         
+                      INFO     Combined context filters for BHARTIARTL: 444/1094 days pass (40.6%)                      
+                      INFO     Rule 'engulfing_pattern' generated 32 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 1005 signals on 1094 data points                           
+                      INFO     Rule 'sma_cross_under' generated 32 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'BHARTIARTL'        
+                               generated only 6 trades, below threshold of 10.                                          
+                      INFO     Combined context filters for BHARTIARTL: 444/1094 days pass (40.6%)                      
+                      INFO     Rule 'engulfing_pattern' generated 32 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 25 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 32 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'BHARTIARTL'         
+                               generated only 1 trades, below threshold of 10.                                          
+                      INFO     Combined context filters for BHARTIARTL: 444/1094 days pass (40.6%)                      
+                      INFO     Rule 'engulfing_pattern' generated 32 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 802 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 32 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'BHARTIARTL'   
+                               generated only 6 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.08s                                               
+                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
+                      INFO     Backtesting 4 rule combinations for KOTAKBANK                                            
+                      INFO     Combined context filters for KOTAKBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 27 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing' on 'KOTAKBANK' generated only 7 trades, below        
+                               threshold of 10.                                                                         
+                      INFO     Combined context filters for KOTAKBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 845 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 27 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_rsi_recovering' on 'KOTAKBANK'         
+                               generated only 6 trades, below threshold of 10.                                          
+                      INFO     Combined context filters for KOTAKBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 25 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 27 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'KOTAKBANK' generated
+                               only 0 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for KOTAKBANK: 444/1094 days pass (40.6%)                       
+                      INFO     Rule 'engulfing_pattern' generated 26 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 529 signals on 1094 data points                         
+[2025-07-20 18:00:35] INFO     Rule 'sma_cross_under' generated 27 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'KOTAKBANK'    
+                               generated only 3 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.09s                                               
+                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
+                      INFO     Backtesting 4 rule combinations for AXISBANK                                             
+                      INFO     Combined context filters for AXISBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      INFO     Combined context filters for AXISBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'rsi_oversold' generated 908 signals on 1094 data points                            
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      INFO     Combined context filters for AXISBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'volume_spike' generated 21 signals on 1094 data points                             
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_strong_volume' on 'AXISBANK' generated 
+                               only 1 trades, below threshold of 10.                                                    
+                      INFO     Combined context filters for AXISBANK: 444/1094 days pass (40.6%)                        
+                      INFO     Rule 'engulfing_pattern' generated 28 signals on 1094 data points                        
+                      INFO     Rule 'price_above_sma' generated 619 signals on 1094 data points                         
+                      INFO     Rule 'sma_cross_under' generated 28 signals on 1094 data points                          
+                      WARNING  Strategy 'strong_bullish_engulfing + confirm_with_medium_term_uptrend' on 'AXISBANK'     
+                               generated only 8 trades, below threshold of 10.                                          
+                      INFO     find_optimal_strategies completed in 0.10s                                               
+                      INFO     Saving 9 strategies to the database.                                                     
+                      INFO     Successfully saved 9 strategies                                                          
+✅ Operation complete!
+Cleared: 0 strategies
+Preserved: 2325 historical strategies
+New strategies found: 9

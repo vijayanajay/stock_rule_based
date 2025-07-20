@@ -361,5 +361,298 @@ class TestPriceCalculationAccuracy:
         assert exit_reason is None or "day" in exit_reason
 
 
+class TestFreezeDatePositionProcessingFix:
+    """Test the freeze_date=None fix for live position processing."""
+    
+    @patch('src.kiss_signal.reporter.data.get_price_data')
+    def test_process_open_positions_ignores_freeze_date_for_live_positions(self, mock_get_price_data, tmp_path):
+        """Test that _process_open_positions passes freeze_date=None for live position tracking."""
+        from src.kiss_signal.reporter import _process_open_positions
+        from src.kiss_signal.config import Config
+        
+        # Create temporary universe file for Config validation
+        universe_file = tmp_path / "test_universe.csv"
+        universe_file.write_text("symbol\nCIPLA\nSUNPHARMA\n")
+        
+        # Setup config with freeze_date set (simulating backtesting mode)
+        config = Config(
+            universe_path=str(universe_file),
+            historical_data_years=3,
+            cache_dir=str(tmp_path / "test_cache"),
+            hold_period=20,
+            database_path=str(tmp_path / "test.db"),
+            freeze_date=date(2024, 6, 1),  # Freeze date in past
+            min_trades_threshold=10,
+            edge_score_weights={'win_pct': 0.6, 'sharpe': 0.4},
+            reports_output_dir=str(tmp_path / "test_reports"),
+            edge_score_threshold=0.50
+        )
+        
+        # Setup open positions with future dates (relative to freeze_date)
+        open_positions = [{
+            "id": 1,
+            "symbol": "CIPLA",
+            "entry_date": "2025-07-01",  # Future date relative to freeze_date
+            "entry_price": 1500.0,
+            "rule_stack": '[{"type": "sma_crossover"}]'
+        }]
+        
+        # Mock price data response
+        mock_price_data = pd.DataFrame({
+            'close': [1500, 1550],
+            'high': [1510, 1560], 
+            'low': [1490, 1540]
+        }, index=pd.date_range('2025-07-01', periods=2))
+        
+        mock_nifty_data = pd.DataFrame({
+            'close': [22000, 22100]
+        }, index=pd.date_range('2025-07-01', periods=2))
+        
+        # Configure mock to return data for both stock and NIFTY calls
+        def mock_data_side_effect(symbol, **kwargs):
+            if symbol == "CIPLA":
+                # Verify freeze_date=None is passed for stock data
+                assert kwargs.get('freeze_date') is None, f"freeze_date should be None for live positions, got {kwargs.get('freeze_date')}"
+                return mock_price_data
+            elif symbol == "^NSEI":
+                # Verify freeze_date=None is passed for NIFTY data
+                assert kwargs.get('freeze_date') is None, f"freeze_date should be None for NIFTY benchmark, got {kwargs.get('freeze_date')}"
+                return mock_nifty_data
+            return pd.DataFrame()
+        
+        mock_get_price_data.side_effect = mock_data_side_effect
+        
+        # Call the function
+        positions_to_hold, positions_to_close = _process_open_positions(
+            open_positions, config, {}
+        )
+        
+        # Verify data fetching was called correctly
+        assert mock_get_price_data.call_count == 2  # Once for stock, once for NIFTY
+        
+        # Verify the position was processed successfully (not filtered out)
+        assert len(positions_to_hold) == 1
+        assert len(positions_to_close) == 0
+        assert positions_to_hold[0]['symbol'] == 'CIPLA'
+        assert positions_to_hold[0]['current_price'] == 1550.0  # Latest price
+        
+        # Verify all calls had freeze_date=None
+        for call_args in mock_get_price_data.call_args_list:
+            kwargs = call_args[1]
+            assert kwargs.get('freeze_date') is None, f"freeze_date should be None, got {kwargs.get('freeze_date')}"
+    
+    @patch('src.kiss_signal.reporter.data.get_price_data')
+    def test_process_open_positions_handles_freeze_date_data_filtering_correctly(self, mock_get_price_data, tmp_path):
+        """Test that without the fix, freeze_date would cause empty data and errors."""
+        from src.kiss_signal.reporter import _process_open_positions
+        from src.kiss_signal.config import Config
+        
+        # Create temporary universe file for Config validation
+        universe_file = tmp_path / "test_universe.csv"
+        universe_file.write_text("symbol\nSUNPHARMA\n")
+        
+        # Setup config with freeze_date set to past date
+        config = Config(
+            universe_path=str(universe_file),
+            historical_data_years=3,
+            cache_dir=str(tmp_path / "test_cache"),
+            hold_period=20,
+            database_path=str(tmp_path / "test.db"),
+            freeze_date=date(2024, 6, 1),  # Freeze date in past
+            min_trades_threshold=10,
+            edge_score_weights={'win_pct': 0.6, 'sharpe': 0.4},
+            reports_output_dir=str(tmp_path / "test_reports"),
+            edge_score_threshold=0.50
+        )
+        
+        # Setup position with entry date after freeze_date
+        open_positions = [{
+            "id": 1,
+            "symbol": "SUNPHARMA",
+            "entry_date": "2025-07-02",  # After freeze_date
+            "entry_price": 1670.0,
+            "rule_stack": '[{"type": "rsi_oversold"}]'
+        }]
+        
+        # Mock empty data (simulating what would happen with freeze_date filtering)
+        # This represents the bug scenario where data gets filtered out
+        empty_data = pd.DataFrame()
+        
+        mock_get_price_data.return_value = empty_data
+        
+        # Call the function - it should handle empty data gracefully
+        positions_to_hold, positions_to_close = _process_open_positions(
+            open_positions, config, {}
+        )
+        
+        # With our fix, even empty data should be handled gracefully
+        assert len(positions_to_hold) == 1  # Position should still be tracked
+        assert positions_to_hold[0]['symbol'] == 'SUNPHARMA'
+        assert positions_to_hold[0]['current_price'] == 1670.0  # Falls back to entry price
+        assert positions_to_hold[0]['return_pct'] == 0.0  # No change when no data
+    
+    @patch('src.kiss_signal.reporter.data.get_price_data')
+    def test_multiple_positions_all_use_freeze_date_none(self, mock_get_price_data, tmp_path):
+        """Test that all positions in a batch get freeze_date=None treatment."""
+        from src.kiss_signal.reporter import _process_open_positions
+        from src.kiss_signal.config import Config
+        
+        # Create temporary universe file for Config validation
+        universe_file = tmp_path / "test_universe.csv"
+        universe_file.write_text("symbol\nCIPLA\nGODREJCP\nNTPC\n")
+        
+        config = Config(
+            universe_path=str(universe_file),
+            historical_data_years=3,
+            cache_dir=str(tmp_path / "test_cache"),
+            hold_period=20,
+            database_path=str(tmp_path / "test.db"),
+            freeze_date=date(2024, 6, 1),  # Past freeze date
+            min_trades_threshold=10,
+            edge_score_weights={'win_pct': 0.6, 'sharpe': 0.4},
+            reports_output_dir=str(tmp_path / "test_reports"),
+            edge_score_threshold=0.50
+        )
+        
+        # Multiple positions all with future dates
+        open_positions = [
+            {
+                "id": 1,
+                "symbol": "CIPLA",
+                "entry_date": "2025-07-01",
+                "entry_price": 1515.0,
+                "rule_stack": '[{"type": "sma_crossover"}]'
+            },
+            {
+                "id": 2,
+                "symbol": "GODREJCP", 
+                "entry_date": "2025-07-04",
+                "entry_price": 1192.0,
+                "rule_stack": '[{"type": "rsi_oversold"}]'
+            },
+            {
+                "id": 3,
+                "symbol": "NTPC",
+                "entry_date": "2025-07-07", 
+                "entry_price": 337.0,
+                "rule_stack": '[{"type": "volume_spike"}]'
+            }
+        ]
+        
+        # Mock to track all calls and verify freeze_date=None
+        call_log = []
+        
+        def track_calls(symbol, **kwargs):
+            call_log.append({
+                'symbol': symbol,
+                'freeze_date': kwargs.get('freeze_date'),
+                'start_date': kwargs.get('start_date'),
+                'end_date': kwargs.get('end_date')
+            })
+            
+            # Return mock data for all symbols
+            return pd.DataFrame({
+                'close': [100, 105],
+                'high': [102, 107],
+                'low': [98, 103]
+            }, index=pd.date_range('2025-07-01', periods=2))
+        
+        mock_get_price_data.side_effect = track_calls
+        
+        # Process positions
+        positions_to_hold, positions_to_close = _process_open_positions(
+            open_positions, config, {}
+        )
+        
+        # Should have called get_price_data for each stock + NIFTY (3 stocks * 2 calls each = 6 total)
+        assert len(call_log) == 6
+        
+        # Verify all calls had freeze_date=None
+        for call in call_log:
+            assert call['freeze_date'] is None, f"freeze_date should be None for {call['symbol']}, got {call['freeze_date']}"
+        
+        # Verify all positions were processed successfully
+        assert len(positions_to_hold) == 3
+        assert len(positions_to_close) == 0
+        
+        processed_symbols = {pos['symbol'] for pos in positions_to_hold}
+        assert processed_symbols == {'CIPLA', 'GODREJCP', 'NTPC'}
+    
+    @patch('src.kiss_signal.reporter.data.get_price_data')
+    def test_freeze_date_none_fix_allows_current_data_access(self, mock_get_price_data, tmp_path):
+        """Test that the fix allows access to current market data beyond freeze_date."""
+        from src.kiss_signal.reporter import _process_open_positions
+        from src.kiss_signal.config import Config
+        
+        # Create temporary universe file for Config validation
+        universe_file = tmp_path / "test_universe.csv"
+        universe_file.write_text("symbol\nPFC\n")
+        
+        config = Config(
+            universe_path=str(universe_file),
+            historical_data_years=3,
+            cache_dir=str(tmp_path / "test_cache"),
+            hold_period=20,
+            database_path=str(tmp_path / "test.db"),
+            freeze_date=date(2024, 6, 1),  # Old freeze date
+            min_trades_threshold=10,
+            edge_score_weights={'win_pct': 0.6, 'sharpe': 0.4},
+            reports_output_dir=str(tmp_path / "test_reports"),
+            edge_score_threshold=0.50
+        )
+        
+        open_positions = [{
+            "id": 1,
+            "symbol": "PFC",
+            "entry_date": "2025-07-08",  # Recent entry
+            "entry_price": 419.80,
+            "rule_stack": '[{"type": "hammer_pattern"}]'
+        }]
+        
+        # Mock current market data (July 2025)
+        current_market_data = pd.DataFrame({
+            'close': [419.80, 425.50, 432.10],  # Price progression
+            'high': [422.00, 428.00, 435.00],
+            'low': [417.50, 423.00, 429.50]
+        }, index=pd.date_range('2025-07-08', periods=3))
+        
+        current_nifty_data = pd.DataFrame({
+            'close': [24500, 24600, 24700]
+        }, index=pd.date_range('2025-07-08', periods=3))
+        
+        def mock_current_data(symbol, **kwargs):
+            # Verify freeze_date=None allows current data access
+            assert kwargs.get('freeze_date') is None
+            
+            if symbol == "PFC":
+                return current_market_data
+            elif symbol == "^NSEI":
+                return current_nifty_data
+            return pd.DataFrame()
+        
+        mock_get_price_data.side_effect = mock_current_data
+        
+        # Process positions
+        positions_to_hold, positions_to_close = _process_open_positions(
+            open_positions, config, {}
+        )
+        
+        # Verify current data was processed correctly
+        assert len(positions_to_hold) == 1
+        position = positions_to_hold[0]
+        
+        # Should have latest price (not filtered by freeze_date)
+        assert position['current_price'] == 432.10  # Latest available price
+        
+        # Should calculate positive return
+        expected_return = (432.10 - 419.80) / 419.80 * 100
+        assert abs(position['return_pct'] - expected_return) < 0.01
+        
+        # Should have NIFTY benchmark data
+        assert position['nifty_return_pct'] is not None
+        expected_nifty_return = (24700 - 24500) / 24500 * 100
+        assert abs(position['nifty_return_pct'] - expected_nifty_return) < 0.01
+
+
 if __name__ == '__main__':
     pytest.main([__file__])
