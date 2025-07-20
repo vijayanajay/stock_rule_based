@@ -1,0 +1,32 @@
+# KISS Signal CLI Configuration
+# Configuration for the Keep-It-Simple Signal Generation system
+
+# Path to universe file containing stock symbols
+universe_path: "data/nifty_large_mid_big.csv"
+
+# Years of historical data to use for backtesting
+historical_data_years: 3
+
+# Directory for data caching
+cache_dir: "data"
+
+# DEPRECATED: Data is automatically refreshed once per day
+# cache_refresh_days: 1
+
+# Default hold period for positions (in trading days)
+hold_period: 20
+
+# Minimum number of trades required for a strategy to be considered valid
+min_trades_threshold: 10
+
+# Weights for calculating edge score (must sum to 1.0)
+edge_score_weights:
+  win_pct: 0.6    # Weight for win percentage
+  sharpe: 0.4     # Weight for Sharpe ratio
+
+# Path to the SQLite database file
+database_path: "data/kiss_signal_big.db"
+
+# Reporting configuration
+reports_output_dir: "reports/"
+edge_score_threshold: 0.50

@@ -478,10 +478,27 @@ def get_market_data(
     # Use different cache filename pattern for indices
     cache_file = cache_dir / f"{index_symbol.replace('^', 'INDEX_')}.csv"
     
+    # Check if market index cache needs refresh (can't use _needs_refresh as it expects different filename pattern)
+    needs_refresh = True
+    if cache_file.exists():
+        try:
+            file_modified_timestamp = cache_file.stat().st_mtime
+            file_modified_date = datetime.fromtimestamp(file_modified_timestamp).date()
+            today = datetime.now().date()
+            needs_refresh = file_modified_date < today
+        except (OSError, ValueError):
+            needs_refresh = True
+    
     # Same logic as get_price_data but for market indices
-    if freeze_date or not _needs_refresh(index_symbol, cache_dir, 30):
+    if freeze_date or not needs_refresh:
         if cache_file.exists():
-            return _load_market_cache(cache_file)
+            data = _load_market_cache(cache_file)
+            # Apply freeze date restriction if specified
+            if freeze_date:
+                if not isinstance(data.index, pd.DatetimeIndex):
+                    data.index = pd.to_datetime(data.index)
+                data = data[data.index <= pd.to_datetime(freeze_date)]
+            return data
     
     if freeze_date:
         # In freeze mode, don't download new data
@@ -493,37 +510,73 @@ def get_market_data(
     data = _fetch_symbol_data(index_symbol, years)
     if data is not None:
         _save_market_cache(data, cache_file)
+        # Apply freeze date restriction if specified
+        if freeze_date:
+            if not isinstance(data.index, pd.DatetimeIndex):
+                data.index = pd.to_datetime(data.index)
+            data = data[data.index <= pd.to_datetime(freeze_date)]
         return data
     else:
         raise ValueError(f"Failed to fetch market data for {index_symbol}")
 
 
 def _load_market_cache(cache_file: Path) -> pd.DataFrame:
-    """Load market index data from cache."""
+    """Load market index data from cache with consistent format."""
     try:
         data = pd.read_csv(cache_file)
+        
+        # Standardize to date column + datetime index format
         if 'date' in data.columns:
             data['date'] = pd.to_datetime(data['date'], errors='coerce')
             data = data.dropna(subset=['date']).set_index('date')
+        elif 'index' in data.columns:
+            # Handle case where reset_index created 'index' column
+            data['date'] = pd.to_datetime(data['index'], errors='coerce') 
+            data = data.drop(columns=['index']).dropna(subset=['date']).set_index('date')
         else:
-            # Fallback for old format where date was the index
+            # Fallback: try to parse first column as date
             data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        
+        # Ensure index is properly DatetimeIndex and handle duplicates
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index, errors='coerce')
+            data = data.dropna()
+        
+        # Remove duplicate index entries to prevent reindexing errors
+        if data.index.duplicated().any():
+            logger.warning(f"Found duplicate dates in market cache, keeping last occurrence")
+            data = data[~data.index.duplicated(keep='last')]
+        
+        # Enforce lowercase column names for consistency
+        data.columns = [str(col).lower() for col in data.columns]
+        
+        if data.empty:
+            raise ValueError(f"No valid data found in market cache")
+            
     except Exception as e:
         logger.error(f"Failed to load market cache from {cache_file}: {e}")
         raise ValueError(f"Corrupted market cache file: {cache_file}") from e
-    if data.empty:
-        raise ValueError(f"Empty or invalid cache file: {cache_file}")
+    
     return data
 
 
 def _save_market_cache(data: pd.DataFrame, cache_file: Path) -> None:
-    """Save market index data to cache."""
+    """Save market index data to cache with consistent format."""
     try:
         cache_file.parent.mkdir(parents=True, exist_ok=True)
-        # Reset index to save datetime index as 'date' column to match load expectations
-        data_to_save = data.reset_index()
-        if data_to_save.index.name or 'date' not in data_to_save.columns:
-            data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
+        # Ensure consistent save format: datetime index saved as 'date' column
+        data_to_save = data.copy()
+        
+        # If index is datetime, reset it to 'date' column
+        if isinstance(data_to_save.index, pd.DatetimeIndex):
+            data_to_save = data_to_save.reset_index()
+            if data_to_save.columns[0] != 'date':
+                data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
+        
+        # Remove any unwanted index columns that may have been created
+        if 'index' in data_to_save.columns and 'date' in data_to_save.columns:
+            data_to_save = data_to_save.drop(columns=['index'])
+            
         data_to_save.to_csv(cache_file, index=False)
         logger.debug(f"Saved market cache to {cache_file}")
     except Exception as e:

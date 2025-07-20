@@ -441,10 +441,18 @@ class Backtester:
                     
                     filter_signals = getattr(rules, filter_def.type)(market_data, **converted_valid_params)
                     
+                    # DEBUG: Add logging to trace alignment issue
+                    logger.info(f"DEBUG filter_signals shape: {filter_signals.shape}")
+                    logger.info(f"DEBUG filter_signals index range: {filter_signals.index.min()} to {filter_signals.index.max()}")
+                    logger.info(f"DEBUG stock_data index range: {stock_data.index.min()} to {stock_data.index.max()}")
+                    logger.info(f"DEBUG filter_signals sum before alignment: {filter_signals.sum()}")
+                    
                     # Align with stock data and apply AND logic
                     stock_index = stock_data.index
                     aligned_filter = filter_signals.reindex(stock_index)
+                    logger.info(f"DEBUG aligned_filter sum after reindex: {aligned_filter.sum()}")
                     aligned_filter = aligned_filter.ffill().fillna(False).infer_objects(copy=False)
+                    logger.info(f"DEBUG aligned_filter sum after ffill: {aligned_filter.sum()}")
                     combined_signals &= aligned_filter
                     
                     # Log filter effectiveness

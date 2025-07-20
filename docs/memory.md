@@ -1,5 +1,19 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Data Schema Consistency: Cache Save/Load Contract Violation (2025-07-20)
+- **Issue**: Multiple test failures were caused by inconsistent data format assumptions between cache save and load operations, along with premature column access before validation.
+- **Structural Root Cause**: The cache system had inconsistent data format contracts between `_save_market_cache()` and `_load_market_cache()` functions. Save operations used `reset_index()` creating unpredictable column names ('index' vs 'date'), while load operations expected specific formats. Additionally, the `market_above_sma()` function accessed columns for debugging before validating their existence, violating defensive programming principles.
+- **Symptoms**: 7 test failures including:
+  - Shape mismatches (5,4) vs (5,5) indicating column loss
+  - KeyError: 'close' when accessing columns before validation
+  - Column order corruption and missing 'open' columns
+  - "cannot reindex on an axis with duplicate labels" from corrupted datetime indices
+- **Fix**: 
+  1. **Consistent Cache Format**: Modified save/load functions to maintain consistent schema - save preserves datetime index as 'date' column, load handles both 'date' and 'index' columns with duplicate removal
+  2. **Validation Before Access**: Moved `_validate_ohlcv_columns()` call before any column access in `market_above_sma()`
+  3. **Enhanced Data Handling**: Added support for both 'date' and 'index' column patterns in market data processing
+- **Lesson**: Data serialization boundaries must maintain strict format contracts. Cache save/load operations should be symmetric and handle edge cases like unnamed indices. Always validate data schema before accessing columns, especially in functions that accept data from multiple sources (cache, API, files).
+
 ## API Contract Desynchronization: Incomplete Refactoring (2025-07-22)
 - **Issue**: Multiple tests for the `clear-and-recalculate` command failed with `AttributeError`, indicating a mocked function (`persistence.clear_and_recalculate_strategies`) did not exist. The application was also broken at runtime.
 - **Structural Root Cause**: An incomplete refactoring had removed a key orchestrator function from the `persistence.py` module, but its primary consumer (`cli.py`) and the test suite were not updated. This broke the API contract between the two modules, leaving the system in a non-functional state.
