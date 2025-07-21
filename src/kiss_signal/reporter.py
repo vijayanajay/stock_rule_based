@@ -681,11 +681,12 @@ def _check_exit_conditions(
         return f"Exit: End of {hold_period}-day holding period."
     return None
 
-def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
+def analyze_strategy_performance(db_path: Path, min_trades: int = 10) -> List[Dict[str, Any]]:
     """Analyze strategy performance with comprehensive per-stock breakdown.
     
     Args:
         db_path: Path to SQLite database
+        min_trades: Minimum trades required for analysis (0 = show all)
         
     Returns:
         List of individual strategy performance records (deduplicated)
@@ -694,8 +695,12 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
         with sqlite3.connect(str(db_path)) as conn:
             conn.row_factory = sqlite3.Row
             
+            # Build WHERE clause for min_trades filtering
+            where_clause = "WHERE total_trades >= ?" if min_trades > 0 else ""
+            params = [min_trades] if min_trades > 0 else []
+            
             # Deduplication query: get latest strategy per symbol-rule_stack combination
-            cursor = conn.execute("""
+            cursor = conn.execute(f"""
                 SELECT s.symbol, s.rule_stack, s.edge_score, s.win_pct, s.sharpe,
                        s.avg_return as total_return, s.total_trades, s.config_hash, s.run_timestamp,
                        s.config_snapshot
@@ -703,10 +708,11 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
                 INNER JOIN (
                     SELECT symbol, rule_stack, MAX(id) as max_id
                     FROM strategies 
+                    {where_clause}
                     GROUP BY symbol, rule_stack
                 ) latest ON s.id = latest.max_id
                 ORDER BY s.symbol, s.edge_score DESC
-            """)
+            """, params)
             
             results = []
             for row in cursor.fetchall():
@@ -725,7 +731,7 @@ def analyze_strategy_performance(db_path: Path) -> List[Dict[str, Any]]:
         return []
 
 
-def analyze_strategy_performance_aggregated(db_path: Path) -> List[Dict[str, Any]]:
+def analyze_strategy_performance_aggregated(db_path: Path, min_trades: int = 10) -> List[Dict[str, Any]]:
     """Analyze strategy performance aggregated by rule stack combinations (Story 16 format).
     
     Groups strategies by rule_stack and calculates aggregated metrics:
@@ -733,6 +739,7 @@ def analyze_strategy_performance_aggregated(db_path: Path) -> List[Dict[str, Any
     
     Args:
         db_path: Path to SQLite database
+        min_trades: Minimum trades required for analysis (0 = show all)
         
     Returns:
         List of aggregated strategy performance records with config tracking
@@ -741,13 +748,18 @@ def analyze_strategy_performance_aggregated(db_path: Path) -> List[Dict[str, Any
         with sqlite3.connect(str(db_path)) as conn:
             conn.row_factory = sqlite3.Row
             
-            cursor = conn.execute("""
+            # Build WHERE clause for min_trades filtering
+            where_clause = "WHERE total_trades >= ?" if min_trades > 0 else ""
+            params = [min_trades] if min_trades > 0 else []
+            
+            cursor = conn.execute(f"""
                 SELECT symbol, rule_stack, edge_score, win_pct, sharpe,
                        avg_return, total_trades, config_hash, run_timestamp,
                        config_snapshot
                 FROM strategies 
+                {where_clause}
                 ORDER BY symbol, edge_score DESC
-            """)
+            """, params)
             
             # Group by strategy (rule_stack) AND config_hash for tracking
             strategy_groups = {}

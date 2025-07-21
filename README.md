@@ -41,8 +41,31 @@ The CLI provides detailed analysis of strategy performance:
 
 ### Strategy Performance Report
 ```cmd
+# Generate per-stock strategy analysis (default)
 python run.py analyze-strategies --output strategy_performance_report.csv
+
+# Include strategies with fewer trades using --min-trades option
+python run.py analyze-strategies --min-trades 5 --output low_threshold_report.csv
+
+# Show ALL strategies, even those with very few trades
+python run.py analyze-strategies --min-trades 0 --output complete_analysis.csv
+
+# Generate aggregated strategy performance summary
+python run.py analyze-strategies --aggregate --output aggregated_summary.csv
 ```
+
+#### New --min-trades Feature
+The `--min-trades` parameter controls which strategies are included in the analysis:
+- **Default (10)**: Only includes strategies with 10+ trades for statistical significance
+- **Custom value**: Set your own threshold (e.g., `--min-trades 5`)
+- **Show all (0)**: Include ALL strategies regardless of trade count (`--min-trades 0`)
+
+This addresses the common issue where strategies are filtered out due to insufficient trades, allowing you to:
+- See the complete picture of rule performance
+- Identify highly selective but profitable strategies
+- Make informed decisions about rule effectiveness
+
+#### Report Metrics
 Generates a CSV report with the following metrics:
 - **strategy_rule_stack**: The combination of rules (e.g., "bullish_engulfing_reversal + filter_with_rsi_oversold")
 - **frequency**: Number of symbols where this strategy was optimal

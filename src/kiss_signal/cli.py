@@ -392,6 +392,11 @@ def analyze_strategies(
         "--aggregate",
         help="Generate aggregated strategy performance (Story 16 format) instead of per-stock records.",
     ),
+    min_trades: int = typer.Option(
+        10,
+        "--min-trades",
+        help="Minimum trades required for analysis (0 = show all strategies)",
+    ),
 ) -> None:
     """Analyze and report on the comprehensive performance of all strategies."""
     format_desc = "aggregated strategy" if aggregate else "per-stock strategy"
@@ -405,9 +410,9 @@ def analyze_strategies(
 
     try:
         if aggregate:
-            strategy_performance = reporter.analyze_strategy_performance_aggregated(db_path)
+            strategy_performance = reporter.analyze_strategy_performance_aggregated(db_path, min_trades=min_trades)
         else:
-            strategy_performance = reporter.analyze_strategy_performance(db_path)
+            strategy_performance = reporter.analyze_strategy_performance(db_path, min_trades=min_trades)
             
         if not strategy_performance:
             console.print("[yellow]No historical strategies found to analyze.[/yellow]")
