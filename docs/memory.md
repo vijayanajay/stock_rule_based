@@ -1,5 +1,44 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Zombie Parameter Pandemic: Incomplete API Refactoring (2025-07-21)
+- **Issue**: Multiple test failures (`TypeError` and `AttributeError`) traced to a structural flaw where calling code referenced parameters and attributes that no longer exist. The core issue was an incomplete refactoring where caching refresh parameters (`cache_refresh_days`, `refresh_days`) were removed from function signatures and config models, but not from all calling sites.
+- **Structural Root Cause**: API contract desynchronization across module boundaries. The `reporter.py` module attempted to access `config.cache_refresh_days` (non-existent) and pass `refresh_days` to `get_price_data()` (non-existent parameter). Similarly, tests called `refresh_market_data()` with `refresh_days` parameter that the function doesn't accept. This created a cascade of parameter mismatches.
+- **Fix**: Systematically removed all references to zombie parameters throughout the codebase:
+  1. Removed `refresh_days=config.cache_refresh_days` call in `reporter.py`
+  2. Fixed all test calls to `refresh_market_data()` to remove non-existent `refresh_days` parameter
+  3. Corrected test calls to use named parameters instead of error-prone positional arguments
+- **Lesson**: When refactoring function signatures or removing config options, systematically search and update ALL calling sites using grep/IDE search. Zombie parameters create subtle API contract violations that lead to runtime failures. Always use named parameters in tests to make parameter mismatches obvious. The absence of compile-time checking in Python makes this discipline critical.
+
+## Logic Duplication and Zombie Parameters in Caching Layer (2025-07-30)
+- **Issue**: Multiple test failures (`TypeError`) were traced to a structural flaw in the data caching layer (`data.py`). The core issue was duplicated and inconsistent logic for checking cache freshness. The function `get_market_data` had a different, more confusing implementation for this check compared to `get_price_data`. This was compounded by a deprecated `refresh_days` parameter that was still present in multiple function signatures (a "zombie parameter") but was ignored by the implementation, leading to incorrect test setups that caused the failures.
+- **Fix**:
+    1.  **Standardization (DRY)**: The caching logic was standardized by refactoring `get_market_data` to use the same clear pattern as `get_price_data`. The redundant `if not cache_file.exists()` check in `get_price_data` was also removed, as the helper function already performed it, creating a single, canonical implementation for cache validation.
+    2.  **Zombie Parameter Removal**: The deprecated `refresh_days` parameter was completely removed from the codebase—from the `Config` model and YAML files down to the private helper function `_needs_refresh`.
+    3.  **Test Correction**: The associated broken tests were corrected to match the simplified, correct function signature.
+- **Lesson**: Logic duplication, even for simple tasks like cache checking, is a structural risk that leads to code drift and maintenance issues. Always refactor to a single source of truth (DRY). Deprecated parameters should be fully removed from all layers of the application (config, function signatures, calls) to prevent confusion and future bugs.
+
+## Logic Duplication and Flawed Initialization (2025-07-29)
+- **Issue**: Two test failures were traced to two distinct structural flaws:
+    1.  **Flawed Initialization**: The `backtester`'s context filter combination logic was initialized with `None`, causing a `TypeError` when the first filter was applied. This error was caught by a broad `except` block, which returned an all-`False` series, causing an assertion failure.
+    2.  **Logic Duplication**: The `data` module contained duplicated logic for checking cache freshness—one generic function and one inline implementation for market data. A test for market data caching was patching the generic function, which was never called, while the un-mocked inline logic failed, causing the test to fail.
+- **Fix**:
+    1.  **Correct Initialization**: The context filter accumulator in `backtester.py` was correctly initialized to a `pd.Series` of all `True` values, the neutral element for a logical AND operation.
+    2.  **Code De-duplication**: The generic `_needs_refresh` function in `data.py` was refactored to be more flexible, and the duplicated inline logic was removed and replaced with a call to the single, canonical function.
+- **Lesson**:
+    -   Iterative combination logic (like applying filters) must be initialized with the correct neutral element for the operation (e.g., `True` for AND, `False` for OR).
+    -   Duplicated logic is a structural flaw that increases maintenance burden and creates subtle bugs, especially when tests target one implementation but the other is executed. Always refactor to a single source of truth (DRY principle).
+
+## Logic Duplication and Flawed Initialization (2025-07-29)
+- **Issue**: Two test failures were traced to two distinct structural flaws:
+    1.  **Flawed Initialization**: The `backtester`'s context filter combination logic was initialized with `None`, causing a `TypeError` when the first filter was applied. This error was caught by a broad `except` block, which returned an all-`False` series, causing an assertion failure.
+    2.  **Logic Duplication**: The `data` module contained duplicated logic for checking cache freshness—one generic function and one inline implementation for market data. A test for market data caching was patching the generic function, which was never called, while the un-mocked inline logic failed, causing the test to fail.
+- **Fix**:
+    1.  **Correct Initialization**: The context filter accumulator in `backtester.py` was correctly initialized to a `pd.Series` of all `True` values, the neutral element for a logical AND operation.
+    2.  **Code De-duplication**: The generic `_needs_refresh` function in `data.py` was refactored to be more flexible, and the duplicated inline logic was removed and replaced with a call to the single, canonical function.
+- **Lesson**:
+    -   Iterative combination logic (like applying filters) must be initialized with the correct neutral element for the operation (e.g., `True` for AND, `False` for OR).
+    -   Duplicated logic is a structural flaw that increases maintenance burden and creates subtle bugs, especially when tests target one implementation but the other is executed. Always refactor to a single source of truth (DRY principle).
+
 ## Data Schema Consistency: Cache Save/Load Contract Violation (2025-07-20)
 - **Issue**: Multiple test failures were caused by inconsistent data format assumptions between cache save and load operations, along with premature column access before validation.
 - **Structural Root Cause**: The cache system had inconsistent data format contracts between `_save_market_cache()` and `_load_market_cache()` functions. Save operations used `reset_index()` creating unpredictable column names ('index' vs 'date'), while load operations expected specific formats. Additionally, the `market_above_sma()` function accessed columns for debugging before validating their existence, violating defensive programming principles.
@@ -232,6 +271,15 @@
 - **Symptom**: All strategies generate 0 trades regardless of data quality or rule configurations
 - **Fix**: Start with first rule's signals, then AND subsequent rules: `entry_signals = rule_signals.copy()` 
 - **Lesson**: Signal combination requires understanding signal density - don't start with universal True state
+
+## Overly Restrictive Signal Generation (2025-07-20)
+- **Issue**: Backtesting on a large universe of stocks (92+) resulted in very few (e.g., 2) open positions, suggesting an issue with signal generation logic.
+- **Structural Root Cause**: The low signal count is primarily a feature of the high-conviction strategy design, which combines multiple strict rules (e.g., `engulfing_pattern` AND `volume_spike`) and a `min_trades_threshold` that filters out strategies that do not fire often. This is expected behavior. However, investigation revealed a subtle but critical bug in the signal combination logic in `reporter.py`'s `_find_signals_in_window`. The original implementation could incorrectly filter out all signals when combining multiple sparse rule outputs, leading to an artificially low number of trades and a discrepancy with the backtester's logic.
+- **Symptoms**:
+  - Very few strategies pass the `min_trades_threshold`.
+  - Daily reports show few or no new positions, even with a large stock universe.
+- **Fix**: The signal combination logic in `reporter.py`'s `_find_signals_in_window` was corrected to properly initialize the combined signal series from the first rule's output before AND-ing it with subsequent rules. This ensures that the combination logic is sound and matches the backtester's approach.
+- **Lesson**: When combining sparse boolean signals, the initialization of the combined series is critical. Starting with the first rule's signals and then iteratively applying logical ANDs is the correct approach. Duplicated logic (like signal combination) between backtesting and reporting modules must be kept perfectly synchronized to avoid discrepancies.
 
 ## Data Contract Mismatches (Pydantic vs Dict) (2025-07-21)
 - **Issue**: Modules had inconsistent expectations for data structures. The `backtester` produces results containing Pydantic `RuleDef` objects, but consumers like the `persistence` layer serialize them to dictionaries (for JSON). Test mocks were also returning raw dictionaries instead of Pydantic objects. This led to `AttributeError` when functions expected an object but received a dictionary (e.g., `dict.key` vs `dict['key']`).

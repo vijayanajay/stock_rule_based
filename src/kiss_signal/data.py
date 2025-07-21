@@ -51,7 +51,6 @@ def load_universe(universe_path: str) -> List[str]:
 def get_price_data(
     symbol: str,
     cache_dir: Path,
-    refresh_days: int = 30,
     years: int = 1,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
@@ -62,7 +61,6 @@ def get_price_data(
     Args:
         symbol: Stock symbol
         cache_dir: Path to cache directory
-        refresh_days: Days before cache refresh
         years: Number of years of data
         start_date: Optional start date filter
         end_date: Optional end date filter
@@ -75,8 +73,7 @@ def get_price_data(
         ValueError: If data is corrupted or invalid    """
     cache_file = cache_dir / f"{symbol}.NS.csv"
     
-    # Check if we need to refresh or download data
-    if not cache_file.exists() or _needs_refresh(symbol, cache_dir, refresh_days):
+    if _needs_refresh(cache_file):
         if freeze_date:
             # In freeze mode, don't download new data
             if not cache_file.exists():
@@ -133,19 +130,15 @@ def get_price_data(
     return data
 
 
-def _needs_refresh(symbol: str, cache_dir: Path, refresh_days: int) -> bool:
+def _needs_refresh(cache_file: Path) -> bool:
     """Check if symbol data needs refresh - refreshes once per day.
     
     Args:
-        symbol: Symbol to check
-        cache_dir: Directory containing cached data files
-        refresh_days: DEPRECATED - kept for compatibility, always uses daily refresh
+        cache_file: Path to the cache file to check.
         
     Returns:
         True if symbol needs refresh (file doesn't exist or wasn't modified today)
     """
-    cache_file = cache_dir / f"{symbol}.NS.csv"
-    
     try:
         if not cache_file.exists():
             return True # Needs refresh if file doesn't exist
@@ -158,10 +151,10 @@ def _needs_refresh(symbol: str, cache_dir: Path, refresh_days: int) -> bool:
         return file_modified_date < today # Needs refresh if not modified today
 
     except OSError: # Catch OS errors from .exists() or .stat()
-        logger.warning(f"OSError checking cache status for {symbol}, assuming refresh needed.")
+        logger.warning(f"OSError checking cache status for {cache_file.name}, assuming refresh needed.")
         return True # Assume refresh is needed if we can't check
     except ValueError: # Catch potential errors from fromtimestamp
-        logger.warning(f"ValueError checking cache status for {symbol}, assuming refresh needed.")
+        logger.warning(f"ValueError checking cache status for {cache_file.name}, assuming refresh needed.")
         return True
 
 
@@ -399,12 +392,9 @@ def _log_refresh_summary(results: Dict[str, bool], total_to_fetch: int) -> None:
     logger.info(f"Successfully refreshed {successful}/{total_to_fetch} symbols")
 
 
-def _get_symbols_to_fetch(symbols: List[str], cache_path: Path, refresh_days: int) -> List[str]:
+def _get_symbols_to_fetch(symbols: List[str], cache_path: Path) -> List[str]:
     """Filter a list of symbols to only those that need a data refresh."""
-    return [
-        symbol for symbol in symbols
-        if _needs_refresh(symbol, cache_path, refresh_days)
-    ]
+    return [symbol for symbol in symbols if _needs_refresh(cache_path / f"{symbol}.NS.csv")]
 
 
 def _fetch_data_for_symbols(
@@ -433,7 +423,6 @@ def refresh_market_data(
     universe_path: Union[str, List[str]],
     cache_dir: str,
     years: int = 3,
-    refresh_days: int = 2,
     freeze_date: Optional[date] = None,
 ) -> Dict[str, bool]:
     """Refresh market data for all symbols in the universe."""
@@ -446,7 +435,7 @@ def refresh_market_data(
         logger.info("Freeze mode active, skipping cache refresh")
         return {symbol: True for symbol in symbols}
     
-    symbols_to_fetch = _get_symbols_to_fetch(symbols, cache_path, refresh_days)
+    symbols_to_fetch = _get_symbols_to_fetch(symbols, cache_path)
     results = _fetch_data_for_symbols(symbols_to_fetch, years, freeze_date, cache_path)
     _log_refresh_summary(results, len(symbols_to_fetch))
     return {symbol: results.get(symbol, True) for symbol in symbols}
@@ -478,46 +467,30 @@ def get_market_data(
     # Use different cache filename pattern for indices
     cache_file = cache_dir / f"{index_symbol.replace('^', 'INDEX_')}.csv"
     
-    # Check if market index cache needs refresh (can't use _needs_refresh as it expects different filename pattern)
-    needs_refresh = True
-    if cache_file.exists():
-        try:
-            file_modified_timestamp = cache_file.stat().st_mtime
-            file_modified_date = datetime.fromtimestamp(file_modified_timestamp).date()
-            today = datetime.now().date()
-            needs_refresh = file_modified_date < today
-        except (OSError, ValueError):
-            needs_refresh = True
-    
-    # Same logic as get_price_data but for market indices
-    if freeze_date or not needs_refresh:
-        if cache_file.exists():
+    if _needs_refresh(cache_file):
+        if freeze_date:
+            if not cache_file.exists():
+                raise FileNotFoundError(f"Cached market data not found for {index_symbol} (freeze mode)")
             data = _load_market_cache(cache_file)
-            # Apply freeze date restriction if specified
-            if freeze_date:
-                if not isinstance(data.index, pd.DatetimeIndex):
-                    data.index = pd.to_datetime(data.index)
-                data = data[data.index <= pd.to_datetime(freeze_date)]
-            return data
+        else:
+            # Download fresh data
+            logger.info(f"Downloading market index data for {index_symbol}")
+            data = _fetch_symbol_data(index_symbol, years)
+            if data is not None:
+                _save_market_cache(data, cache_file)
+            else:
+                raise ValueError(f"Failed to fetch market data for {index_symbol}")
+    else:
+        # Load from cache
+        data = _load_market_cache(cache_file)
     
     if freeze_date:
-        # In freeze mode, don't download new data
-        if not cache_file.exists():
-            raise FileNotFoundError(f"Cached market data not found for {index_symbol} (freeze mode)")
-    
-    # Download fresh data
-    logger.info(f"Downloading market index data for {index_symbol}")
-    data = _fetch_symbol_data(index_symbol, years)
-    if data is not None:
-        _save_market_cache(data, cache_file)
         # Apply freeze date restriction if specified
-        if freeze_date:
-            if not isinstance(data.index, pd.DatetimeIndex):
-                data.index = pd.to_datetime(data.index)
-            data = data[data.index <= pd.to_datetime(freeze_date)]
-        return data
-    else:
-        raise ValueError(f"Failed to fetch market data for {index_symbol}")
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index)
+        data = data[data.index <= pd.to_datetime(freeze_date)]
+    
+    return data
 
 
 def _load_market_cache(cache_file: Path) -> pd.DataFrame:

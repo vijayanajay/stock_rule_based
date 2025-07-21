@@ -88,22 +88,11 @@ def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict
         if not rule_stack_defs or price_data.empty:
             return pd.Series(False, index=price_data.index)
 
-        # Start with the first rule's signals, then AND subsequent rules
-        first_rule = rule_stack_defs[0]
-        rule_func = getattr(rules, first_rule['type'])
-        
-        # Convert string parameters to appropriate types (defensive programming)
-        first_params = first_rule.get('params', {})
-        converted_first_params = {}
-        for key, value in first_params.items():
-            if isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit():
-                converted_first_params[key] = float(value) if '.' in value else int(value)
-            else:
-                converted_first_params[key] = value
-        
-        combined_signals = rule_func(price_data, **converted_first_params)
+        # Correctly initialize with the first rule's signals, then AND subsequent rules.
+        # This fixes a critical bug where signals were being improperly combined.
+        combined_signals: Optional[pd.Series] = None
 
-        for rule_def in rule_stack_defs[1:]:
+        for rule_def in rule_stack_defs:
             rule_func = getattr(rules, rule_def['type'])
             
             # Convert string parameters to appropriate types (defensive programming)
@@ -115,7 +104,12 @@ def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict
                 else:
                     converted_rule_params[key] = value
             
-            combined_signals &= rule_func(price_data, **converted_rule_params)
+            rule_signals = rule_func(price_data, **converted_rule_params)
+
+            if combined_signals is None:
+                combined_signals = rule_signals.copy()
+            else:
+                combined_signals &= rule_signals
 
         return combined_signals.fillna(False)
     except Exception as e:
@@ -151,7 +145,6 @@ def _identify_new_signals(
             price_data = data.get_price_data(
                 symbol=symbol,
                 cache_dir=Path(config.cache_dir),
-                refresh_days=config.cache_refresh_days or 1,
                 years=config.historical_data_years,
                 freeze_date=config.freeze_date,
             )
@@ -165,7 +158,8 @@ def _identify_new_signals(
             all_signals = _find_signals_in_window(price_data, rule_stack_defs)
             
             # Determine the start date for recent signals
-            start_date_filter = (date.today() - timedelta(days=config.hold_period)) if hasattr(config, 'hold_period') and config.hold_period else date.today()
+            run_date = config.freeze_date or date.today()
+            start_date_filter = (run_date - timedelta(days=config.hold_period)) if hasattr(config, 'hold_period') and config.hold_period else run_date
             # Filter for signals within the last `hold_period` days
             recent_signals = all_signals[all_signals.index.date >= start_date_filter]
 
@@ -304,8 +298,8 @@ def generate_daily_report(
         # 4. Identify and persist new signals
         new_signals = _identify_new_signals(db_path, run_timestamp, config)
         if new_signals:
-            persistence.add_new_positions_from_signals(db_path, new_signals)
-            logger.info(f"Added {len(new_signals)} new positions to the database.")
+            added_count = persistence.add_new_positions_from_signals(db_path, new_signals)
+            logger.info(f"Added {added_count} new positions to the database.")
 
         # 5. Build and save the report
         report_date_str = (config.freeze_date or date.today()).strftime("%Y-%m-%d")
@@ -356,13 +350,13 @@ def _process_open_positions(
         days_held = (run_date - entry_date).days
 
         try:
-            # For live position tracking, ignore freeze_date to get current market data
+            # Ignore freeze_date to get latest data for live position tracking
             price_data = data.get_price_data(
                 symbol=pos["symbol"], 
                 cache_dir=Path(config.cache_dir), 
                 start_date=entry_date, 
                 end_date=run_date, 
-                freeze_date=None,  # Don't apply freeze_date for live positions
+                freeze_date=None,
                 years=config.historical_data_years
             )
 
@@ -389,18 +383,13 @@ def _process_open_positions(
                 # This is important for comparing stock performance against the market benchmark
                 actual_end_date = last_data_date if last_data_date < run_date else run_date
                 try:
-                    # Ensure we're using the exact same date range for Nifty data as for the stock
-                    # This alignment is critical for accurate comparison between stock and index performance
-                    logger.info(f"Fetching NIFTY data for {pos['symbol']} from {entry_date} to {actual_end_date}")
-                    
-                    # Get Nifty index data for the same period as the stock position
-                    # Also disable freeze_date for Nifty to ensure consistent comparison
+                    # Ignore freeze_date to get latest data for live position tracking
                     nifty_data = data.get_price_data(
                         symbol="^NSEI", 
                         cache_dir=Path(config.cache_dir), 
                         start_date=entry_date,  # Use the same entry date as the stock position
                         end_date=actual_end_date,  # Use the same end date as available for the stock
-                        freeze_date=None,  # Don't apply freeze_date for live benchmark data
+                        freeze_date=None,
                         years=config.historical_data_years
                     )
                     
@@ -870,3 +859,6 @@ def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
         rows.append(row)
     
     return f"# Strategy Performance Report\n\n{header}{separator}" + "\n".join(rows)
+
+
+

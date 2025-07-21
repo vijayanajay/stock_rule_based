@@ -56,12 +56,13 @@ class TestDataBasicFunctions:
         assert data._add_ns_suffix("^NSEI") == "^NSEI"
 
     def test_needs_refresh_missing_file(self, temp_cache_dir):
-        assert data._needs_refresh("TEST", temp_cache_dir, 7) is True
+        cache_file = temp_cache_dir / "TEST.NS.csv"
+        assert data._needs_refresh(cache_file) is True
 
     def test_needs_refresh_fresh_file(self, temp_cache_dir):
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_file.touch()
-        assert data._needs_refresh("TEST", temp_cache_dir, 7) is False
+        assert data._needs_refresh(cache_file) is False
 
     def test_needs_refresh_stale_file(self, temp_cache_dir):
         cache_file = temp_cache_dir / "TEST.NS.csv"
@@ -69,7 +70,7 @@ class TestDataBasicFunctions:
         # Mock file modification time to be old
         with patch('pathlib.Path.stat') as mock_stat:
             mock_stat.return_value.st_mtime = (datetime.now() - timedelta(days=8)).timestamp()
-            assert data._needs_refresh("TEST", temp_cache_dir, 7) is True
+            assert data._needs_refresh(cache_file) is True
 
     def test_validate_data_quality_good_data(self):
         """Test data quality validation with good data."""
@@ -175,8 +176,6 @@ class TestDataBasicFunctions:
         result = data.get_price_data(
             "RELIANCE",
             temp_cache_dir,
-            30,  # refresh_days
-            1,   # years
             freeze_date=date(2023, 1, 5)
         )
         assert len(result) == 5  # Data up to 2023-01-05
@@ -215,8 +214,6 @@ class TestDataBasicFunctions:
         result = data.get_price_data(
             "RELIANCE",
             temp_cache_dir,
-            30,  # refresh_days
-            1,   # years
             freeze_date=date(2023, 1, 3)
         )
         assert len(result) == 3
@@ -314,7 +311,7 @@ class TestDataBasicFunctions:
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_file.touch()
         with patch('pathlib.Path.stat', side_effect=OSError("Permission denied")):
-            assert data._needs_refresh("TEST", temp_cache_dir, 7) is True
+            assert data._needs_refresh(cache_file) is True
 
     @patch('kiss_signal.data._fetch_symbol_data')
     def test_get_price_data_adds_ns_suffix_for_fetch(self, mock_fetch, temp_cache_dir):
@@ -331,7 +328,7 @@ class TestDataBasicFunctions:
         
         # Call get_price_data with a plain symbol
         try:
-            data.get_price_data("BPCL", temp_cache_dir, refresh_days=0, years=1)
+            data.get_price_data("BPCL", temp_cache_dir, years=1)
         except Exception:
             # We expect this to fail during save, but we only care about the fetch call
             pass
@@ -354,7 +351,7 @@ class TestDataBasicFunctions:
         
         # Call get_price_data with an index symbol
         try:
-            data.get_price_data("^NSEI", temp_cache_dir, refresh_days=0, years=1)
+            data.get_price_data("^NSEI", temp_cache_dir, years=1)
         except Exception:
             # We expect this to fail during save, but we only care about the fetch call
             pass

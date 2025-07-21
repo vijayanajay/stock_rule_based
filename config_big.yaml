@@ -10,9 +10,6 @@ historical_data_years: 3
 # Directory for data caching
 cache_dir: "data"
 
-# DEPRECATED: Data is automatically refreshed once per day
-# cache_refresh_days: 1
-
 # Default hold period for positions (in trading days)
 hold_period: 20
 

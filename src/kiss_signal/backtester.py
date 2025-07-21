@@ -416,7 +416,6 @@ class Backtester:
         if not context_filters:
             return pd.Series(True, index=stock_data.index)
         
-        # Initialize with all True
         combined_signals = pd.Series(True, index=stock_data.index)
         
         for filter_def in context_filters:
@@ -441,18 +440,10 @@ class Backtester:
                     
                     filter_signals = getattr(rules, filter_def.type)(market_data, **converted_valid_params)
                     
-                    # DEBUG: Add logging to trace alignment issue
-                    logger.info(f"DEBUG filter_signals shape: {filter_signals.shape}")
-                    logger.info(f"DEBUG filter_signals index range: {filter_signals.index.min()} to {filter_signals.index.max()}")
-                    logger.info(f"DEBUG stock_data index range: {stock_data.index.min()} to {stock_data.index.max()}")
-                    logger.info(f"DEBUG filter_signals sum before alignment: {filter_signals.sum()}")
-                    
                     # Align with stock data and apply AND logic
                     stock_index = stock_data.index
                     aligned_filter = filter_signals.reindex(stock_index)
-                    logger.info(f"DEBUG aligned_filter sum after reindex: {aligned_filter.sum()}")
                     aligned_filter = aligned_filter.ffill().fillna(False).infer_objects(copy=False)
-                    logger.info(f"DEBUG aligned_filter sum after ffill: {aligned_filter.sum()}")
                     combined_signals &= aligned_filter
                     
                     # Log filter effectiveness
@@ -468,7 +459,7 @@ class Backtester:
                 # Fail-safe: if context filter fails, exclude all signals
                 return pd.Series(False, index=stock_data.index)
         
-        combined_count = int(combined_signals.sum())  # Ensure numeric type for arithmetic
+        combined_count = int(combined_signals.sum())
         logger.info(f"Combined context filters for {symbol}: "
                    f"{combined_count}/{len(combined_signals)} days pass "
                    f"({combined_count/len(combined_signals)*100:.1f}%)")

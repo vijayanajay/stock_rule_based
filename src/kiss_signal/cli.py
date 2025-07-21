@@ -85,7 +85,6 @@ def _analyze_symbol(
         price_data = data.get_price_data(
             symbol=symbol,
             cache_dir=Path(app_config.cache_dir),
-            refresh_days=app_config.cache_refresh_days or 1,
             years=app_config.historical_data_years,
             freeze_date=freeze_date,
         )
@@ -301,7 +300,6 @@ def run(
                 data.refresh_market_data(
                     universe_path=app_config.universe_path,
                     cache_dir=app_config.cache_dir,
-                    refresh_days=app_config.cache_refresh_days,
                     years=app_config.historical_data_years,
                     freeze_date=app_config.freeze_date,
                 )

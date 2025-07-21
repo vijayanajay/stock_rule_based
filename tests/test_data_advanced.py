@@ -31,7 +31,7 @@ class TestDataAdvancedFunctions:
             'Volume': [1000, 1100, 1200]
         }, index=pd.to_datetime(pd.date_range('2023-01-01', periods=3, name='Date')))
         mock_download.return_value = mock_data
-        result = data.get_price_data("RELIANCE", temp_cache_dir, 7, 1)
+        result = data.get_price_data("RELIANCE", temp_cache_dir, years=1)
         assert len(result) == 3
         assert 'open' in result.columns
         mock_download.assert_called_once()
@@ -51,7 +51,6 @@ class TestDataAdvancedFunctions:
         data.refresh_market_data(
             universe_path=["RELIANCE"],
             cache_dir=str(temp_cache_dir),
-            refresh_days=7,
             years=1,
             freeze_date=date(2023, 1, 10)
         )
@@ -71,7 +70,6 @@ class TestDataAdvancedFunctions:
         data.refresh_market_data(
             universe_path=["RELIANCE"],
             cache_dir=str(temp_cache_dir),
-            refresh_days=7,
             years=1
         )
         mock_download.assert_called_once()
@@ -123,8 +121,7 @@ class TestDataAdvancedFunctions:
         
         results = data.refresh_market_data(
             universe_path=["RELIANCE"],
-            cache_dir=str(temp_cache_dir),
-            refresh_days=0  # Force refresh
+            cache_dir=str(temp_cache_dir)
         )
         
         assert results["RELIANCE"] is False
@@ -142,8 +139,7 @@ class TestDataAdvancedFunctions:
         
         results = data.refresh_market_data(
             universe_path=["RELIANCE"],
-            cache_dir=str(temp_cache_dir),
-            refresh_days=0  # Force refresh
+            cache_dir=str(temp_cache_dir)
         )
         
         assert results["RELIANCE"] is False
@@ -202,8 +198,7 @@ class TestDataAdvancedFunctions:
         """Test refresh_market_data with a list of symbols."""
         results = data.refresh_market_data(
             universe_path=["RELIANCE", "TCS"],
-            cache_dir=str(temp_cache_dir),
-            refresh_days=0  # force refresh
+            cache_dir=str(temp_cache_dir)
         )
         assert mock_fetch_store.call_count == 2
         assert results["RELIANCE"] is True
