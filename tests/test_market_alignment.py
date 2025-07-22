@@ -12,7 +12,34 @@ from pathlib import Path
 import tempfile
 import os
 
-from src.kiss_signal.data import get_market_data, _load_market_cache, _save_market_cache
+from src.kiss_signal.data import get_price_data
+
+
+def _save_market_cache_compat(data: pd.DataFrame, cache_file: Path) -> None:
+    """Compatibility wrapper for old _save_market_cache function."""
+    from src.kiss_signal.data import _save_cache
+    # Extract symbol from cache file name
+    filename = cache_file.name
+    if filename.startswith("INDEX_"):
+        symbol = "^" + filename.replace("INDEX_", "").replace(".csv", "")
+    else:
+        symbol = filename.replace(".NS.csv", "")
+    
+    # Ensure the cache file parent directory exists
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    _save_cache(symbol, data, cache_file.parent)
+
+
+def _load_market_cache_compat(cache_file: Path) -> pd.DataFrame:
+    """Compatibility wrapper for old _load_market_cache function."""
+    from src.kiss_signal.data import _load_cache
+    # Extract symbol from cache file name
+    filename = cache_file.name
+    if filename.startswith("INDEX_"):
+        symbol = "^" + filename.replace("INDEX_", "").replace(".csv", "")
+    else:
+        symbol = filename.replace(".NS.csv", "")
+    return _load_cache(symbol, cache_file.parent)
 from src.kiss_signal.rules import market_above_sma
 from src.kiss_signal.backtester import Backtester
 
@@ -54,10 +81,10 @@ class TestMarketDataAlignment:
         cache_file = self.temp_dir / "INDEX_NSEI.csv"
         
         # Save market data
-        _save_market_cache(self.sample_market_data, cache_file)
+        _save_market_cache_compat(self.sample_market_data, cache_file)
         
         # Load market data
-        loaded_data = _load_market_cache(cache_file)
+        loaded_data = _load_market_cache_compat(cache_file)
         
         # Verify index is DatetimeIndex
         assert isinstance(loaded_data.index, pd.DatetimeIndex), \
@@ -101,10 +128,10 @@ class TestMarketDataAlignment:
         """Test alignment works in backtester context (integration test)."""
         # Save market data to cache
         cache_file = self.temp_dir / "INDEX_NSEI.csv"
-        _save_market_cache(self.sample_market_data, cache_file)
+        _save_market_cache_compat(self.sample_market_data, cache_file)
         
         # Load market data (this simulates what backtester does)
-        market_data = get_market_data("^NSEI", self.temp_dir)
+        market_data = get_price_data("^NSEI", self.temp_dir)
         
         # Get market signals
         market_signals = market_above_sma(market_data, period=20)
@@ -125,11 +152,11 @@ class TestMarketDataAlignment:
         """Test freeze date filtering works correctly."""
         # Save market data to cache
         cache_file = self.temp_dir / "INDEX_NSEI.csv"
-        _save_market_cache(self.sample_market_data, cache_file)
+        _save_market_cache_compat(self.sample_market_data, cache_file)
         
         # Load with freeze date
         freeze_date = date(2023, 6, 30)
-        market_data = get_market_data("^NSEI", self.temp_dir, freeze_date=freeze_date)
+        market_data = get_price_data("^NSEI", self.temp_dir, freeze_date=freeze_date)
         
         # Verify freeze date applied
         assert market_data.index.max().date() <= freeze_date
@@ -194,7 +221,7 @@ class TestMarketDataAlignment:
             f.write(csv_content)
         
         # Load using our function
-        loaded_data = _load_market_cache(cache_file)
+        loaded_data = _load_market_cache_compat(cache_file)
         
         # Verify it's properly processed
         assert isinstance(loaded_data.index, pd.DatetimeIndex)
@@ -232,8 +259,8 @@ def test_end_to_end_alignment():
         assert isinstance(raw_data.index, pd.RangeIndex), "Should start with RangeIndex"
         assert 'date' in raw_data.columns, "Should have date as column"
         
-        # Load market data (should fix the index issue via _load_market_cache)
-        loaded_market = get_market_data("^NSEI", temp_path)
+        # Load market data (should fix the index issue via _load_cache)
+        loaded_market = get_price_data("^NSEI", temp_path)
         
         # Verify the fix worked at loading level
         assert isinstance(loaded_market.index, pd.DatetimeIndex), \

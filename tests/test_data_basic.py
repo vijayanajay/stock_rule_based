@@ -123,7 +123,7 @@ class TestDataBasicFunctions:
         test_data = test_data.set_index('date')
         assert data._validate_data_quality(test_data, "TEST") is False
 
-    def test_save_and_load_symbol_cache(self, temp_cache_dir):
+    def test_save_and_load_cache(self, temp_cache_dir):
         """Test saving and loading symbol cache."""
         test_data = pd.DataFrame({
             'date': pd.to_datetime(pd.date_range('2023-01-01', periods=3)),
@@ -133,32 +133,32 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104],
             'volume': [1000, 1100, 1200]
         })
-        data._save_symbol_cache("RELIANCE", test_data, temp_cache_dir)
-        loaded_data = data._load_symbol_cache("RELIANCE", temp_cache_dir)
+        data._save_cache("RELIANCE", test_data, temp_cache_dir)
+        loaded_data = data._load_cache("RELIANCE", temp_cache_dir)
         expected_data = test_data.set_index('date')
         pd.testing.assert_frame_equal(expected_data, loaded_data)
 
     @patch('pandas.DataFrame.to_csv', side_effect=OSError("Disk full"))
-    def test_save_symbol_cache_exception(self, mock_to_csv, temp_cache_dir):
-        """Test _save_symbol_cache handles exceptions."""
+    def test_save_cache_exception(self, mock_to_csv, temp_cache_dir):
+        """Test _save_cache handles exceptions."""
         df = pd.DataFrame({'close': [100]})
-        assert data._save_symbol_cache("TEST", df, temp_cache_dir) is False
+        assert data._save_cache("TEST", df, temp_cache_dir) is False
 
-    def test_load_symbol_cache_with_unnamed_col(self, temp_cache_dir):
+    def test_load_cache_with_unnamed_col(self, temp_cache_dir):
         """Test loading cache file with an 'Unnamed: 0' column."""
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_file.write_text("Unnamed: 0,date,close\n0,2023-01-01,100\n1,2023-01-02,101")
         
-        loaded_data = data._load_symbol_cache("TEST", temp_cache_dir)
+        loaded_data = data._load_cache("TEST", temp_cache_dir)
         assert 'Unnamed: 0' not in loaded_data.columns
         assert 'date' in loaded_data.index.name
         assert len(loaded_data) == 2
 
-    def test_load_symbol_cache_with_date_as_first_col(self, temp_cache_dir):
+    def test_load_cache_with_date_as_first_col(self, temp_cache_dir):
         """Test loading cache where date is the first column but not index."""
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_file.write_text("date,close\n2023-01-01,100\n2023-01-02,101")
-        loaded_data = data._load_symbol_cache("TEST", temp_cache_dir)
+        loaded_data = data._load_cache("TEST", temp_cache_dir)
         assert isinstance(loaded_data.index, pd.DatetimeIndex)
         assert len(loaded_data) == 2
     
@@ -172,7 +172,7 @@ class TestDataBasicFunctions:
             'close': range(102, 112),
             'volume': range(1000, 1010)
         })
-        data._save_symbol_cache("RELIANCE", test_data, temp_cache_dir)
+        data._save_cache("RELIANCE", test_data, temp_cache_dir)
         result = data.get_price_data(
             "RELIANCE",
             temp_cache_dir,
@@ -189,7 +189,7 @@ class TestDataBasicFunctions:
             'low': range(95, 105), 'close': range(102, 112),
             'volume': range(1000, 1010)
         })
-        data._save_symbol_cache("RELIANCE", test_data, temp_cache_dir)
+        data._save_cache("RELIANCE", test_data, temp_cache_dir)
         result = data.get_price_data(
             "RELIANCE",
             temp_cache_dir,
@@ -210,7 +210,7 @@ class TestDataBasicFunctions:
             'close': range(102, 112),
             'volume': range(1000, 1010)
         })
-        data._save_symbol_cache("RELIANCE", test_data, temp_cache_dir)
+        data._save_cache("RELIANCE", test_data, temp_cache_dir)
         result = data.get_price_data(
             "RELIANCE",
             temp_cache_dir,
@@ -233,7 +233,7 @@ class TestDataBasicFunctions:
             'open': range(5), 'high': range(5), 'low': range(5), 'volume': range(5),
             'close': range(5)
         })
-        data._save_symbol_cache("TEST", test_data, temp_cache_dir)
+        data._save_cache("TEST", test_data, temp_cache_dir)
         with pytest.raises(ValueError, match="No data available for TEST"):
             data.get_price_data("TEST", temp_cache_dir, start_date=date(2024, 1, 1))
 
@@ -244,7 +244,7 @@ class TestDataBasicFunctions:
             'open': range(10), 'high': range(10), 'low': range(10), 'volume': range(10),
             'close': range(10)
         })
-        data._save_symbol_cache("TEST", test_data, temp_cache_dir)
+        data._save_cache("TEST", test_data, temp_cache_dir)
         with caplog.at_level(logging.WARNING):
             result = data.get_price_data("TEST", temp_cache_dir)
             assert len(result) == 10
@@ -261,7 +261,7 @@ class TestDataBasicFunctions:
             'close': [18050, 18150, 18250],
             'volume': [1000000, 1100000, 1200000]
         })
-        data._save_symbol_cache("^NSEI", test_data, temp_cache_dir)
+        data._save_cache("^NSEI", test_data, temp_cache_dir)
         
         with caplog.at_level(logging.WARNING):
             result = data.get_price_data("^NSEI", temp_cache_dir)
@@ -290,8 +290,8 @@ class TestDataBasicFunctions:
             'volume': [1000, 1100, 1200]
         })
         
-        data._save_symbol_cache("^NSEI", nifty_data, temp_cache_dir)
-        data._save_symbol_cache("RELIANCE", stock_data, temp_cache_dir)
+        data._save_cache("^NSEI", nifty_data, temp_cache_dir)
+        data._save_cache("RELIANCE", stock_data, temp_cache_dir)
         
         with caplog.at_level(logging.WARNING):
             # Test NIFTY - should NOT warn
@@ -334,7 +334,7 @@ class TestDataBasicFunctions:
             pass
         
         # Verify that _fetch_symbol_data was called with the .NS suffix
-        mock_fetch.assert_called_once_with("BPCL.NS", 1)
+        mock_fetch.assert_called_once_with("BPCL.NS", 1, None)
 
     @patch('kiss_signal.data._fetch_symbol_data')
     def test_get_price_data_preserves_index_symbols(self, mock_fetch, temp_cache_dir):
@@ -357,7 +357,7 @@ class TestDataBasicFunctions:
             pass
         
         # Verify that _fetch_symbol_data was called with the original symbol (no .NS suffix)
-        mock_fetch.assert_called_once_with("^NSEI", 1)
+        mock_fetch.assert_called_once_with("^NSEI", 1, None)
 
     def test_get_price_data_position_tracking_no_warning(self, temp_cache_dir, caplog):
         """Test that get_price_data does NOT log warning during position tracking (start_date and end_date specified)."""
@@ -370,7 +370,7 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104, 105, 106],
             'volume': [1000, 1100, 1200, 1300, 1400]
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         with caplog.at_level(logging.WARNING):
             # Test position tracking scenario (both start_date and end_date specified)
@@ -414,7 +414,7 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104, 105, 106],
             'volume': [1000, 1100, 1200, 1300, 1400]
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         with caplog.at_level(logging.WARNING):
             # Test regular loading (no start_date or end_date)
@@ -436,7 +436,7 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104, 105, 106],
             'volume': [1000, 1100, 1200, 1300, 1400]
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         with caplog.at_level(logging.WARNING):
             # Test with only start_date (not position tracking)
@@ -462,7 +462,7 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104, 105, 106],
             'volume': [1000, 1100, 1200, 1300, 1400]
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         with caplog.at_level(logging.WARNING):
             # Test with only end_date (not position tracking)
@@ -488,7 +488,7 @@ class TestDataBasicFunctions:
             'close': range(102, 162),
             'volume': range(1000, 1060)
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         with caplog.at_level(logging.WARNING):
             # Test regular loading with sufficient data
@@ -523,7 +523,7 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104, 105, 106],
             'volume': [1000, 1100, 1200, 1300, 1400]
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         # Test position tracking scenario (both start_date and end_date specified)
         with caplog.at_level(logging.DEBUG):
@@ -555,7 +555,7 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104, 105, 106],
             'volume': [1000, 1100, 1200, 1300, 1400]
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         # Test regular loading (no start_date/end_date filters)
         with caplog.at_level(logging.WARNING):
@@ -579,7 +579,7 @@ class TestDataBasicFunctions:
             'close': [102, 103, 104, 105, 106],
             'volume': [1000, 1100, 1200, 1300, 1400]
         })
-        data._save_symbol_cache("TESTSTOCK", test_data, temp_cache_dir)
+        data._save_cache("TESTSTOCK", test_data, temp_cache_dir)
         
         # Test with only start_date (not position tracking)
         with caplog.at_level(logging.WARNING):

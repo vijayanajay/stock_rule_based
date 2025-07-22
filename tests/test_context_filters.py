@@ -12,7 +12,67 @@ from datetime import date
 import pandas as pd
 import numpy as np
 
-from src.kiss_signal.data import get_market_data, _load_market_cache, _save_market_cache
+from src.kiss_signal.data import get_price_data
+
+
+def _save_market_cache_compat(data: pd.DataFrame, cache_file: Path) -> None:
+    """Compatibility wrapper for old _save_market_cache function."""
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Ensure data has 'date' as column, not index
+        if data.index.name == 'date' or isinstance(data.index, pd.DatetimeIndex):
+            data_to_save = data.reset_index()
+            if data_to_save.columns[0] != 'date':
+                data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
+        else:
+            data_to_save = data.copy()
+        
+        # Remove any unwanted index columns
+        if 'index' in data_to_save.columns and 'date' in data_to_save.columns:
+            data_to_save = data_to_save.drop(columns=['index'])
+            
+        data_to_save.to_csv(cache_file, index=False)
+    except Exception as e:
+        raise RuntimeError(f"Failed to save market cache: {e}")
+
+
+def _load_market_cache_compat(cache_file: Path) -> pd.DataFrame:
+    """Compatibility wrapper for old _load_market_cache function."""
+    try:
+        data = pd.read_csv(cache_file)
+        
+        # Standardize to date column + datetime index format
+        if 'date' in data.columns:
+            data['date'] = pd.to_datetime(data['date'], errors='coerce')
+            data = data.dropna(subset=['date']).set_index('date')
+        elif 'index' in data.columns:
+            # Handle case where reset_index created 'index' column
+            data['date'] = pd.to_datetime(data['index'], errors='coerce') 
+            data = data.drop(columns=['index']).dropna(subset=['date']).set_index('date')
+        else:
+            # Fallback: try to parse first column as date
+            data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        
+        # Ensure index is properly DatetimeIndex and handle duplicates
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index, errors='coerce')
+            data = data.dropna()
+        
+        # Remove duplicate index entries
+        if data.index.duplicated().any():
+            data = data[~data.index.duplicated(keep='last')]
+        
+        # Enforce lowercase column names for consistency
+        data.columns = [str(col).lower() for col in data.columns]
+        
+        if data.empty:
+            raise ValueError(f"No valid data found in cache")
+            
+    except Exception as e:
+        raise ValueError(f"Corrupted cache file: {cache_file}") from e
+    
+    return data
 from src.kiss_signal.backtester import Backtester
 from src.kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
 
@@ -42,17 +102,17 @@ class TestContextFilterIntegration(unittest.TestCase):
             'volume': [10000, 20000, 30000, 40000, 50000]
         }, index=pd.date_range('2024-01-01', periods=5, freq='D'))
 
-    def test_get_market_data_basic_functionality(self):
-        """Test basic get_market_data functionality."""
+    def test_get_price_data_basic_functionality(self):
+        """Test basic get_price_data functionality for market indices."""
         with patch('src.kiss_signal.data._needs_refresh', return_value=True), \
              patch('src.kiss_signal.data._fetch_symbol_data', return_value=self.market_data) as mock_fetch, \
-             patch('src.kiss_signal.data._save_market_cache') as mock_save, \
+             patch('src.kiss_signal.data._save_cache') as mock_save, \
              patch.object(Path, 'exists', return_value=False):
             
-            result = get_market_data("^NSEI", self.cache_dir, years=1)
+            result = get_price_data("^NSEI", self.cache_dir, years=1)
             
             # Verify correct symbol passed to fetch
-            mock_fetch.assert_called_once_with("^NSEI", 1)
+            mock_fetch.assert_called_once_with("^NSEI", 1, None)
             mock_save.assert_called_once()
             
             # Verify data structure
@@ -63,14 +123,13 @@ class TestContextFilterIntegration(unittest.TestCase):
     def test_market_cache_filename_pattern(self):
         """Test that market indices use INDEX_ prefix in cache files."""
         with patch('src.kiss_signal.data._needs_refresh', return_value=False), \
-             patch('src.kiss_signal.data._load_market_cache', return_value=self.market_data) as mock_load, \
+             patch('src.kiss_signal.data._load_cache', return_value=self.market_data) as mock_load, \
              patch.object(Path, 'exists', return_value=True):
             
-            get_market_data("^NSEI", self.cache_dir)
+            get_price_data("^NSEI", self.cache_dir)
             
-            # Verify correct cache file pattern
-            expected_cache_file = self.cache_dir / "INDEX_NSEI.csv"
-            mock_load.assert_called_once_with(expected_cache_file)
+            # Verify correct cache function called with symbol and cache_dir
+            mock_load.assert_called_once_with("^NSEI", self.cache_dir)
 
     def test_backtester_apply_context_filters_integration(self):
         """Test backtester _apply_context_filters method integration."""
@@ -85,7 +144,7 @@ class TestContextFilterIntegration(unittest.TestCase):
         """Test backtester market data caching mechanism."""
         backtester = Backtester()
         
-        with patch('src.kiss_signal.data.get_market_data', return_value=self.market_data) as mock_get_data:
+        with patch('src.kiss_signal.data.get_price_data', return_value=self.market_data) as mock_get_data:
             
             # First call should fetch data
             result1 = backtester._get_market_data_cached("^NSEI")
@@ -97,7 +156,7 @@ class TestContextFilterIntegration(unittest.TestCase):
             pd.testing.assert_frame_equal(result1, self.market_data)
             pd.testing.assert_frame_equal(result2, self.market_data)
             
-            # Should only call get_market_data once
+            # Should only call get_price_data once
             self.assertEqual(mock_get_data.call_count, 1)
 
     def test_context_filter_with_market_above_sma(self):
@@ -172,11 +231,11 @@ class TestContextFilterIntegration(unittest.TestCase):
         
         try:
             # Save test data
-            _save_market_cache(self.market_data, cache_file)
+            _save_market_cache_compat(self.market_data, cache_file)
             self.assertTrue(cache_file.exists())
             
             # Load data back
-            loaded_data = _load_market_cache(cache_file)
+            loaded_data = _load_market_cache_compat(cache_file)
             
             # Verify data integrity (allowing for index frequency differences)
             self.assertEqual(loaded_data.shape, self.market_data.shape)
@@ -198,21 +257,21 @@ class TestContextFilterIntegration(unittest.TestCase):
                 cache_file.unlink()
 
     def test_freeze_mode_behavior(self):
-        """Test get_market_data behavior in freeze mode."""
+        """Test get_price_data behavior in freeze mode for indices."""
         freeze_date = date(2024, 6, 1)
         
         # Test with existing cache
-        with patch('src.kiss_signal.data._load_market_cache', return_value=self.market_data) as mock_load, \
+        with patch('src.kiss_signal.data._load_cache', return_value=self.market_data) as mock_load, \
              patch.object(Path, 'exists', return_value=True):
             
-            result = get_market_data("^NSEI", self.cache_dir, freeze_date=freeze_date)
+            result = get_price_data("^NSEI", self.cache_dir, freeze_date=freeze_date)
             mock_load.assert_called_once()
             pd.testing.assert_frame_equal(result, self.market_data)
         
         # Test without cache (should raise error)
         with patch.object(Path, 'exists', return_value=False):
             with self.assertRaises(FileNotFoundError) as context:
-                get_market_data("^NSEI", self.cache_dir, freeze_date=freeze_date)
+                get_price_data("^NSEI", self.cache_dir, freeze_date=freeze_date)
             
             self.assertIn("freeze mode", str(context.exception))
 

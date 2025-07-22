@@ -1,17 +1,22 @@
 """Optimized tests for data management functionality - Advanced operations."""
 
+from __future__ import annotations
+
 import pytest
 import pandas as pd
 from datetime import date
 from unittest.mock import patch
 import tempfile
 from pathlib import Path
+from typing import Generator
 
 from kiss_signal import data
 
+__all__ = ["TestDataAdvancedFunctions", "temp_cache_dir"]
+
 
 @pytest.fixture
-def temp_cache_dir():
+def temp_cache_dir() -> Generator[Path, None, None]:
     """Fast in-memory data manager for testing."""
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
@@ -47,7 +52,7 @@ class TestDataAdvancedFunctions:
             'close': range(102, 107),
             'volume': range(1000, 1005)
         })
-        data._save_symbol_cache("RELIANCE", test_data, temp_cache_dir)
+        data._save_cache("RELIANCE", test_data, temp_cache_dir)
         data.refresh_market_data(
             universe_path=["RELIANCE"],
             cache_dir=str(temp_cache_dir),
@@ -147,7 +152,7 @@ class TestDataAdvancedFunctions:
     @patch('kiss_signal.data._fetch_symbol_data', return_value=None)
     def test_get_price_data_fetch_fails(self, mock_fetch, temp_cache_dir):
         """Test get_price_data when fetching fails."""
-        with pytest.raises(ValueError, match="Failed to fetch data for TEST"):
+        with pytest.raises(ValueError, match="Failed to fetch or validate data for TEST"):
             data.get_price_data("TEST", temp_cache_dir)
 
     @patch('yfinance.download', return_value=pd.DataFrame())
@@ -186,7 +191,7 @@ class TestDataAdvancedFunctions:
 
     @patch('kiss_signal.data._fetch_symbol_data')
     @patch('kiss_signal.data._validate_data_quality', return_value=True)
-    @patch('kiss_signal.data._save_symbol_cache', return_value=False)
+    @patch('kiss_signal.data._save_cache', return_value=False)
     def test_fetch_and_store_data_save_fails(self, mock_save, mock_validate, mock_fetch, temp_cache_dir):
         """Test _fetch_and_store_data when saving fails."""
         mock_fetch.return_value = pd.DataFrame({'close': [100]})

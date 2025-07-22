@@ -473,9 +473,9 @@ class Backtester:
         
         if index_symbol not in self._market_cache:
             from pathlib import Path
-            from .data import get_market_data
-            self._market_cache[index_symbol] = get_market_data(
-                index_symbol=index_symbol,
+            from .data import get_price_data
+            self._market_cache[index_symbol] = get_price_data(
+                symbol=index_symbol,
                 cache_dir=Path("data"),  # TODO: Get from config
                 years=2,  # Buffer for lookback calculations
                 freeze_date=getattr(self, 'freeze_date', None)

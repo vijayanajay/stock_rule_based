@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
-__all__ = ["get_price_data", "refresh_market_data", "load_universe", "get_market_data"]
+__all__ = ["get_price_data", "refresh_market_data", "load_universe"]
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,13 @@ def load_universe(universe_path: str) -> List[str]:
     return symbols
 
 
+def _get_cache_filepath(symbol: str, cache_dir: Path) -> Path:
+    """Generate cache file path for stock or index symbol."""
+    if symbol.startswith("^"):
+        return cache_dir / f"{symbol.replace('^', 'INDEX_')}.csv"
+    return cache_dir / f"{symbol}.NS.csv"
+
+
 def get_price_data(
     symbol: str,
     cache_dir: Path,
@@ -56,10 +63,10 @@ def get_price_data(
     end_date: Optional[date] = None,
     freeze_date: Optional[date] = None,
 ) -> pd.DataFrame:
-    """Get price data from cache with validation.
+    """Get price data for a stock or index from cache or by fetching.
     
     Args:
-        symbol: Stock symbol
+        symbol: Stock symbol or index (e.g., 'RELIANCE' or '^NSEI')
         cache_dir: Path to cache directory
         years: Number of years of data
         start_date: Optional start date filter
@@ -70,57 +77,49 @@ def get_price_data(
         Standardized DataFrame with date index and OHLCV columns
         
     Raises:
-        ValueError: If data is corrupted or invalid    """
-    cache_file = cache_dir / f"{symbol}.NS.csv"
+        ValueError: If data is corrupted or invalid
+        FileNotFoundError: If cache doesn't exist in freeze mode
+    """
+    cache_file = _get_cache_filepath(symbol, cache_dir)
     
-    if _needs_refresh(cache_file):
-        if freeze_date:
-            # In freeze mode, don't download new data
-            if not cache_file.exists():
-                raise FileNotFoundError(f"Cached data not found for {symbol} (freeze mode)")
-            # Use existing cache
-            data = _load_symbol_cache(symbol, cache_dir)
+    # Fetch data if refresh needed and not in freeze mode
+    if _needs_refresh(cache_file) and not freeze_date:
+        logger.info(f"Downloading fresh data for {symbol}")
+        symbol_with_suffix = _add_ns_suffix(symbol)
+        fetched_data = _fetch_symbol_data(symbol_with_suffix, years, freeze_date)
+        if fetched_data is not None and _validate_data_quality(fetched_data, symbol):
+            _save_cache(symbol, fetched_data, cache_dir)
+            data = fetched_data
         else:
-            # Download fresh data
-            logger.info(f"Downloading fresh data for {symbol}")
-            symbol_with_suffix = _add_ns_suffix(symbol)
-            data = _fetch_symbol_data(symbol_with_suffix, years)
-            if data is not None:
-                _save_symbol_cache(symbol, data, cache_dir)
-            else:
-                raise ValueError(f"Failed to fetch data for {symbol}")
+            raise ValueError(f"Failed to fetch or validate data for {symbol}")
+    elif not cache_file.exists():
+        if freeze_date:
+            raise FileNotFoundError(f"Cached data not found for {symbol} (freeze mode)")
+        else:
+            raise FileNotFoundError(f"Cached data not found for {symbol}")
     else:
-        # Load from cache
-        data = _load_symbol_cache(symbol, cache_dir)
+        data = _load_cache(symbol, cache_dir)
     
-    # Apply date filtering with robust index handling
-    if start_date:
-        start_timestamp = pd.to_datetime(start_date)
-        # Ensure index is datetime for proper comparison
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index)
-        data = data[data.index >= start_timestamp]    
-    if end_date:
-        end_timestamp = pd.to_datetime(end_date)
-        # Ensure index is datetime for proper comparison
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index)
-        data = data[data.index <= end_timestamp]
+    # Ensure proper datetime index
+    if "date" in data.columns:
+        data["date"] = pd.to_datetime(data["date"], errors="coerce", format="mixed")
+        data = data.dropna(subset=["date"]).set_index("date")
+    elif not isinstance(data.index, pd.DatetimeIndex):
+        data.index = pd.to_datetime(data.index, errors="coerce", format="mixed")
+        data = data.dropna()
     
-    # Apply freeze date restriction
+    # Apply date filters
     if freeze_date:
-        # Ensure index is datetime for proper comparison
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index)
-        data = data[data.index <= pd.to_datetime(freeze_date)]
+        data = data[data.index.date <= freeze_date]
+    if start_date:
+        data = data[data.index.date >= start_date]
+    if end_date:
+        data = data[data.index.date <= end_date]
     
     if data.empty:
         raise ValueError(f"No data available for {symbol} in requested date range")
     
-    # Only log in verbose mode for individual symbol data serving
-    # Skip warning for NIFTY index as it's used for benchmark calculations with short date ranges
-    # Also skip warning during position tracking (when both start_date and end_date are specified)
-    # as limited rows are expected when filtering to position date ranges
+    # Log warnings for limited data (with same logic as before)
     is_position_tracking = start_date is not None and end_date is not None
     if len(data) < 50 and not symbol.startswith('^NSEI') and not is_position_tracking:
         logger.warning(f"Limited data for {symbol}: only {len(data)} rows")
@@ -248,23 +247,15 @@ def _validate_data_quality(data: pd.DataFrame, symbol: str) -> bool:
     return True
 
 
-def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool:
-    """Save symbol data to cache file.
-    
-    Args:
-        symbol: Symbol name (without .NS suffix)
-        data: DataFrame to save (should have 'date' column, not as index)
-        cache_dir: Directory to save cached data files
-        
-    Returns:
-        True if save successful
-    """
-    cache_file = cache_dir / f"{symbol}.NS.csv"
+def _save_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool:
+    """Save symbol data to cache file with unified logic for stocks and indices."""
+    cache_file = _get_cache_filepath(symbol, cache_dir)
     
     try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        
         # Ensure data has 'date' as column, not index
         if data.index.name == 'date' or isinstance(data.index, pd.DatetimeIndex):
-            # Reset index to make date a column
             data_to_save = data.reset_index()
             if data_to_save.columns[0] != 'date':
                 data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
@@ -277,76 +268,83 @@ def _save_symbol_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool
             if hasattr(volume_col, 'dtype') and str(volume_col.dtype) == 'Int64':
                 data_to_save['volume'] = volume_col.fillna(0).astype(int)
             elif hasattr(volume_col, 'isna') and volume_col.isna().any(axis=None):
-                # Handle any nullable columns that might have NA values
                 data_to_save['volume'] = volume_col.fillna(0).astype(int)
         
-        # Also ensure all numeric columns are regular types for CSV compatibility
+        # Ensure all numeric columns are regular types for CSV compatibility
         for col in ['open', 'high', 'low', 'close']:
             if col in data_to_save.columns:
                 col_data = data_to_save[col]
                 if hasattr(col_data, 'isna') and col_data.isna().any(axis=None):
                     data_to_save[col] = col_data.fillna(0).astype(float)
         
-        # Save without index to avoid "Unnamed: 0" columns
+        # Remove any unwanted index columns
+        if 'index' in data_to_save.columns and 'date' in data_to_save.columns:
+            data_to_save = data_to_save.drop(columns=['index'])
+            
         data_to_save.to_csv(cache_file, index=False)
+        logger.debug(f"Saved cache to {cache_file}")
         return True
     except Exception as e:
         logger.error(f"Failed to save cache for {symbol}: {e}")
         return False
 
 
-def _load_symbol_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
-    """Load symbol data from cache file."""
-    cache_file = cache_dir / f"{symbol}.NS.csv"
-    data = pd.read_csv(cache_file)
+def _load_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
+    """Load symbol data from cache file with unified logic for stocks and indices."""
+    cache_file = _get_cache_filepath(symbol, cache_dir)
     
-    # Clean up any unnamed index columns that might have been saved accidentally
-    unnamed_cols = [col for col in data.columns if col.startswith('Unnamed:')]
-    if unnamed_cols:
-        logger.debug(f"Removing unnamed columns from {symbol}: {unnamed_cols}")
-        data = data.drop(columns=unnamed_cols)
-    
-    # Set the date column as index and parse as datetime
-    if 'date' in data.columns:
-        # Handle potentially invalid dates gracefully
-        data['date'] = pd.to_datetime(data['date'], format='%Y-%m-%d', errors='coerce')
-        # Drop rows with invalid dates (NaT values)
-        data = data.dropna(subset=['date'])
-        if data.empty:
-            raise ValueError(f"No valid date data found for {symbol}")
-        data = data.set_index('date')
-    else:
-        # Fallback to treating first column as date index
-        data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
-    
-    # Ensure index is properly converted to DatetimeIndex
-    # This fixes the '>=' not supported between instances of 'numpy.ndarray' and 'Timestamp' error
-    if not isinstance(data.index, pd.DatetimeIndex):
-        try:
-            data.index = pd.to_datetime(data.index)
-        except Exception as e:
-            logger.warning(f"Failed to convert index to datetime for {symbol}: {e}")
-            # If conversion fails, try to parse the index as strings with error handling
-            data.index = pd.to_datetime(data.index, errors='coerce')
-            # Drop any rows with invalid dates
+    try:
+        data = pd.read_csv(cache_file)
+        
+        # Clean up any unnamed index columns
+        unnamed_cols = [col for col in data.columns if col.startswith('Unnamed:')]
+        if unnamed_cols:
+            logger.debug(f"Removing unnamed columns from {symbol}: {unnamed_cols}")
+            data = data.drop(columns=unnamed_cols)
+        
+        # Standardize to date column + datetime index format
+        if 'date' in data.columns:
+            data['date'] = pd.to_datetime(data['date'], errors='coerce', format='mixed')
+            data = data.dropna(subset=['date']).set_index('date')
+        elif 'index' in data.columns:
+            # Handle case where reset_index created 'index' column
+            data['date'] = pd.to_datetime(data['index'], errors='coerce', format='mixed') 
+            data = data.drop(columns=['index']).dropna(subset=['date']).set_index('date')
+        else:
+            # Fallback: try to parse first column as date
+            data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        
+        # Ensure index is properly DatetimeIndex and handle duplicates
+        if not isinstance(data.index, pd.DatetimeIndex):
+            data.index = pd.to_datetime(data.index, errors='coerce', format='mixed')
             data = data.dropna()
-            if data.empty:
-                raise ValueError(f"No valid date data found for {symbol}")
-    
-    # Enforce lowercase column names to ensure a consistent data contract
-    data.columns = [str(col).lower() for col in data.columns]
-    
-    # Ensure numeric columns are properly typed (fix for string division errors)
-    numeric_columns = ['open', 'high', 'low', 'close', 'volume']
-    for col in numeric_columns:
-        if col in data.columns:
-            data[col] = pd.to_numeric(data[col], errors='coerce')
-    
-    # Drop any rows where all numeric columns are NaN (invalid data)
-    data = data.dropna(subset=[col for col in numeric_columns if col in data.columns], how='all')
-    
-    if data.empty:
-        raise ValueError(f"No valid numeric data found for {symbol}")
+        
+        # Remove duplicate index entries
+        if data.index.duplicated().any():
+            logger.warning(f"Found duplicate dates in cache for {symbol}, keeping last occurrence")
+            data = data[~data.index.duplicated(keep='last')]
+        
+        # Enforce lowercase column names for consistency
+        data.columns = [str(col).lower() for col in data.columns]
+        
+        # Ensure numeric columns are properly typed
+        numeric_columns = ['open', 'high', 'low', 'close', 'volume']
+        for col in numeric_columns:
+            if col in data.columns:
+                data[col] = pd.to_numeric(data[col], errors='coerce')
+        
+        # Drop any rows where all numeric columns are NaN
+        data = data.dropna(subset=[col for col in numeric_columns if col in data.columns], how='all')
+        
+        if data.empty:
+            raise ValueError(f"No valid data found in cache for {symbol}")
+            
+    except ValueError:
+        # Re-raise ValueError exceptions (business logic errors) without masking
+        raise
+    except Exception as e:
+        logger.error(f"Failed to load cache for {symbol}: {e}")
+        raise ValueError(f"Corrupted cache file: {cache_file}") from e
     
     return data
 
@@ -372,7 +370,7 @@ def _fetch_and_store_data(
             time.sleep(delay)
 
     if fetched_data is not None and _validate_data_quality(fetched_data, symbol):
-        success = _save_symbol_cache(symbol, fetched_data, cache_path)
+        success = _save_cache(symbol, fetched_data, cache_path)
         if not success:
             logger.warning(f"Failed to save cache for {symbol}")
         return success
@@ -441,117 +439,4 @@ def refresh_market_data(
     return {symbol: results.get(symbol, True) for symbol in symbols}
 
 
-def get_market_data(
-    index_symbol: str,
-    cache_dir: Path,
-    years: int = 1,
-    freeze_date: Optional[date] = None,
-) -> pd.DataFrame:
-    """Get market index data for context filtering.
-    
-    Simplified version of get_price_data specifically for market indices.
-    
-    Args:
-        index_symbol: Market index symbol (e.g., '^NSEI')
-        cache_dir: Path to cache directory
-        years: Number of years of data
-        freeze_date: Optional freeze date for backtesting
-        
-    Returns:
-        DataFrame with market index OHLCV data
-        
-    Raises:
-        ValueError: If market data cannot be fetched
-        FileNotFoundError: If cache doesn't exist in freeze mode
-    """
-    # Use different cache filename pattern for indices
-    cache_file = cache_dir / f"{index_symbol.replace('^', 'INDEX_')}.csv"
-    
-    if _needs_refresh(cache_file):
-        if freeze_date:
-            if not cache_file.exists():
-                raise FileNotFoundError(f"Cached market data not found for {index_symbol} (freeze mode)")
-            data = _load_market_cache(cache_file)
-        else:
-            # Download fresh data
-            logger.info(f"Downloading market index data for {index_symbol}")
-            data = _fetch_symbol_data(index_symbol, years)
-            if data is not None:
-                _save_market_cache(data, cache_file)
-            else:
-                raise ValueError(f"Failed to fetch market data for {index_symbol}")
-    else:
-        # Load from cache
-        data = _load_market_cache(cache_file)
-    
-    if freeze_date:
-        # Apply freeze date restriction if specified
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index)
-        data = data[data.index <= pd.to_datetime(freeze_date)]
-    
-    return data
 
-
-def _load_market_cache(cache_file: Path) -> pd.DataFrame:
-    """Load market index data from cache with consistent format."""
-    try:
-        data = pd.read_csv(cache_file)
-        
-        # Standardize to date column + datetime index format
-        if 'date' in data.columns:
-            data['date'] = pd.to_datetime(data['date'], errors='coerce')
-            data = data.dropna(subset=['date']).set_index('date')
-        elif 'index' in data.columns:
-            # Handle case where reset_index created 'index' column
-            data['date'] = pd.to_datetime(data['index'], errors='coerce') 
-            data = data.drop(columns=['index']).dropna(subset=['date']).set_index('date')
-        else:
-            # Fallback: try to parse first column as date
-            data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
-        
-        # Ensure index is properly DatetimeIndex and handle duplicates
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index, errors='coerce')
-            data = data.dropna()
-        
-        # Remove duplicate index entries to prevent reindexing errors
-        if data.index.duplicated().any():
-            logger.warning(f"Found duplicate dates in market cache, keeping last occurrence")
-            data = data[~data.index.duplicated(keep='last')]
-        
-        # Enforce lowercase column names for consistency
-        data.columns = [str(col).lower() for col in data.columns]
-        
-        if data.empty:
-            raise ValueError(f"No valid data found in market cache")
-            
-    except Exception as e:
-        logger.error(f"Failed to load market cache from {cache_file}: {e}")
-        raise ValueError(f"Corrupted market cache file: {cache_file}") from e
-    
-    return data
-
-
-def _save_market_cache(data: pd.DataFrame, cache_file: Path) -> None:
-    """Save market index data to cache with consistent format."""
-    try:
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        # Ensure consistent save format: datetime index saved as 'date' column
-        data_to_save = data.copy()
-        
-        # If index is datetime, reset it to 'date' column
-        if isinstance(data_to_save.index, pd.DatetimeIndex):
-            data_to_save = data_to_save.reset_index()
-            if data_to_save.columns[0] != 'date':
-                data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
-        
-        # Remove any unwanted index columns that may have been created
-        if 'index' in data_to_save.columns and 'date' in data_to_save.columns:
-            data_to_save = data_to_save.drop(columns=['index'])
-            
-        data_to_save.to_csv(cache_file, index=False)
-        logger.debug(f"Saved market cache to {cache_file}")
-    except Exception as e:
-        logger.error(f"Failed to save market cache to {cache_file}: {e}")
-        raise

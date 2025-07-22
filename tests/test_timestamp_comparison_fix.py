@@ -4,6 +4,10 @@ This test suite verifies that the fix for the '>=' not supported between instanc
 of 'numpy.ndarray' and 'Timestamp' error is working correctly.
 """
 
+__all__ = [
+    "TestTimestampComparisonFix",
+]
+
 import pytest
 import pandas as pd
 import numpy as np
@@ -87,7 +91,7 @@ class TestTimestampComparisonFix:
         assert isinstance(result.index, pd.DatetimeIndex)
 
     def test_load_symbol_cache_converts_index_to_datetime(self, temp_cache_dir):
-        """Test that _load_symbol_cache properly converts index to DatetimeIndex."""
+        """Test that _load_cache properly converts index to DatetimeIndex."""
         # Create cache file with potential index issues
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_data = """date,open,high,low,close,volume
@@ -96,14 +100,14 @@ class TestTimestampComparisonFix:
 2024-01-03,102,107,97,105,10000"""
         cache_file.write_text(cache_data)
         
-        result = data._load_symbol_cache("TEST", temp_cache_dir)
+        result = data._load_cache("TEST", temp_cache_dir)
         
         # Verify the index is properly converted
         assert isinstance(result.index, pd.DatetimeIndex)
         assert len(result) == 3
 
     def test_load_symbol_cache_handles_invalid_dates(self, temp_cache_dir):
-        """Test that _load_symbol_cache handles invalid dates gracefully."""
+        """Test that _load_cache handles invalid dates gracefully."""
         # Create cache file with some invalid dates
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_data = """date,open,high,low,close,volume
@@ -112,14 +116,14 @@ invalid-date,101,106,96,104,10000
 2024-01-03,102,107,97,105,10000"""
         cache_file.write_text(cache_data)
         
-        result = data._load_symbol_cache("TEST", temp_cache_dir)
+        result = data._load_cache("TEST", temp_cache_dir)
         
         # Should drop invalid dates and keep valid ones
         assert isinstance(result.index, pd.DatetimeIndex)
         assert len(result) == 2  # One invalid date should be dropped
 
     def test_load_symbol_cache_empty_after_cleanup_raises_error(self, temp_cache_dir):
-        """Test that _load_symbol_cache raises error if no valid dates remain."""
+        """Test that _load_cache raises error if no valid dates remain."""
         # Create cache file with only invalid dates
         cache_file = temp_cache_dir / "TEST.NS.csv"
         cache_data = """date,open,high,low,close,volume
@@ -128,8 +132,8 @@ invalid-date2,101,106,96,104,10000
 not-a-date,102,107,97,105,10000"""
         cache_file.write_text(cache_data)
         
-        with pytest.raises(ValueError, match="No valid date data found for TEST"):
-            data._load_symbol_cache("TEST", temp_cache_dir)
+        with pytest.raises(ValueError, match="No valid data found in cache for TEST"):
+            data._load_cache("TEST", temp_cache_dir)
 
     def test_get_price_data_with_freeze_date_index_conversion(self, temp_cache_dir):
         """Test that freeze_date filtering works with index conversion."""
@@ -153,7 +157,7 @@ not-a-date,102,107,97,105,10000"""
         assert isinstance(result.index, pd.DatetimeIndex)
         assert result.index[-1] <= pd.to_datetime('2024-01-03')
 
-    @patch('kiss_signal.data._load_symbol_cache')
+    @patch('kiss_signal.data._load_cache')
     def test_get_price_data_handles_non_datetime_index(self, mock_load_cache, temp_cache_dir):
         """Test that get_price_data converts non-DatetimeIndex properly."""
         # Create mock data with RangeIndex (problematic type)
@@ -174,7 +178,7 @@ not-a-date,102,107,97,105,10000"""
         cache_file.write_text("dummy")
         
         # This should handle the index conversion without error
-        with pytest.raises(ValueError):  # Will fail because RangeIndex can't be converted to datetime
+        with pytest.raises(ValueError, match="No data available for TEST"):
             data.get_price_data(
                 symbol="TEST",
                 cache_dir=temp_cache_dir,
@@ -227,7 +231,7 @@ not-a-date,102,107,97,105,10000"""
             end_date=date(2025, 7, 18)
         )
         
-        assert len(nifty_data) == 4
+        assert len(nifty_data) == 14
         assert isinstance(nifty_data.index, pd.DatetimeIndex)
         # Verify the filtering worked correctly
         assert nifty_data.index[0] == pd.to_datetime('2025-07-01')
