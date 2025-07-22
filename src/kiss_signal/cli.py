@@ -116,11 +116,15 @@ def _run_backtests(
     rules_config: Dict[str, Any],
     symbols: List[str],
     freeze_date: Optional[date],
+    min_trades_threshold: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Run backtester for all symbols and return combined results."""
+    # Use provided min_trades_threshold, or fall back to config, or default to 0
+    threshold = min_trades_threshold if min_trades_threshold is not None else getattr(app_config, "min_trades_threshold", 0)
+    
     bt = backtester.Backtester(
         hold_period=getattr(app_config, "hold_period", 20),
-        min_trades_threshold=getattr(app_config, "min_trades_threshold", 10),
+        min_trades_threshold=threshold,
     )
     
     all_results = []
@@ -264,7 +268,8 @@ def main(
 @app.command(name="run")
 def run(
     ctx: typer.Context,
-    freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)")
+    freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)"),
+    min_trades: Optional[int] = typer.Option(None, "--min-trades", help="Minimum trades required during backtesting (None = use config default)")
 ) -> None:
     """Run the KISS Signal analysis pipeline."""
     _show_banner()
@@ -306,7 +311,7 @@ def run(
 
             console.print("[3/4] Analyzing strategies for each ticker...")
             symbols = data.load_universe(app_config.universe_path)
-            all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date)
+            all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date, min_trades)
 
             console.print("[4/4] Analysis complete. Results summary:")
             
@@ -392,10 +397,10 @@ def analyze_strategies(
         "--aggregate",
         help="Generate aggregated strategy performance (Story 16 format) instead of per-stock records.",
     ),
-    min_trades: int = typer.Option(
-        10,
+    min_trades: Optional[int] = typer.Option(
+        None,
         "--min-trades",
-        help="Minimum trades required for analysis (0 = show all strategies)",
+        help="Minimum trades required for analysis (None = use default threshold)",
     ),
 ) -> None:
     """Analyze and report on the comprehensive performance of all strategies."""
@@ -409,10 +414,13 @@ def analyze_strategies(
         raise typer.Exit(1)
 
     try:
+        # Use provided min_trades or fall back to default of 10
+        min_trades_value = min_trades if min_trades is not None else 10
+        
         if aggregate:
-            strategy_performance = reporter.analyze_strategy_performance_aggregated(db_path, min_trades=min_trades)
+            strategy_performance = reporter.analyze_strategy_performance_aggregated(db_path, min_trades=min_trades_value)
         else:
-            strategy_performance = reporter.analyze_strategy_performance(db_path, min_trades=min_trades)
+            strategy_performance = reporter.analyze_strategy_performance(db_path, min_trades=min_trades_value)
             
         if not strategy_performance:
             console.print("[yellow]No historical strategies found to analyze.[/yellow]")
