@@ -22,7 +22,7 @@ from .config import Config
 # Import config functions from persistence for convenience
 from .persistence import generate_config_hash, create_config_snapshot
 
-__all__ = ["generate_daily_report", "analyze_rule_performance", "format_rule_analysis_as_md", "_identify_new_signals", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot"]
+__all__ = ["generate_daily_report", "_identify_new_signals", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot"]
 
 logger = logging.getLogger(__name__)
 
@@ -482,85 +482,6 @@ def _process_open_positions(
 
     return positions_to_hold, positions_to_close
 
-
-def analyze_rule_performance(db_path: Path) -> List[Dict[str, Any]]:
-    """Analyzes the entire history of strategies to rank individual rule performance."""
-    rule_stats: Dict[str, Dict[str, List[Any]]] = defaultdict(lambda: {'metrics': [], 'symbols': []})
-
-    try:
-        with sqlite3.connect(str(db_path)) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute("SELECT rule_stack, edge_score, win_pct, sharpe, symbol FROM strategies")
-            strategies = cursor.fetchall()
-
-        for strategy in strategies:
-            try:
-                rules_in_stack = json.loads(strategy['rule_stack'])
-                if not isinstance(rules_in_stack, list): # Check if it's a list
-                    logger.debug(f"Skipping malformed rule_stack (not a list) for strategy on symbol {strategy['symbol']}")
-                    continue
-                for rule_def in rules_in_stack:
-                    if not isinstance(rule_def, dict): # Check if rule_def is a dict
-                        logger.debug(f"Skipping malformed rule_def (not a dict) in rule_stack for symbol {strategy['symbol']}")
-                        continue
-                    rule_name = rule_def.get('name')
-                    if not rule_name:
-                        continue
-                    
-                    metrics = {
-                        'edge_score': strategy['edge_score'],
-                        'win_pct': strategy['win_pct'],
-                        'sharpe': strategy['sharpe']
-                    }
-                    rule_stats[rule_name]['metrics'].append(metrics)
-                    rule_stats[rule_name]['symbols'].append(strategy['symbol'])
-            except (json.JSONDecodeError, TypeError):
-                continue  # Skip malformed rule stacks
-
-        analysis = []
-        for name, data in rule_stats.items():
-            freq = len(data['metrics'])
-            avg_edge = sum(m['edge_score'] for m in data['metrics']) / freq
-            avg_win = sum(m['win_pct'] for m in data['metrics']) / freq
-            avg_sharpe = sum(m['sharpe'] for m in data['metrics']) / freq
-            top_symbols_list = [s for s, count in Counter(data['symbols']).most_common(3)]
-            
-            analysis.append({
-                'rule_name': name,
-                'frequency': freq,
-                'avg_edge_score': avg_edge,
-                'avg_win_pct': avg_win,
-                'avg_sharpe': avg_sharpe,
-                'top_symbols': ", ".join(top_symbols_list),
-            })
-
-        return sorted(analysis, key=lambda x: x['avg_edge_score'], reverse=True)
-    except sqlite3.Error as e:
-        logger.error(f"Database error during rule analysis: {e}")
-        return []
-
-
-# pure
-def format_rule_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
-    """Formats the rule performance analysis into a markdown table."""
-    title = "# Rule Performance Analysis\n\n"
-    description = "This report analyzes all optimal strategies ever found to rank individual rule performance.\n\n"
-    header = "| Rule Name | Frequency | Avg Edge Score | Avg Win % | Avg Sharpe | Top Symbols |\n"
-    separator = "|:---|---:|---:|---:|---:|:---|\n"
-    
-    rows = []
-    for stats in analysis:
-        row = (
-            f"| {stats['rule_name']} "
-            f"| {stats['frequency']} "
-            f"| {stats['avg_edge_score']:.2f} "
-            f"| {stats['avg_win_pct']:.1%} "
-            f"| {stats['avg_sharpe']:.2f} "
-            f"| {stats['top_symbols']} |"
-        )
-        rows.append(row)
-    
-    return title + description + header + separator + "\n".join(rows)
 
 def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]], aggregate: bool = False) -> str:
     """Formats the strategy performance analysis into a CSV string.

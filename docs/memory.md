@@ -1,5 +1,14 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Test Suite Desynchronization: Incomplete CLI Refactoring (2025-07-25)
+- **Issue**: Multiple test failures (`AttributeError`, `AssertionError`) were traced to a structural flaw where the test suite was not updated after a major CLI simplification (Story 22). The refactoring removed the `analyze-rules` command and inverted the default behavior of `analyze-strategies` to show an aggregated view instead of a per-stock view.
+- **Structural Root Cause**: API contract desynchronization. The test suite continued to test the old, more complex CLI API. This resulted in "zombie tests" for deleted code (`analyze-rules`) and assertion failures in tests that incorrectly assumed the default output of `analyze-strategies` was still per-stock.
+- **Fix**:
+    1.  **Deletion**: Deleted the obsolete test for the removed `analyze-rules` command.
+    2.  **Mock Correction**: Updated tests for the default `analyze-strategies` behavior to mock the correct underlying function (`..._aggregated`).
+    3.  **Invocation Correction**: Added the `--per-stock` flag to tests that were specifically designed to validate the per-stock output format, aligning them with the new, non-default invocation.
+- **Lesson**: A refactoring is not complete until all consumers, including the test suite, are updated. Tests must accurately reflect the public API and its default behaviors. When a command's default output changes, tests that rely on the old default must be explicitly updated to invoke the new, non-default mode to remain valid.
+
 ## Incomplete Refactoring: Test Suite Desynchronization (2025-07-22)
 - **Issue**: A large number of test failures (`AttributeError`) were traced to a structural flaw where the test suite was calling private helper functions in `data.py` that no longer existed. The functions `_load_symbol_cache` and `_save_symbol_cache` had been refactored and renamed to `_load_cache` and `_save_cache` to unify caching logic, but the corresponding calls throughout the test suite were not updated.
 - **Structural Root Cause**: API contract desynchronization due to an incomplete refactoring. The internal API of the `data.py` module changed, but its primary consumers in the test suite were not updated, rendering a significant portion of the test harness invalid and unable to catch real regressions.

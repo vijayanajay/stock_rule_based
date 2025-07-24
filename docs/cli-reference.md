@@ -18,14 +18,15 @@ These options are available for all commands:
 |--------|-------|---------|-------------|
 | `--config` | | `config.yaml` | Path to the main conf### Version History
 
-### Current (Story 17+ with Aggregation Enhancement)
-- ✅ Per-stock strategy analysis (default mode)
-- ✅ Aggregated strategy performance analysis (`--aggregate` flag)
+### Current (Story 22: CLI Simplification)
+- ✅ Simplified CLI with single analysis command
+- ✅ Aggregated strategy leaderboard as default (most useful view)
+- ✅ Per-stock detailed analysis via `--per-stock` flag
 - ✅ Configuration tracking and snapshots for both modes
 - ✅ Percentage conversion for aggregated returns
 - ✅ Intelligent clearing with historical preservation
 - ✅ Enhanced CLI commands with proper error handling
-- ✅ Dual output format support (detailed vs. summary)
+- ✅ Dual output format support (aggregated vs. detailed)
 
 ### Previous Versions
 - Story 17: Per-stock analysis with configuration tracking
@@ -85,54 +86,9 @@ python -m kiss_signal run --config my_config.yaml --rules my_rules.yaml
 
 ---
 
-### 2. `analyze-rules` - Rule Performance Analysis
+### 2. `analyze-strategies` - Strategy Performance Analysis
 
-**Purpose:** Analyze historical performance of individual trading rules across all strategies.
-
-```bash
-python -m kiss_signal analyze-rules [OPTIONS]
-```
-
-#### Options
-
-| Option | Short | Type | Default | Description |
-|--------|-------|------|---------|-------------|
-| `--output` | `-o` | `Path` | `rule_performance_analysis.md` | Output file path for the Markdown report |
-
-#### Behavior
-
-1. **Database Query:** Extracts all historical strategy data from database
-2. **Rule Extraction:** Parses rule stacks from JSON format
-3. **Performance Calculation:** Computes frequency, average metrics, and top symbols per rule
-4. **Report Generation:** Creates Markdown table with rule performance summary
-
-#### Report Contents
-
-- **Rule Name:** Individual rule identifier
-- **Frequency:** Number of times the rule appeared in strategies
-- **Avg Edge Score:** Average edge score across all uses
-- **Avg Win %:** Average win percentage
-- **Avg Sharpe:** Average Sharpe ratio
-- **Top Symbols:** Best performing symbols for this rule
-
-#### Example Usage
-
-```bash
-# Generate rule analysis with default output
-python -m kiss_signal analyze-rules
-
-# Save to custom location
-python -m kiss_signal analyze-rules --output reports/rule_analysis_2025.md
-
-# With verbose logging
-python -m kiss_signal analyze-rules --verbose -o detailed_rules.md
-```
-
----
-
-### 3. `analyze-strategies` - Strategy Performance Analysis
-
-**Purpose:** Generate comprehensive strategy performance analysis with flexible output formats and configuration tracking.
+**Purpose:** Analyze comprehensive strategy performance with aggregated leaderboard as default.
 
 ```bash
 python -m kiss_signal analyze-strategies [OPTIONS]
@@ -143,40 +99,25 @@ python -m kiss_signal analyze-strategies [OPTIONS]
 | Option | Short | Type | Default | Description |
 |--------|-------|------|---------|-------------|
 | `--output` | `-o` | `Path` | `strategy_performance_report.csv` | Output file path for the CSV report |
-| `--aggregate` | | `bool` | `false` | Generate aggregated strategy performance (Story 16 format) instead of per-stock records |
+| `--per-stock` | | `bool` | `false` | Generate detailed per-stock strategy report instead of the aggregated leaderboard |
 
 #### Behavior
 
-**Default Mode (Per-Stock Analysis - Story 17):**
-1. **Data Retrieval:** Extracts all strategy records from database
-2. **Per-Stock Analysis:** Returns individual records for each symbol-strategy combination
-3. **Configuration Tracking:** Includes config hash and snapshot for each record
-4. **CSV Export:** Generates detailed CSV with all strategy metrics
-
-**Aggregate Mode (`--aggregate` flag - Story 16 + Config Tracking):**
+**Default Mode (Aggregated Strategy Leaderboard):**
 1. **Data Grouping:** Groups strategies by rule stack combinations and configuration
 2. **Aggregated Metrics:** Calculates frequency, averages, and top symbols per strategy
 3. **Configuration Tracking:** Preserves config information for each strategy group
 4. **CSV Export:** Generates summary CSV with aggregated performance metrics
 
+**Per-Stock Mode (`--per-stock` flag):**
+1. **Data Retrieval:** Extracts all strategy records from database
+2. **Per-Stock Analysis:** Returns individual records for each symbol-strategy combination
+3. **Configuration Tracking:** Includes config hash and snapshot for each record
+4. **CSV Export:** Generates detailed CSV with all strategy metrics
+
 #### Report Formats
 
-**Per-Stock Format (Default - CSV)**
-
-| Column | Description |
-|--------|-------------|
-| `symbol` | Stock symbol (e.g., RELIANCE, TCS) |
-| `strategy_rule_stack` | Human-readable rule combination |
-| `edge_score` | Strategy edge score (0-1) |
-| `win_pct` | Win percentage (0-1) |
-| `sharpe` | Sharpe ratio |
-| `total_return` | Average return per trade |
-| `total_trades` | Number of trades executed |
-| `config_hash` | Configuration fingerprint for tracking |
-| `run_date` | Date of strategy calculation |
-| `config_details` | JSON snapshot of configuration used |
-
-**Aggregated Format (`--aggregate` flag - CSV)**
+**Aggregated Format (Default - CSV)**
 
 | Column | Description |
 |--------|-------------|
@@ -192,9 +133,25 @@ python -m kiss_signal analyze-strategies [OPTIONS]
 | `run_date` | Date of strategy calculation |
 | `config_details` | JSON snapshot of configuration used |
 
+**Per-Stock Format (`--per-stock` flag - CSV)**
+
+| Column | Description |
+|--------|-------------|
+| `symbol` | Stock symbol (e.g., RELIANCE, TCS) |
+| `strategy_rule_stack` | Human-readable rule combination |
+| `edge_score` | Strategy edge score (0-1) |
+| `win_pct` | Win percentage (0-1) |
+| `sharpe` | Sharpe ratio |
+| `total_return` | Average return per trade |
+| `total_trades` | Number of trades executed |
+| `config_hash` | Configuration fingerprint for tracking |
+| `run_date` | Date of strategy calculation |
+| `config_details` | JSON snapshot of configuration used |
+
 #### Features
 
-- **Dual Output Modes:** Choose between detailed per-stock records or aggregated summaries
+- **Sensible Defaults:** Aggregated leaderboard by default (most useful view)
+- **Dual Output Modes:** Choose between aggregated summaries or detailed per-stock records
 - **Configuration Tracking:** Both modes include config hash and snapshot for historical context
 - **Percentage Returns:** Aggregated mode converts raw PnL to meaningful percentages
 - **Historical Preservation:** All past runs maintained with their configurations
@@ -203,30 +160,30 @@ python -m kiss_signal analyze-strategies [OPTIONS]
 #### Example Usage
 
 ```bash
-# Generate per-stock strategy analysis (default)
+# Default: Aggregated leaderboard (most common use case)
 python -m kiss_signal analyze-strategies
 
-# Generate aggregated strategy performance summary
-python -m kiss_signal analyze-strategies --aggregate
+# Detailed per-stock analysis
+python -m kiss_signal analyze-strategies --per-stock
 
-# Save aggregated analysis to custom location
-python -m kiss_signal analyze-strategies --aggregate --output reports/strategy_summary_2025.csv
+# Custom output with aggregated summary
+python -m kiss_signal analyze-strategies --output reports/strategy_summary_2025.csv
 
 # Per-stock analysis with custom output
-python -m kiss_signal analyze-strategies --output reports/detailed_strategies_2025.csv
+python -m kiss_signal analyze-strategies --per-stock --output reports/detailed_strategies_2025.csv
 
 # With verbose logging for debugging
-python -m kiss_signal analyze-strategies --aggregate --verbose
+python -m kiss_signal analyze-strategies --per-stock --verbose
 ```
 
 #### When to Use Each Mode
 
 | Use Case | Command | Best For |
 |----------|---------|----------|
-| **Strategy Research** | `--aggregate` | Understanding which rule combinations work best overall |
-| **Stock-Specific Analysis** | Default | Analyzing how strategies perform on individual stocks |
-| **Performance Comparison** | `--aggregate` | Comparing strategy effectiveness across configurations |
-| **Detailed Investigation** | Default | Debugging strategy performance on specific symbols |
+| **Strategy Research** | Default | Understanding which rule combinations work best overall |
+| **Stock-Specific Analysis** | `--per-stock` | Analyzing how strategies perform on individual stocks |
+| **Performance Comparison** | Default | Comparing strategy effectiveness across configurations |
+| **Detailed Investigation** | `--per-stock` | Debugging strategy performance on specific symbols |
 | **Historical Tracking** | Both | Both modes preserve configuration history |
 
 ---
@@ -504,13 +461,11 @@ filter_rules:
 # 1. Run daily analysis
 python -m kiss_signal run --verbose
 
-# 2. Check rule performance weekly
-python -m kiss_signal analyze-rules --output weekly_rules.md
+# 2. Generate monthly strategy summary (aggregated - default)
+python -m kiss_signal analyze-strategies --output monthly_strategies.csv
 
-# 3. Generate monthly strategy summary (aggregated)
-python -m kiss_signal analyze-strategies --aggregate --output monthly_strategies.csv
-
-# 4. Generate detailed stock analysis (per-stock)
+# 3. Generate detailed stock analysis (per-stock)
+python -m kiss_signal analyze-strategies --per-stock --output detailed_monthly_strategies.csv
 python -m kiss_signal analyze-strategies --output detailed_monthly_strategies.csv
 ```
 
@@ -530,14 +485,14 @@ python -m kiss_signal clear-and-recalculate --preserve-all --freeze-data 2025-01
 # Historical analysis with frozen data
 python -m kiss_signal run --freeze-data 2024-12-31
 
-# Compare configurations (aggregated view)
-python -m kiss_signal analyze-strategies --aggregate --output config_v1_summary.csv
+# Compare configurations (aggregated view - default)
+python -m kiss_signal analyze-strategies --output config_v1_summary.csv
 # ... update configuration ...
 python -m kiss_signal clear-and-recalculate --force
-python -m kiss_signal analyze-strategies --aggregate --output config_v2_summary.csv
+python -m kiss_signal analyze-strategies --output config_v2_summary.csv
 
 # Compare configurations (detailed view)
-python -m kiss_signal analyze-strategies --output config_v1_detailed.csv
+python -m kiss_signal analyze-strategies --per-stock --output config_v1_detailed.csv
 # ... update configuration ...
 python -m kiss_signal clear-and-recalculate --force
 python -m kiss_signal analyze-strategies --output config_v2_detailed.csv

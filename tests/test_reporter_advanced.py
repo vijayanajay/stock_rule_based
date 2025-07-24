@@ -444,52 +444,6 @@ class TestGenerateDailyReport:
         mock_add_new.assert_not_called() # Since new_signals is [], this shouldn't be called
 
 
-class TestRulePerformanceAnalysis:
-    """Tests for rule performance analysis functionality."""
-
-    def test_analyze_rule_performance(self, populated_db: Path):
-        """Test the logic of analyzing rule performance from the database."""
-        analysis = reporter.analyze_rule_performance(populated_db)
-
-        assert len(analysis) == 3
-        analysis_map = {item['rule_name']: item for item in analysis}
-
-        assert analysis[0]['rule_name'] == 'rule_B'
-        rule_b = analysis_map['rule_B']
-        assert rule_b['frequency'] == 2
-        assert rule_b['avg_edge_score'] == pytest.approx(0.85)
-        assert rule_b['avg_win_pct'] == pytest.approx(0.75)
-        assert rule_b['avg_sharpe'] == pytest.approx(1.65)
-        assert rule_b['top_symbols'] == "RELIANCE"
-
-    def test_format_rule_analysis_as_md(self):
-        """Test the markdown formatting of the analysis results."""
-        analysis_data = [
-            {
-                'rule_name': 'rule_B', 'frequency': 2, 'avg_edge_score': 0.85,
-                'avg_win_pct': 0.75, 'avg_sharpe': 1.65, 'top_symbols': "RELIANCE"
-            }
-        ]
-        
-        md_content = reporter.format_rule_analysis_as_md(analysis_data)
-
-        assert "# Rule Performance Analysis" in md_content
-        assert "| Rule Name | Frequency | Avg Edge Score | Avg Win % | Avg Sharpe | Top Symbols |" in md_content
-        assert "|:---|---:|---:|---:|---:|:---|" in md_content
-        assert "| rule_B | 2 | 0.85 | 75.0% | 1.65 | RELIANCE |" in md_content
-
-    @patch('sqlite3.connect')
-    def test_analyze_rule_performance_db_error(self, mock_connect, populated_db):
-        """Test database error during rule performance analysis."""
-        # populated_db fixture creates the db, but we mock connect to fail on this specific call
-        mock_conn_instance = mock_connect.return_value.__enter__.return_value
-        mock_conn_instance.execute.side_effect = sqlite3.Error("DB query failed")
-
-        result = reporter.analyze_rule_performance(populated_db) # populated_db path is still used by mock_connect
-        assert result == []
-        mock_connect.assert_called_once_with(str(populated_db))
-
-
 class TestStrategyPerformanceAnalysis:
     """Tests for strategy performance analysis functionality."""
 

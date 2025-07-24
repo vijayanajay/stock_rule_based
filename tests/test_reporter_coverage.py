@@ -87,13 +87,6 @@ class TestDatabaseErrorHandling:
             result = reporter._fetch_best_strategies(sample_db_with_data, "test_run", 0.5)
             assert result == []
     
-    def test_analyze_rule_performance_db_error(self, tmp_path):
-        """Test rule performance analysis with database error."""
-        non_existent_db = tmp_path / "missing.db"
-        
-        result = reporter.analyze_rule_performance(non_existent_db)
-        assert result == []
-    
     def test_analyze_strategy_performance_db_error(self, tmp_path):
         """Test strategy analysis with database error.""" 
         non_existent_db = tmp_path / "missing.db"
@@ -134,19 +127,6 @@ class TestJsonParsingErrors:
             result = reporter._identify_new_signals(sample_db_with_data, "2024-01-01_run", basic_config)
             # Should skip malformed entry and process valid ones
             assert len(result) >= 0  # May have valid entries
-    
-    def test_analyze_rule_performance_json_errors(self, sample_db_with_data):
-        """Test rule performance analysis with JSON parsing errors."""
-        # Add strategy with malformed rule_stack
-        with sqlite3.connect(str(sample_db_with_data)) as conn:
-            conn.execute("""
-                INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return)
-                VALUES ('JSON_ERROR', '2024-01-01_run', 'not_valid_json', 0.7, 0.6, 1.0, 8, 0.04)
-            """)
-        
-        result = reporter.analyze_rule_performance(sample_db_with_data)
-        # Should skip malformed entries and process valid ones
-        assert isinstance(result, list)
     
     def test_analyze_strategy_performance_json_errors(self, sample_db_with_data):
         """Test strategy performance analysis with JSON errors."""
@@ -542,25 +522,6 @@ class TestPositionProcessingEdgeCases:
 
 class TestAnalysisFunctionEdgeCases:
     """Test edge cases in analysis functions."""
-    
-    def test_analyze_rule_performance_malformed_rule_defs(self, sample_db_with_data):
-        """Test analyze_rule_performance with malformed rule definitions."""
-        # Add strategies with various malformed rule stacks
-        with sqlite3.connect(str(sample_db_with_data)) as conn:
-            # Rule stack with non-dict elements
-            conn.execute("""
-                INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return)
-                VALUES ('TEST1', '2024-01-01_run', '[{"type": "valid"}, "not_a_dict", 123]', 0.7, 0.6, 1.0, 10, 0.05)
-            """)
-            # Rule def missing 'name' field  
-            conn.execute("""
-                INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return)
-                VALUES ('TEST2', '2024-01-01_run', '[{"type": "valid"}, {"type": "no_name"}]', 0.8, 0.7, 1.2, 12, 0.06)
-            """)
-        
-        result = reporter.analyze_rule_performance(sample_db_with_data)
-        # Should handle malformed data gracefully and process valid entries
-        assert isinstance(result, list)
         
     def test_analyze_strategy_performance_aggregated_empty_records(self, tmp_path):
         """Test aggregated analysis with strategy groups that have no records."""

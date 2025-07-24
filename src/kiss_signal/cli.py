@@ -348,42 +348,6 @@ def run(
             logger.info("Database connection closed.")
 
 
-@app.command(name="analyze-rules")
-def analyze_rules(
-    ctx: typer.Context,
-    output_file: Path = typer.Option(
-        "rule_performance_analysis.md",
-        "--output",
-        "-o",
-        help="Path to save the markdown analysis report.",
-    ),
-) -> None:
-    """Analyze and report on the historical performance of individual rules."""
-    console.print("[bold blue]Analyzing historical rule performance...[/bold blue]")
-    app_config = ctx.obj["config"]
-    db_path = Path(app_config.database_path)
-
-    if not db_path.exists():
-        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
-        raise typer.Exit(1)
-
-    try:
-        rule_performance = reporter.analyze_rule_performance(db_path)
-        if not rule_performance:
-            console.print("[yellow]No historical strategies found in the database to analyze.[/yellow]")
-            return
-
-        report_content = reporter.format_rule_analysis_as_md(rule_performance)
-        output_file.write_text(report_content, encoding="utf-8")
-        console.print(f"✅ Rule performance analysis saved to: [cyan]{output_file}[/cyan]")
-
-    except Exception as e:
-        console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
-        if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose", False):
-            console.print_exception()
-        raise typer.Exit(1)
-
-
 @app.command(name="analyze-strategies")
 def analyze_strategies(
     ctx: typer.Context,
@@ -392,10 +356,10 @@ def analyze_strategies(
         "--output", "-o",
         help="Path to save the strategy performance report as a CSV file.",
     ),
-    aggregate: bool = typer.Option(
+    per_stock: bool = typer.Option(
         False,
-        "--aggregate",
-        help="Generate aggregated strategy performance (Story 16 format) instead of per-stock records.",
+        "--per-stock",
+        help="Generate detailed per-stock strategy report instead of the aggregated leaderboard.",
     ),
     min_trades: Optional[int] = typer.Option(
         None,
@@ -404,7 +368,7 @@ def analyze_strategies(
     ),
 ) -> None:
     """Analyze and report on the comprehensive performance of all strategies."""
-    format_desc = "aggregated strategy" if aggregate else "per-stock strategy"
+    format_desc = "per-stock strategy" if per_stock else "aggregated strategy"
     console.print(f"[bold blue]Analyzing {format_desc} performance...[/bold blue]")
     app_config = ctx.obj["config"]
     db_path = Path(app_config.database_path)
@@ -417,16 +381,16 @@ def analyze_strategies(
         # Use provided min_trades or fall back to default of 10
         min_trades_value = min_trades if min_trades is not None else 10
         
-        if aggregate:
-            strategy_performance = reporter.analyze_strategy_performance_aggregated(db_path, min_trades=min_trades_value)
-        else:
+        if per_stock:
             strategy_performance = reporter.analyze_strategy_performance(db_path, min_trades=min_trades_value)
+        else:
+            strategy_performance = reporter.analyze_strategy_performance_aggregated(db_path, min_trades=min_trades_value)
             
         if not strategy_performance:
             console.print("[yellow]No historical strategies found to analyze.[/yellow]")
             return
 
-        report_content = reporter.format_strategy_analysis_as_csv(strategy_performance, aggregate=aggregate)
+        report_content = reporter.format_strategy_analysis_as_csv(strategy_performance, aggregate=not per_stock)
         output_file.write_text(report_content, encoding="utf-8")
         console.print(f"✅ Strategy performance analysis saved to: [cyan]{output_file}[/cyan]")
 

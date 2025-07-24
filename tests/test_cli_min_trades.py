@@ -382,7 +382,7 @@ class TestAnalyzeStrategiesMinTrades:
             # Test with min_trades=0 (should include all strategies)
             result = runner.invoke(
                 app, 
-                ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--min-trades", "0"]
+                ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--per-stock", "--min-trades", "0"]
             )
             
             assert result.exit_code == 0, f"Command failed: {result.stdout}"
@@ -443,7 +443,7 @@ class TestAnalyzeStrategiesMinTrades:
             assert "INFY" not in content
 
     def test_analyze_strategies_aggregated_respects_min_trades(self, sample_config):
-        """Test analyze-strategies --aggregate respects min_trades parameter."""
+        """Test analyze-strategies (default aggregated) respects min_trades parameter."""
         with runner.isolated_filesystem():
             # Setup test database
             db_path = Path("test.db")
@@ -463,10 +463,10 @@ class TestAnalyzeStrategiesMinTrades:
             rules_path = config_dir / "rules.yaml"
             rules_path.write_text(VALID_RULES_YAML)
 
-            # Test aggregated mode with min_trades=0
+            # Test default aggregated mode with min_trades=0
             result = runner.invoke(
                 app, 
-                ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--aggregate", "--min-trades", "0"]
+                ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--min-trades", "0"]
             )
             
             assert result.exit_code == 0, f"Command failed: {result.stdout}"

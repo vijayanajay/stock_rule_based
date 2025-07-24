@@ -19,35 +19,37 @@ baseline:
 runner = CliRunner()
 
 
-@patch("kiss_signal.cli.reporter.analyze_strategy_performance")
 @patch("kiss_signal.cli.persistence.get_connection")
-def test_analyze_strategies_command_min_trades_filter(mock_get_connection, mock_analyze):
+@patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
+def test_analyze_strategies_command_min_trades_filter(mock_analyze, mock_get_connection):
     """Test analyze-strategies command with --min-trades parameter."""
     with runner.isolated_filesystem() as fs:
         fs_path = Path(fs)
         
-        # Mock strategy data with different trade counts
+        # Mock aggregated strategy data (default behavior now)
         mock_analyze.return_value = [
             {
-                'symbol': 'TEST1',
                 'strategy_rule_stack': 'high_trade_strategy',
-                'edge_score': 0.6,
-                'win_pct': 0.65,
-                'sharpe': 1.2,
-                'total_return': 0.05,
-                'total_trades': 15,  # Above default threshold
+                'frequency': 1,
+                'avg_edge_score': 0.6,
+                'avg_win_pct': 0.65,
+                'avg_sharpe': 1.2,
+                'avg_return': 0.05,
+                'avg_trades': 15,  # Above default threshold
+                'top_symbols': 'TEST1 (1)',
                 'config_hash': 'test_hash',
                 'run_date': '2025-07-21',
                 'config_details': '{"test": true}'
             },
             {
-                'symbol': 'TEST2',
                 'strategy_rule_stack': 'low_trade_strategy',
-                'edge_score': 0.8,
-                'win_pct': 0.75,
-                'sharpe': 1.5,
-                'total_return': 0.08,
-                'total_trades': 5,  # Below default threshold
+                'frequency': 1,
+                'avg_edge_score': 0.8,
+                'avg_win_pct': 0.75,
+                'avg_sharpe': 1.5,
+                'avg_return': 0.08,
+                'avg_trades': 5,  # Below default threshold
+                'top_symbols': 'TEST2 (1)',
                 'config_hash': 'test_hash',
                 'run_date': '2025-07-21',
                 'config_details': '{"test": true}'
@@ -80,12 +82,12 @@ def test_analyze_strategies_command_min_trades_filter(mock_get_connection, mock_
         rules_path.parent.mkdir(exist_ok=True)
         rules_path.write_text(VALID_RULES_YAML)
         
-        # Test with default min-trades (should use default 10)
+        # Test with default min-trades (should use default 10) - now checks aggregated mode
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
         assert result.exit_code == 0, result.stdout
         mock_analyze.assert_called_with(db_path, min_trades=10)
         
-        # Test with custom min-trades (should include low-trade strategies)
+        # Test with custom min-trades in aggregated mode
         mock_analyze.reset_mock()
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--min-trades", "3"])
         assert result.exit_code == 0, result.stdout
@@ -145,7 +147,7 @@ def test_analyze_strategies_command_min_trades_aggregated(mock_get_connection, m
         rules_path.parent.mkdir(exist_ok=True)
         rules_path.write_text(VALID_RULES_YAML)
         
-        # Test aggregated mode with custom min-trades
-        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--aggregate", "--min-trades", "5"])
+        # Test default aggregated mode with custom min-trades
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--min-trades", "5"])
         assert result.exit_code == 0, result.stdout
         mock_analyze.assert_called_with(db_path, min_trades=5)
