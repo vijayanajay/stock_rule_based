@@ -1,0 +1,13 @@
+# Rule Performance Analysis
+
+This report analyzes all optimal strategies ever found to rank individual rule performance.
+
+| Rule Name | Frequency | Avg Edge Score | Avg Win % | Avg Sharpe | Top Symbols |
+|:---|---:|---:|---:|---:|:---|
+| confirm_with_medium_term_uptrend | 4 | 0.40 | 47.0% | 0.29 | HCLTECH, DIVISLAB, SBILIFE |
+| strong_bullish_engulfing | 42 | 0.24 | 41.4% | -0.02 | HCLTECH, DIVISLAB, SBILIFE |
+| filter_market_is_bullish | 42 | 0.24 | 41.4% | -0.02 | HCLTECH, DIVISLAB, SBILIFE |
+| atr_stop_loss_2x | 42 | 0.24 | 41.4% | -0.02 | HCLTECH, DIVISLAB, SBILIFE |
+| trend_reversal_exit | 42 | 0.24 | 41.4% | -0.02 | HCLTECH, DIVISLAB, SBILIFE |
+| atr_take_profit_4x | 42 | 0.24 | 41.4% | -0.02 | HCLTECH, DIVISLAB, SBILIFE |
+| confirm_with_rsi_recovering | 18 | 0.22 | 40.7% | -0.06 | TCS, HDFCBANK, HCLTECH |

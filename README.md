@@ -1,4 +1,4 @@
-# KISS Signal CLI – Keep-It-Simple Signal Generation for NSE Equities
+# Signal CLI – Keep-It-Simple Signal Generation for NSE Equities
 
 A streamlined tool for backtesting and generating trading signals for Indian equities. Provides robust data acquisition, rule-based signal generation, backtesting, and reporting via a simple CLI.
 

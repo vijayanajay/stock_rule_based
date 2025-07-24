@@ -222,7 +222,14 @@ class Backtester:
             )
             if strategy_result:
                 strategies.append(strategy_result)
-        strategies.sort(key=lambda x: x['edge_score'], reverse=True)
+
+        # Augment the rule_stack for each successful strategy to include the full context.
+        # This ensures the persisted strategy reflects all rules used in the backtest.
+        full_context_and_sell_rules = rules_config.context_filters + rules_config.sell_conditions
+        for strategy in strategies:
+            strategy["rule_stack"].extend(full_context_and_sell_rules)
+
+        strategies.sort(key=lambda x: x["edge_score"], reverse=True)
         return strategies
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
