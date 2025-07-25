@@ -248,39 +248,20 @@ def _validate_data_quality(data: pd.DataFrame, symbol: str) -> bool:
 
 
 def _save_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool:
-    """Save symbol data to cache file with unified logic for stocks and indices."""
+    """Save standardized symbol data to a cache file."""
     cache_file = _get_cache_filepath(symbol, cache_dir)
-    
     try:
         cache_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Ensure data has 'date' as column, not index
-        if data.index.name == 'date' or isinstance(data.index, pd.DatetimeIndex):
+        # Handle DataFrame with DatetimeIndex - convert to 'date' column for CSV storage
+        if isinstance(data.index, pd.DatetimeIndex):
             data_to_save = data.reset_index()
             if data_to_save.columns[0] != 'date':
                 data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
         else:
+            # Data already has 'date' column, save as-is
             data_to_save = data.copy()
         
-        # Convert nullable Int64 volume to regular int to avoid CSV save issues
-        if 'volume' in data_to_save.columns:
-            volume_col = data_to_save['volume']
-            if hasattr(volume_col, 'dtype') and str(volume_col.dtype) == 'Int64':
-                data_to_save['volume'] = volume_col.fillna(0).astype(int)
-            elif hasattr(volume_col, 'isna') and volume_col.isna().any(axis=None):
-                data_to_save['volume'] = volume_col.fillna(0).astype(int)
-        
-        # Ensure all numeric columns are regular types for CSV compatibility
-        for col in ['open', 'high', 'low', 'close']:
-            if col in data_to_save.columns:
-                col_data = data_to_save[col]
-                if hasattr(col_data, 'isna') and col_data.isna().any(axis=None):
-                    data_to_save[col] = col_data.fillna(0).astype(float)
-        
-        # Remove any unwanted index columns
-        if 'index' in data_to_save.columns and 'date' in data_to_save.columns:
-            data_to_save = data_to_save.drop(columns=['index'])
-            
         data_to_save.to_csv(cache_file, index=False)
         logger.debug(f"Saved cache to {cache_file}")
         return True
@@ -290,63 +271,41 @@ def _save_cache(symbol: str, data: pd.DataFrame, cache_dir: Path) -> bool:
 
 
 def _load_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
-    """Load symbol data from cache file with unified logic for stocks and indices."""
+    """Load symbol data from a cache file, setting 'date' as the index."""
     cache_file = _get_cache_filepath(symbol, cache_dir)
-    
     try:
-        data = pd.read_csv(cache_file)
+        # Load the CSV file first
+        df = pd.read_csv(cache_file)
         
         # Clean up any unnamed index columns
-        unnamed_cols = [col for col in data.columns if col.startswith('Unnamed:')]
+        unnamed_cols = [col for col in df.columns if col.startswith('Unnamed:')]
         if unnamed_cols:
-            logger.debug(f"Removing unnamed columns from {symbol}: {unnamed_cols}")
-            data = data.drop(columns=unnamed_cols)
+            df = df.drop(columns=unnamed_cols)
         
-        # Standardize to date column + datetime index format
-        if 'date' in data.columns:
-            data['date'] = pd.to_datetime(data['date'], errors='coerce', format='mixed')
-            data = data.dropna(subset=['date']).set_index('date')
-        elif 'index' in data.columns:
-            # Handle case where reset_index created 'index' column
-            data['date'] = pd.to_datetime(data['index'], errors='coerce', format='mixed') 
-            data = data.drop(columns=['index']).dropna(subset=['date']).set_index('date')
+        # Handle date column and set as index
+        if 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+            # Drop rows with invalid dates
+            df = df.dropna(subset=['date'])
+            df = df.set_index('date')
         else:
             # Fallback: try to parse first column as date
-            data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+            df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
         
-        # Ensure index is properly DatetimeIndex and handle duplicates
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index, errors='coerce', format='mixed')
-            data = data.dropna()
+        # Ensure index is DatetimeIndex
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index, errors='coerce')
+            df = df.dropna()
         
-        # Remove duplicate index entries
-        if data.index.duplicated().any():
-            logger.warning(f"Found duplicate dates in cache for {symbol}, keeping last occurrence")
-            data = data[~data.index.duplicated(keep='last')]
-        
-        # Enforce lowercase column names for consistency
-        data.columns = [str(col).lower() for col in data.columns]
-        
-        # Ensure numeric columns are properly typed
-        numeric_columns = ['open', 'high', 'low', 'close', 'volume']
-        for col in numeric_columns:
-            if col in data.columns:
-                data[col] = pd.to_numeric(data[col], errors='coerce')
-        
-        # Drop any rows where all numeric columns are NaN
-        data = data.dropna(subset=[col for col in numeric_columns if col in data.columns], how='all')
-        
-        if data.empty:
+        if df.empty:
             raise ValueError(f"No valid data found in cache for {symbol}")
-            
+        return df
     except ValueError:
         # Re-raise ValueError exceptions (business logic errors) without masking
         raise
     except Exception as e:
         logger.error(f"Failed to load cache for {symbol}: {e}")
         raise ValueError(f"Corrupted cache file: {cache_file}") from e
-    
-    return data
 
 
 def _fetch_and_store_data(
