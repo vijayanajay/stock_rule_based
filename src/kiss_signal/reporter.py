@@ -93,12 +93,21 @@ def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict
         combined_signals: Optional[pd.Series] = None
 
         for rule_def in rule_stack_defs:
+            # Skip ATR exit functions as they are exit conditions, not entry signals
+            # ATR functions require entry_price parameter which is not available during signal generation
+            if rule_def['type'] in ['stop_loss_atr', 'take_profit_atr']:
+                logger.debug(f"Skipping ATR exit function {rule_def['type']} in signal generation")
+                continue
+                
             rule_func = getattr(rules, rule_def['type'])
             
             # Convert string parameters to appropriate types (defensive programming)
             rule_params = rule_def.get('params', {})
             converted_rule_params = {}
             for key, value in rule_params.items():
+                # Filter out index_symbol parameter as it's not accepted by rule functions
+                if key == 'index_symbol':
+                    continue
                 if isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit():
                     converted_rule_params[key] = float(value) if '.' in value else int(value)
                 else:
