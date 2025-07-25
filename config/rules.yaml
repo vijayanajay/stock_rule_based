@@ -1,14 +1,13 @@
 # =============================================================================
-# PROPOSED STRATEGY: High-Conviction Pullback in a Bull Market
+# REVISED STRATEGY: EXTREME-Conviction Pullback in a Bull Market
 #
-# THESIS: Buy a strong bullish reversal pattern during a short-term pullback,
-# but only when the broader market and stock trend are bullish and stable.
-# Every rule here serves to confirm this single, clear thesis.
+# THESIS: The previous strategy was too loose. We will now ONLY buy a
+# VIOLENT bullish reversal pattern during a short-term pullback, backed by
+# OVERWHELMING evidence. We will be far more selective and take profits sooner.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# CONTEXT FILTERS: Is the overall market environment favorable for long trades?
-# We check this first to avoid wasting time on analysis during bear markets.
+# CONTEXT FILTERS: No change. This is sound. Don't trade against the market.
 # -----------------------------------------------------------------------------
 context_filters:
   - name: "filter_market_is_bullish"
@@ -19,73 +18,60 @@ context_filters:
       period: 50
 
 # -----------------------------------------------------------------------------
-# BASELINE SIGNAL: What is the core entry pattern?
+# BASELINE SIGNAL: Make the entry signal EXTREMELY selective.
 # -----------------------------------------------------------------------------
 baseline:
   name: "strong_bullish_engulfing"
   type: "engulfing_pattern"
-  description: "Baseline: Enter on a STRONG bullish engulfing pattern. No weak signals."
+  description: "Baseline: Enter on an EXTREMELY strong bullish engulfing pattern. The body of the green candle must be at least 2.5x the prior red candle."
   params:
-    min_body_ratio: 1.5  # TIGHTENED from 1.2. We only want powerful reversals.
+    min_body_ratio: 2.5  # TIGHTENED from 1.5. We only want explosive reversals.
 
 # -----------------------------------------------------------------------------
-# LAYERS: What evidence confirms this is a high-probability setup?
+# LAYERS: Simplify and tighten. Remove what doesn't work.
 # -----------------------------------------------------------------------------
 layers:
-  - name: "confirm_with_rsi_recovering"
-    type: "rsi_oversold"
-    description: "Confirmation 1: Ensure momentum is recovering from a dip (RSI crossing above 40)."
-    params:
-      period: 14
-      oversold_threshold: 40.0 # MODIFIED: We want recovery, not deep oversold conditions.
+  # DELETED: The RSI layer is proven ineffective by the performance report. Kill it.
+  # - name: "confirm_with_rsi_recovering" ...
 
-  - name: "confirm_with_strong_volume"
+  - name: "confirm_with_extreme_volume"
     type: "volume_spike"
-    description: "Confirmation 2: The reversal must be backed by significant volume (2x average)."
+    description: "Confirmation 1: The reversal must be backed by overwhelming volume (3x average)."
     params:
       period: 20
-      spike_multiplier: 2.0  # TIGHTENED from 1.5. We need real conviction.
+      spike_multiplier: 3.0  # TIGHTENED from 2.0. We need institutional conviction.
       price_change_threshold: 0.01
 
   - name: "confirm_with_medium_term_uptrend"
     type: "price_above_sma"
-    description: "Confirmation 3: The stock itself must be in a medium-term uptrend (Price > 50-day SMA)."
+    description: "Confirmation 2: The stock itself must be in a medium-term uptrend (Price > 50-day SMA)."
     params:
-      period: 50  # MODIFIED from 20. Aligns with a more robust trend.
+      period: 50 # No change. This is a sound rule.
 
 # -----------------------------------------------------------------------------
-# SELL CONDITIONS: How do we manage the trade and protect capital?
+# SELL CONDITIONS: Be more realistic.
 # -----------------------------------------------------------------------------
 sell_conditions:
   # --- Primary Risk Management ---
-  - name: "atr_stop_loss_2x"
+  - name: "atr_stop_loss_1.5x"
     type: "stop_loss_atr"
-    description: "RISK 1 (Catastrophic Stop): Exit if price drops 2x ATR. This is our disaster stop."
+    description: "RISK 1 (Tighter Stop): Exit if price drops 1.5x ATR. The old 2x stop allowed too much loss."
     params:
       period: 14
-      multiplier: 2.0
-
-  # --- Pattern Failure Exit ---
-  # NEW: This is a crucial addition. If the reversal fails, we get out fast.
-  # This assumes a rule `price_below_pattern_low` exists. If not, this is a concept to implement.
-  # - name: "pattern_failed_exit"
-  #   type: "price_below_pattern_low"
-  #   description: "RISK 2 (Pattern Failure): Exit if price closes below the low of the engulfing pattern."
-  #   params:
-  #     lookback: 2 # For a 2-candle pattern
+      multiplier: 1.5 # TIGHTENED from 2.0. Cut losses faster.
 
   # --- Trend Failure Exit ---
   - name: "trend_reversal_exit"
     type: "sma_cross_under"
-    description: "RISK 3 (Trend Failure): Exit if the short-term trend breaks (10d SMA < 20d SMA)."
+    description: "RISK 2 (Trend Failure): Exit if the short-term trend breaks (10d SMA < 20d SMA)."
     params:
       fast_period: 10
       slow_period: 20
 
   # --- Profit Target ---
-  - name: "atr_take_profit_4x"
+  - name: "atr_take_profit_3x"
     type: "take_profit_atr"
-    description: "PROFIT TARGET: Exit if price rises 4x ATR, ensuring a 2:1 Reward/Risk ratio."
+    description: "PROFIT TARGET: Exit if price rises 3x ATR. This still ensures a 2:1 Reward/Risk ratio with our tighter stop."
     params:
       period: 14
-      multiplier: 4.0
+      multiplier: 3.0 # REDUCED from 4.0. The data shows 4x is too ambitious. Let's bank profits sooner.
