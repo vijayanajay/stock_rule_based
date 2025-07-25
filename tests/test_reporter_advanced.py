@@ -493,39 +493,6 @@ class TestStrategyPerformanceAnalysis:
         symbols = [r['symbol'] for r in result]
         assert symbols == ['HDFC', 'INFY', 'RELIANCE', 'TCS']
 
-    def test_format_strategy_analysis_as_md(self):
-        """Test strategy analysis markdown formatting."""
-        analysis_data = [
-            {
-                'strategy_name': 'bullish_engulfing + rsi_oversold',
-                'frequency': 15,
-                'avg_edge_score': 0.72,
-                'avg_win_pct': 0.685,
-                'avg_sharpe': 1.35,
-                'avg_return': 0.095,
-                'avg_trades': 12.3,
-                'top_symbols': 'RELIANCE, INFY, HDFCBANK'
-            },
-            {
-                'strategy_name': 'sma_crossover',
-                'frequency': 8,
-                'avg_edge_score': 0.55,
-                'avg_win_pct': 0.601,
-                'avg_sharpe': 0.95,
-                'avg_return': 0.042,
-                'avg_trades': 18.7,
-                'top_symbols': 'TCS, WIPRO'
-            }
-        ]
-        
-        md_content = reporter.format_strategy_analysis_as_md(analysis_data)
-
-        assert "# Strategy Performance Report" in md_content
-        assert "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg PnL/Trade | Avg Trades | Top Symbols |" in md_content
-        assert "|:---|---:|---:|---:|---:|---:|---:|:---|" in md_content
-        assert "| `bullish_engulfing + rsi_oversold` | 15 | 0.72 | 68.5% | 1.35 | 0.10 | 12.3 | RELIANCE, INFY, HDFCBANK |" in md_content
-        assert "| `sma_crossover` | 8 | 0.55 | 60.1% | 0.95 | 0.04 | 18.7 | TCS, WIPRO |" in md_content
-
     def test_format_strategy_analysis_as_csv(self):
         """Test strategy analysis CSV formatting."""
         # Story 17 change: Use per-stock record format instead of aggregated format

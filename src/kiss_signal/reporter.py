@@ -279,29 +279,17 @@ def generate_daily_report(
     config: Config,
     rules_config: Dict[str, Any],
 ) -> Optional[Path]:
-    """
-    Generates the main daily markdown report with consolidated position logic.
-    
-    Returns the path to the generated report file, or None if failed.
-    """
+    """Orchestrates the generation of the daily markdown report."""
     try:
-        # 1. Fetch all existing open positions
         open_positions = persistence.get_open_positions(db_path)
-
-        # 2. Process each open position with dynamic exit checking
         positions_to_hold, positions_to_close = _process_open_positions(open_positions, config, rules_config)
-
-        # 3. Persist changes (close positions)
         if positions_to_close:
             persistence.close_positions_batch(db_path, positions_to_close)
-        
-        # 4. Identify and persist new signals
+
         new_signals = _identify_new_signals(db_path, run_timestamp, config)
         if new_signals:
-            added_count = persistence.add_new_positions_from_signals(db_path, new_signals)
-            logger.info(f"Added {added_count} new positions to the database.")
+            persistence.add_new_positions_from_signals(db_path, new_signals)
 
-        # 5. Build and save the report
         report_date_str = (config.freeze_date or date.today()).strftime("%Y-%m-%d")
         report_content = _build_report_content(
             report_date_str, new_signals, positions_to_hold, positions_to_close, config
@@ -309,12 +297,11 @@ def generate_daily_report(
         
         output_dir = Path(config.reports_output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        
         report_file = output_dir / f"signals_{report_date_str}.md"
         report_file.write_text(report_content, encoding='utf-8')
         logger.info(f"Report generated: {report_file}")
         return report_file
-    except (Exception, KeyError) as e:
+    except Exception as e:
         logger.error(f"Failed to generate report: {e}", exc_info=True)
         return None
 
@@ -323,128 +310,21 @@ def _process_open_positions(
     config: Config, 
     rules_config: Dict[str, Any]
 ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Process open positions to determine which to hold and which to close.
-    
-    This function processes each open position to:
-    1. Calculate current price and return percentage
-    2. Calculate Nifty index return for the same period (for benchmark comparison)
-    3. Check exit conditions to determine if positions should be closed
-    
-    The Nifty period return calculation ensures accurate comparison between stock
-    and market performance by using the exact same date range for both calculations.
-    
-    Args:
-        open_positions: List of open position records from database
-        config: Application configuration
-        rules_config: Rules configuration dictionary
-        
-    Returns:
-        Tuple of (positions_to_hold, positions_to_close)
-    """
+    """Process open positions to determine which to hold and which to close."""
     run_date = config.freeze_date or date.today()
     positions_to_hold: List[Dict[str, Any]] = []
     positions_to_close: List[Dict[str, Any]] = []
 
     for pos in open_positions:
-        entry_date = date.fromisoformat(pos["entry_date"])
-        days_held = (run_date - entry_date).days
-
         try:
-            # Ignore freeze_date to get latest data for live position tracking
-            price_data = data.get_price_data(
-                symbol=pos["symbol"], 
-                cache_dir=Path(config.cache_dir), 
-                start_date=entry_date, 
-                end_date=run_date, 
-                freeze_date=None,
-                years=config.historical_data_years
+            entry_date = date.fromisoformat(pos["entry_date"])
+            days_held = (run_date - entry_date).days
+            
+            current_price, current_low, current_high, return_pct, price_data = _get_position_pricing(
+                pos, config, entry_date, run_date
             )
-
-            if price_data.empty:
-                logger.warning(f"No price data available for {pos['symbol']} from {entry_date} to {run_date}")
-                current_price = float(pos['entry_price'])
-                current_low = current_high = current_price
-                return_pct = 0.0
-                nifty_return_pct = 0.0
-            else:
-                # Use the latest available price (which may be older than run_date)
-                current_price = float(price_data['close'].iloc[-1])
-                current_low = float(price_data['low'].iloc[-1])  
-                current_high = float(price_data['high'].iloc[-1])
-                return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
-                
-                # Log if data is stale (last date != run_date)
-                last_data_date = price_data.index[-1].date()
-                if last_data_date < run_date:
-                    days_behind = (run_date - last_data_date).days
-                    logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date} ({days_behind} day{'s' if days_behind != 1 else ''} behind)")
-                
-                # Calculate NIFTY return for the same period as available stock data
-                # This is important for comparing stock performance against the market benchmark
-                actual_end_date = last_data_date if last_data_date < run_date else run_date
-                try:
-                    # Ignore freeze_date to get latest data for live position tracking
-                    nifty_data = data.get_price_data(
-                        symbol="^NSEI", 
-                        cache_dir=Path(config.cache_dir), 
-                        start_date=entry_date,  # Use the same entry date as the stock position
-                        end_date=actual_end_date,  # Use the same end date as available for the stock
-                        freeze_date=None,
-                        years=config.historical_data_years
-                    )
-                    
-                    # Log the retrieved Nifty data details for debugging and verification
-                    if nifty_data is not None and not nifty_data.empty:
-                        logger.info(f"NIFTY data retrieved: {len(nifty_data)} rows, date range: {nifty_data.index[0].date()} to {nifty_data.index[-1].date()}")
-                        logger.debug(f"NIFTY first value: {nifty_data['close'].iloc[0]}, last value: {nifty_data['close'].iloc[-1]}")
-                    
-                    # Handle cases where Nifty data is missing or invalid
-                    if nifty_data is None or nifty_data.empty or len(nifty_data) == 0:
-                        logger.warning(f"No NIFTY data available for period {entry_date} to {actual_end_date}")
-                        nifty_return_pct = 0.0
-                    elif nifty_data['close'].iloc[0] <= 0:
-                        logger.warning(f"Invalid NIFTY entry price for period {entry_date} to {actual_end_date}: {nifty_data['close'].iloc[0]}")
-                        nifty_return_pct = 0.0
-                    else:
-                        # Calculate Nifty return with proper start and end values
-                        # This calculation mirrors how stock returns are calculated for consistency
-                        try:
-                            # Ensure we have data points to calculate with - need at least 2 points for a valid return calculation
-                            # (one for the starting value and one for the ending value)
-                            if len(nifty_data) >= 2:
-                                nifty_start = nifty_data['close'].iloc[0]  # First day's closing price (position entry date)
-                                nifty_end = nifty_data['close'].iloc[-1]   # Last day's closing price (current date)
-                                
-                                # Validate the values to prevent calculation errors
-                                # Both start and end values must be positive for a valid percentage calculation
-                                if nifty_start > 0 and nifty_end > 0:
-                                    # Calculate percentage return using the standard formula:
-                                    # ((end_price - start_price) / start_price) * 100
-                                    # This gives us the percentage change in the Nifty index over the same period
-                                    # that the position has been held, allowing for direct comparison
-                                    nifty_return_pct = (nifty_end - nifty_start) / nifty_start * 100
-                                    logger.info(f"NIFTY return calculation for {pos['symbol']}: {nifty_start:.2f} to {nifty_end:.2f} = {nifty_return_pct:.2f}%")
-                                else:
-                                    logger.warning(f"Invalid NIFTY values for {pos['symbol']}: start={nifty_start}, end={nifty_end}")
-                                    nifty_return_pct = 0.0
-                            else:
-                                # For very new positions (e.g., entered today), we might only have one data point
-                                # In this case, we can't calculate a return, so we default to 0.0%
-                                logger.warning(f"Insufficient NIFTY data points for {pos['symbol']}: {len(nifty_data)} rows")
-                                nifty_return_pct = 0.0
-                        except (IndexError, ZeroDivisionError) as e:
-                            # Handle specific calculation errors gracefully
-                            logger.warning(f"Error calculating NIFTY return for {pos['symbol']}: {e}")
-                            nifty_return_pct = 0.0
-                except ValueError as e:
-                    # Handle specific data retrieval errors
-                    logger.warning(f"Failed to get NIFTY data for {pos['symbol']} comparison: {e}")
-                    nifty_return_pct = 0.0
-                except Exception as e:
-                    # Catch-all for unexpected errors
-                    logger.error(f"Unexpected error calculating NIFTY return for {pos['symbol']}: {e}", exc_info=True)
-                    nifty_return_pct = 0.0
-
+            nifty_return_pct = _calculate_nifty_return(pos, config, entry_date, run_date, price_data)
+            
             pos.update({
                 'current_price': current_price, 
                 'return_pct': return_pct, 
@@ -452,12 +332,9 @@ def _process_open_positions(
                 'days_held': days_held
             })
 
-            # Check for dynamic exit conditions
-            sell_conditions = getattr(rules_config, 'sell_conditions', None) if hasattr(rules_config, 'sell_conditions') else rules_config.get('sell_conditions', [])
-            # Ensure sell_conditions is a list
-            if sell_conditions is None:
-                sell_conditions = []
+            sell_conditions = _get_sell_conditions(rules_config)
             exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, sell_conditions, days_held, config.hold_period)
+            
             if exit_reason:
                 pos.update({
                     'exit_date': run_date.isoformat(), 
@@ -471,16 +348,98 @@ def _process_open_positions(
                 positions_to_hold.append(pos)
         except Exception as e:
             logger.error(f"Failed to process position for {pos['symbol']}: {e}")
-            # Fall back to N/A values when everything fails
             pos.update({
                 'current_price': None, 
                 'return_pct': None, 
                 'nifty_return_pct': None, 
-                'days_held': days_held
+                'days_held': (run_date - date.fromisoformat(pos["entry_date"])).days
             })
             positions_to_hold.append(pos)
 
     return positions_to_hold, positions_to_close
+
+
+def _get_position_pricing(
+    pos: Dict[str, Any], 
+    config: Config, 
+    entry_date: date, 
+    run_date: date
+) -> tuple[float, float, float, float, pd.DataFrame]:
+    """Get current pricing data for a position."""
+    price_data = data.get_price_data(
+        symbol=pos["symbol"], 
+        cache_dir=Path(config.cache_dir), 
+        start_date=entry_date, 
+        end_date=run_date, 
+        freeze_date=None,
+        years=config.historical_data_years
+    )
+
+    if price_data.empty:
+        logger.warning(f"No price data available for {pos['symbol']} from {entry_date} to {run_date}")
+        current_price = float(pos['entry_price'])
+        return current_price, current_price, current_price, 0.0, price_data
+
+    current_price = float(price_data['close'].iloc[-1])
+    current_low = float(price_data['low'].iloc[-1])  
+    current_high = float(price_data['high'].iloc[-1])
+    return_pct = (current_price - pos['entry_price']) / pos['entry_price'] * 100 if pos['entry_price'] > 0 else 0.0
+    
+    last_data_date = price_data.index[-1].date()
+    if last_data_date < run_date:
+        days_behind = (run_date - last_data_date).days
+        logger.info(f"Using stale data for {pos['symbol']}: last available {last_data_date}, current {run_date} ({days_behind} day{'s' if days_behind != 1 else ''} behind)")
+    
+    return current_price, current_low, current_high, return_pct, price_data
+
+
+def _calculate_nifty_return(
+    pos: Dict[str, Any], 
+    config: Config, 
+    entry_date: date, 
+    run_date: date, 
+    price_data: pd.DataFrame
+) -> float:
+    """Calculate NIFTY return for the same period as the position."""
+    if price_data.empty:
+        return 0.0
+        
+    actual_end_date = price_data.index[-1].date() if not price_data.empty else run_date
+    
+    try:
+        nifty_data = data.get_price_data(
+            symbol="^NSEI", 
+            cache_dir=Path(config.cache_dir), 
+            start_date=entry_date,
+            end_date=actual_end_date,
+            freeze_date=None,
+            years=config.historical_data_years
+        )
+        
+        if nifty_data is None or nifty_data.empty or len(nifty_data) < 2:
+            logger.warning(f"Insufficient NIFTY data for {pos['symbol']}")
+            return 0.0
+            
+        nifty_start = nifty_data['close'].iloc[0]
+        nifty_end = nifty_data['close'].iloc[-1]
+        
+        if nifty_start > 0 and nifty_end > 0:
+            nifty_return_pct = (nifty_end - nifty_start) / nifty_start * 100
+            logger.debug(f"NIFTY return for {pos['symbol']}: {nifty_return_pct:.2f}%")
+            return nifty_return_pct
+        else:
+            logger.warning(f"Invalid NIFTY values for {pos['symbol']}")
+            return 0.0
+            
+    except Exception as e:
+        logger.warning(f"Error calculating NIFTY return for {pos['symbol']}: {e}")
+        return 0.0
+
+
+def _get_sell_conditions(rules_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract sell conditions from rules configuration."""
+    sell_conditions = getattr(rules_config, 'sell_conditions', None) if hasattr(rules_config, 'sell_conditions') else rules_config.get('sell_conditions', [])
+    return sell_conditions if sell_conditions is not None else []
 
 
 def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]], aggregate: bool = False) -> str:
@@ -770,28 +729,3 @@ def analyze_strategy_performance_aggregated(db_path: Path, min_trades: int = 10)
     except (sqlite3.Error, pd.errors.DatabaseError) as e:
         logger.error(f"Failed to read strategies from database: {e}")
         return []
-
-
-def format_strategy_analysis_as_md(analysis: List[Dict[str, Any]]) -> str:
-    """Formats the strategy performance analysis into a markdown table."""
-    header = "| Strategy (Rule Stack) | Freq. | Avg Edge | Avg Win % | Avg Sharpe | Avg PnL/Trade | Avg Trades | Top Symbols |\n"
-    separator = "|:---|---:|---:|---:|---:|---:|---:|:---|\n"
-    
-    rows = []
-    for stats in analysis:
-        row = (
-            f"| `{stats['strategy_name']}` "
-            f"| {stats['frequency']} "
-            f"| {stats['avg_edge_score']:.2f} "
-            f"| {stats['avg_win_pct']:.1%} "
-            f"| {stats['avg_sharpe']:.2f} "
-            f"| {stats['avg_return']:.2f} "  # PnL in currency units
-            f"| {stats['avg_trades']:.1f} "
-            f"| {stats['top_symbols']} |"
-        )
-        rows.append(row)
-    
-    return f"# Strategy Performance Report\n\n{header}{separator}" + "\n".join(rows)
-
-
-

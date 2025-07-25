@@ -12,67 +12,7 @@ from datetime import date
 import pandas as pd
 import numpy as np
 
-from src.kiss_signal.data import get_price_data
-
-
-def _save_market_cache_compat(data: pd.DataFrame, cache_file: Path) -> None:
-    """Compatibility wrapper for old _save_market_cache function."""
-    try:
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Ensure data has 'date' as column, not index
-        if data.index.name == 'date' or isinstance(data.index, pd.DatetimeIndex):
-            data_to_save = data.reset_index()
-            if data_to_save.columns[0] != 'date':
-                data_to_save = data_to_save.rename(columns={data_to_save.columns[0]: 'date'})
-        else:
-            data_to_save = data.copy()
-        
-        # Remove any unwanted index columns
-        if 'index' in data_to_save.columns and 'date' in data_to_save.columns:
-            data_to_save = data_to_save.drop(columns=['index'])
-            
-        data_to_save.to_csv(cache_file, index=False)
-    except Exception as e:
-        raise RuntimeError(f"Failed to save market cache: {e}")
-
-
-def _load_market_cache_compat(cache_file: Path) -> pd.DataFrame:
-    """Compatibility wrapper for old _load_market_cache function."""
-    try:
-        data = pd.read_csv(cache_file)
-        
-        # Standardize to date column + datetime index format
-        if 'date' in data.columns:
-            data['date'] = pd.to_datetime(data['date'], errors='coerce')
-            data = data.dropna(subset=['date']).set_index('date')
-        elif 'index' in data.columns:
-            # Handle case where reset_index created 'index' column
-            data['date'] = pd.to_datetime(data['index'], errors='coerce') 
-            data = data.drop(columns=['index']).dropna(subset=['date']).set_index('date')
-        else:
-            # Fallback: try to parse first column as date
-            data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
-        
-        # Ensure index is properly DatetimeIndex and handle duplicates
-        if not isinstance(data.index, pd.DatetimeIndex):
-            data.index = pd.to_datetime(data.index, errors='coerce')
-            data = data.dropna()
-        
-        # Remove duplicate index entries
-        if data.index.duplicated().any():
-            data = data[~data.index.duplicated(keep='last')]
-        
-        # Enforce lowercase column names for consistency
-        data.columns = [str(col).lower() for col in data.columns]
-        
-        if data.empty:
-            raise ValueError(f"No valid data found in cache")
-            
-    except Exception as e:
-        raise ValueError(f"Corrupted cache file: {cache_file}") from e
-    
-    return data
+from src.kiss_signal.data import get_price_data, _save_cache, _load_cache
 from src.kiss_signal.backtester import Backtester
 from src.kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
 
@@ -227,15 +167,18 @@ class TestContextFilterIntegration(unittest.TestCase):
 
     def test_market_cache_save_load_cycle(self):
         """Test complete save/load cycle for market cache."""
-        cache_file = Path("test_market_cache.csv")
+        test_symbol = "^NSEI"
         
         try:
-            # Save test data
-            _save_market_cache_compat(self.market_data, cache_file)
+            # Save test data using the current data.py functions
+            _save_cache(test_symbol, self.market_data, self.cache_dir)
+            
+            # Verify cache file exists (the _save_cache function transforms ^NSEI to INDEX_NSEI.csv)
+            cache_file = self.cache_dir / "INDEX_NSEI.csv"
             self.assertTrue(cache_file.exists())
             
-            # Load data back
-            loaded_data = _load_market_cache_compat(cache_file)
+            # Load data back using the current data.py functions
+            loaded_data = _load_cache(test_symbol, self.cache_dir)
             
             # Verify data integrity (allowing for index frequency differences)
             self.assertEqual(loaded_data.shape, self.market_data.shape)
@@ -253,8 +196,12 @@ class TestContextFilterIntegration(unittest.TestCase):
                 
         finally:
             # Cleanup
+            cache_file = self.cache_dir / "INDEX_NSEI.csv"
             if cache_file.exists():
                 cache_file.unlink()
+            # Also cleanup the cache directory if it exists and is empty
+            if self.cache_dir.exists() and not any(self.cache_dir.iterdir()):
+                self.cache_dir.rmdir()
 
     def test_freeze_mode_behavior(self):
         """Test get_price_data behavior in freeze mode for indices."""
