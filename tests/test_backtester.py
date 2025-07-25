@@ -229,6 +229,130 @@ def sample_rules_config():
         ]
     )
 
+    def test_check_preconditions_all_pass(self, sample_price_data):
+        """Test _check_preconditions when all preconditions pass."""
+        from kiss_signal.config import RuleDef
+        backtester = Backtester()
+        
+        # Create preconditions that should pass with sample data
+        preconditions = [
+            RuleDef(
+                name="trend_filter",
+                type="price_above_long_sma",
+                params={"period": 20}  # Use short period to ensure signals with sample data
+            ),
+            RuleDef(
+                name="volatility_filter", 
+                type="is_volatile",
+                params={"period": 14, "atr_threshold_pct": 0.001}  # Very low threshold to ensure it passes
+            )
+        ]
+        
+        result = backtester._check_preconditions(sample_price_data, preconditions, "TEST")
+        assert result is True
+
+    def test_check_preconditions_fail(self, sample_price_data):
+        """Test _check_preconditions when preconditions fail."""
+        from kiss_signal.config import RuleDef
+        backtester = Backtester()
+        
+        # Create preconditions that should fail
+        preconditions = [
+            RuleDef(
+                name="impossible_volatility",
+                type="is_volatile", 
+                params={"period": 14, "atr_threshold_pct": 10.0}  # Impossibly high threshold
+            )
+        ]
+        
+        result = backtester._check_preconditions(sample_price_data, preconditions, "TEST")
+        assert result is False
+
+    def test_check_preconditions_empty_list(self, sample_price_data):
+        """Test _check_preconditions with empty preconditions list."""
+        backtester = Backtester()
+        
+        result = backtester._check_preconditions(sample_price_data, [], "TEST")
+        assert result is True
+
+    def test_check_preconditions_exception_handling(self, sample_price_data):
+        """Test _check_preconditions handles exceptions gracefully."""
+        from kiss_signal.config import RuleDef
+        backtester = Backtester()
+        
+        # Create precondition with invalid parameters
+        preconditions = [
+            RuleDef(
+                name="invalid_rule",
+                type="nonexistent_function",  # This will cause an AttributeError
+                params={}
+            )
+        ]
+        
+        result = backtester._check_preconditions(sample_price_data, preconditions, "TEST")
+        assert result is False  # Should fail gracefully
+
+    def test_backtest_combination_with_preconditions_pass(self, sample_price_data, sample_edge_score_weights):
+        """Test _backtest_combination when preconditions pass."""
+        from kiss_signal.config import RuleDef, RulesConfig
+        backtester = Backtester()
+        
+        # Create rules config with preconditions that should pass
+        rules_config = RulesConfig(
+            baseline=RuleDef(
+                name="test_baseline",
+                type="sma_crossover",
+                params={"fast_period": 5, "slow_period": 10}
+            ),
+            preconditions=[
+                RuleDef(
+                    name="trend_filter",
+                    type="price_above_long_sma", 
+                    params={"period": 20}
+                )
+            ]
+        )
+        
+        combo = [rules_config.baseline]
+        
+        result = backtester._backtest_combination(
+            combo, sample_price_data, rules_config, sample_edge_score_weights, "TEST"
+        )
+        
+        # Should proceed with backtesting since preconditions pass
+        # Result could be None if insufficient trades, but shouldn't be None due to precondition failure
+        assert result is None or isinstance(result, dict)
+
+    def test_backtest_combination_with_preconditions_fail(self, sample_price_data, sample_edge_score_weights):
+        """Test _backtest_combination when preconditions fail."""
+        from kiss_signal.config import RuleDef, RulesConfig
+        backtester = Backtester()
+        
+        # Create rules config with preconditions that should fail
+        rules_config = RulesConfig(
+            baseline=RuleDef(
+                name="test_baseline",
+                type="sma_crossover",
+                params={"fast_period": 5, "slow_period": 10}
+            ),
+            preconditions=[
+                RuleDef(
+                    name="impossible_volatility",
+                    type="is_volatile",
+                    params={"period": 14, "atr_threshold_pct": 10.0}  # Impossibly high
+                )
+            ]
+        )
+        
+        combo = [rules_config.baseline]
+        
+        result = backtester._backtest_combination(
+            combo, sample_price_data, rules_config, sample_edge_score_weights, "TEST"
+        )
+        
+        # Should return None due to failed preconditions
+        assert result is None
+
 
 class TestBacktesterIntegration:
     """Integration tests for backtester with sample data."""

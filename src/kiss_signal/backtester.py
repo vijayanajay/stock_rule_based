@@ -50,6 +50,17 @@ class Backtester:
     ) -> Optional[Dict[str, Any]]:
         """Backtest a single rule combination and return its performance metrics."""
         try:
+            # NEW: Apply preconditions first - if stock personality doesn't fit, skip entirely
+            if rules_config.preconditions:
+                precondition_result = self._check_preconditions(
+                    price_data, rules_config.preconditions, symbol
+                )
+                
+                # If preconditions fail, skip this symbol entirely  
+                if not precondition_result:
+                    logger.debug(f"Stock {symbol} failed precondition checks, skipping strategy evaluation")
+                    return None
+            
             # NEW: Apply context filters first if any are defined
             if rules_config.context_filters:
                 context_signals = self._apply_context_filters(
@@ -258,7 +269,7 @@ class Backtester:
 
         try:
             # Defensive parameter type conversion - ensure numeric strings become numbers
-            converted_params = {}
+            converted_params: Dict[str, Any] = {}
             for key, value in rule_params.items():
                 if isinstance(value, str):
                     # Try to convert string to number if it looks numeric
@@ -269,7 +280,7 @@ class Backtester:
                             converted_params[key] = int(value)
                     except ValueError:
                         # If conversion fails, keep as string (might be a symbol/name)
-                        converted_params[key] = value
+                        converted_params[key] = str(value)
                 else:
                     converted_params[key] = value
                     
@@ -412,6 +423,51 @@ class Backtester:
         
         logger.debug(f"Generated {exit_signals.sum()} ATR-based exit signals for {rule_def.name}")
         return exit_signals
+
+    def _check_preconditions(
+        self,
+        price_data: pd.DataFrame,
+        preconditions: List[Any],
+        symbol: str
+    ) -> bool:
+        """Check if stock meets all precondition requirements.
+        
+        Simplified approach: Check if stock meets preconditions for the 
+        most recent 30 trading days (roughly 6 weeks). Much simpler than
+        the arbitrary 70% threshold.
+        """
+        if not preconditions:
+            return True
+        
+        recent_days = 30  # Check last 30 trading days
+        recent_data = price_data.tail(recent_days) if len(price_data) > recent_days else price_data
+        
+        for precondition in preconditions:
+            try:
+                # Apply precondition function to recent data
+                precondition_params = precondition.params.copy()
+                precondition_signals = getattr(rules, precondition.type)(recent_data, **precondition_params)
+                
+                # Simple check: Are we meeting the precondition now (most recent valid period)?
+                recent_valid_signals = precondition_signals.dropna()
+                if len(recent_valid_signals) == 0:
+                    logger.debug(f"Stock {symbol} failed precondition '{precondition.name}': No valid data")
+                    return False
+                    
+                currently_meets_condition = recent_valid_signals.iloc[-1]
+                if not currently_meets_condition:
+                    logger.debug(f"Stock {symbol} failed precondition '{precondition.name}': Current condition not met")
+                    return False
+                    
+                logger.debug(f"Stock {symbol} passed precondition '{precondition.name}': Currently meets condition")
+                            
+            except Exception as e:
+                logger.error(f"Error checking precondition '{precondition.name}' for {symbol}: {e}")
+                # Fail-safe: if precondition check fails, exclude stock
+                return False
+        
+        logger.info(f"Stock {symbol} passed all {len(preconditions)} precondition checks")
+        return True
 
     def _apply_context_filters(
         self,

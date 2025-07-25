@@ -29,6 +29,9 @@ __all__ = [
     "take_profit_atr",
     # New functions (Story 019) - Market context filters
     "market_above_sma",
+    # New functions (Story 023) - Stock personality preconditions
+    "price_above_long_sma",
+    "is_volatile",
 ]
 
 logger = logging.getLogger(__name__)
@@ -799,3 +802,83 @@ def market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series:
                 f"({signal_count/total_periods*100:.1f}%)")
     
     return bullish_signals.fillna(False)
+
+
+def price_above_long_sma(price_data: pd.DataFrame, period: int = 200) -> pd.Series:
+    """
+    Simple trend filter: price above long-term SMA indicates uptrend.
+    
+    Much simpler than ADX but effective for basic trend identification.
+    Start here, add ADX later if needed (Story 025).
+    
+    Args:
+        price_data: DataFrame with OHLC data
+        period: SMA period (default: 200 for long-term trend)
+        
+    Returns:
+        Boolean Series with True when price > SMA
+    """
+    _validate_ohlcv_columns(price_data, ['close'])
+    
+    if period <= 0:
+        raise ValueError(f"SMA period must be positive, got {period}")
+    
+    # Check sufficient data
+    if len(price_data) < period:
+        logger.warning(f"Insufficient data for SMA calculation: {len(price_data)} rows, need {period}")
+        return pd.Series(False, index=price_data.index)
+    
+    # Calculate long-term SMA
+    sma = price_data['close'].rolling(window=period, min_periods=period).mean()
+    
+    # Trend signal when price > long SMA
+    trend_signals = price_data['close'] > sma
+    
+    signal_count = trend_signals.sum()
+    total_periods = len(trend_signals)
+    logger.debug(f"Price above {period}-day SMA: {signal_count}/{total_periods} periods "
+                f"({signal_count/total_periods*100:.1f}%)")
+    
+    return trend_signals.fillna(False)
+
+
+def is_volatile(price_data: pd.DataFrame, period: int = 14, atr_threshold_pct: float = 0.02) -> pd.Series:
+    """
+    Volatility filter using existing ATR calculation from Story 018.
+    
+    Ensures stock has sufficient daily volatility for meaningful risk/reward ratios.
+    Reuses proven ATR implementation for consistency.
+    
+    Args:
+        price_data: DataFrame with OHLCV data
+        period: ATR calculation period (default: 14)
+        atr_threshold_pct: Minimum ATR as % of price (default: 2%)
+        
+    Returns:
+        Boolean Series with True when stock shows sufficient volatility
+    """
+    _validate_ohlcv_columns(price_data, ['high', 'low', 'close'])
+    
+    if period <= 0 or atr_threshold_pct <= 0:
+        raise ValueError(f"Period and threshold must be positive, got period={period}, threshold={atr_threshold_pct}")
+    
+    # Check sufficient data for ATR calculation
+    if len(price_data) < period + 1:
+        logger.warning(f"Insufficient data for ATR calculation: {len(price_data)} rows, need {period + 1}")
+        return pd.Series(False, index=price_data.index)
+    
+    # Use existing ATR calculation from Story 018
+    atr = calculate_atr(price_data, period=period)
+    
+    # Calculate volatility as percentage of price
+    volatility_pct = atr / price_data['close']
+    
+    # Volatility signal when ATR% > threshold
+    volatility_signals = volatility_pct > atr_threshold_pct
+    
+    signal_count = volatility_signals.sum()
+    total_periods = len(volatility_signals)
+    logger.debug(f"Sufficient volatility periods (ATR > {atr_threshold_pct:.1%}): {signal_count}/{total_periods} "
+                f"({signal_count/total_periods*100:.1f}%)")
+    
+    return volatility_signals.fillna(False)

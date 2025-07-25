@@ -175,3 +175,66 @@ baseline:
     # Verify context_filters defaults to empty list
     assert rules_config.context_filters == []
     assert len(rules_config.context_filters) == 0
+
+
+def test_rules_config_with_preconditions(tmp_path: Path) -> None:
+    """Test that RulesConfig handles preconditions correctly (Story 023)."""
+    rules_content = """
+preconditions:
+  - name: "stock_in_long_term_uptrend"
+    type: "price_above_long_sma"
+    description: "Stock must be above its 200-day SMA"
+    params:
+      period: 200
+  - name: "stock_is_sufficiently_volatile"
+    type: "is_volatile"
+    description: "Stock must have sufficient volatility"
+    params:
+      period: 14
+      atr_threshold_pct: 0.02
+
+baseline:
+  name: "test_baseline"
+  type: "close_above_sma"
+  params:
+    period: 20
+"""
+    rules_file = tmp_path / "rules_with_preconditions.yaml"
+    rules_file.write_text(rules_content)
+    
+    rules_config = load_rules(rules_file)
+    
+    # Verify preconditions are loaded correctly
+    assert len(rules_config.preconditions) == 2
+    
+    # Check first precondition
+    first_precondition = rules_config.preconditions[0]
+    assert first_precondition.name == "stock_in_long_term_uptrend"
+    assert first_precondition.type == "price_above_long_sma"
+    assert first_precondition.params["period"] == 200
+    
+    # Check second precondition
+    second_precondition = rules_config.preconditions[1]
+    assert second_precondition.name == "stock_is_sufficiently_volatile" 
+    assert second_precondition.type == "is_volatile"
+    assert second_precondition.params["period"] == 14
+    assert second_precondition.params["atr_threshold_pct"] == 0.02
+
+
+def test_rules_config_without_preconditions(tmp_path: Path) -> None:
+    """Test that RulesConfig works with empty preconditions (backward compatibility)."""
+    rules_content = """
+baseline:
+  name: "test_baseline"
+  type: "close_above_sma"
+  params:
+    period: 20
+"""
+    rules_file = tmp_path / "minimal_rules.yaml"
+    rules_file.write_text(rules_content)
+    
+    rules_config = load_rules(rules_file)
+    
+    # Verify preconditions defaults to empty list
+    assert rules_config.preconditions == []
+    assert len(rules_config.preconditions) == 0

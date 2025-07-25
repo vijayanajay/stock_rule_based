@@ -1,6 +1,6 @@
 # Story 023: Implement Stock Personality Filters (Preconditions)
 
-## Status: 🔄 Ready for Development
+## Status: 🔄 InProgress
 
 **Priority:** High (Strategy quality depends on stock characteristics)
 **Estimated Story Points:** 3 (Reduced - reuse existing ATR, simplify trend measure first)

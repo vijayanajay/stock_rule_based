@@ -120,7 +120,10 @@ def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict
             else:
                 combined_signals &= rule_signals
 
-        return combined_signals.fillna(False)
+        if combined_signals is not None:
+            return combined_signals.fillna(False)
+        else:
+            return pd.Series(False, index=price_data.index)
     except Exception as e:
         logger.error(f"Error finding signals for rule stack: {e}")
         return pd.Series(False, index=price_data.index)
@@ -433,7 +436,7 @@ def _calculate_nifty_return(
         nifty_end = nifty_data['close'].iloc[-1]
         
         if nifty_start > 0 and nifty_end > 0:
-            nifty_return_pct = (nifty_end - nifty_start) / nifty_start * 100
+            nifty_return_pct = float((nifty_end - nifty_start) / nifty_start * 100)
             logger.debug(f"NIFTY return for {pos['symbol']}: {nifty_return_pct:.2f}%")
             return nifty_return_pct
         else:

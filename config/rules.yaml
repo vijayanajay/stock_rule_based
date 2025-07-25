@@ -7,6 +7,25 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# PRECONDITIONS: Stock personality filters (NEW in Story 023)
+# Filter out stocks that lack the personality traits needed for trend-following
+# strategies. Applied before expensive rule evaluation for performance.
+# -----------------------------------------------------------------------------
+preconditions:
+  - name: "stock_in_long_term_uptrend"
+    type: "price_above_long_sma"
+    description: "Precondition 1: Stock must be above its 200-day SMA (simple long-term uptrend)."
+    params:
+      period: 200
+
+  - name: "stock_is_sufficiently_volatile"
+    type: "is_volatile"
+    description: "Precondition 2: Stock must have daily volatility ≥2% (ATR/Price) for meaningful risk/reward."
+    params:
+      period: 14
+      atr_threshold_pct: 0.02
+
+# -----------------------------------------------------------------------------
 # CONTEXT FILTERS: No change. This is sound. Don't trade against the market.
 # -----------------------------------------------------------------------------
 context_filters:

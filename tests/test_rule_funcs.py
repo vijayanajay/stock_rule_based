@@ -28,6 +28,9 @@ from kiss_signal.rules import (
     take_profit_atr,
     # New functions (Story 019) - Market context filters
     market_above_sma,
+    # New functions (Story 023) - Stock personality preconditions
+    price_above_long_sma,
+    is_volatile,
 )
 
 
@@ -1271,3 +1274,254 @@ def test_atr_consistency_across_functions():
     profit_triggered = current_price >= expected_profit_level
     actual_profit_triggered = take_profit_atr(price_data, entry_price, period, profit_multiplier)
     assert profit_triggered == actual_profit_triggered
+
+
+# =============================================================================
+# Story 023: Stock Personality Preconditions Tests
+# =============================================================================
+
+def test_price_above_long_sma_basic():
+    """Test basic functionality of price_above_long_sma."""
+    # Create data with a clear trend above 200-day SMA
+    dates = pd.date_range('2023-01-01', periods=250, freq='D')
+    prices = []
+    
+    # First 200 days: gradually increasing to establish SMA
+    for i in range(200):
+        prices.append(100 + i * 0.1)
+    
+    # Next 50 days: clearly above the SMA trend
+    for i in range(50):
+        prices.append(120 + i * 0.2)  # Clearly above the established SMA
+    
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.01 for p in prices],
+        'low': [p * 0.99 for p in prices],
+        'close': prices,
+        'volume': [1000] * len(prices)
+    }, index=dates)
+    
+    # Test with default 200-day period
+    trend_signals = price_above_long_sma(price_data, period=200)
+    
+    # Should have signals in the later periods where price > SMA
+    assert isinstance(trend_signals, pd.Series)
+    assert len(trend_signals) == len(price_data)
+    assert trend_signals.dtype == bool
+    
+    # The last 20 periods should definitely be trending
+    recent_signals = trend_signals.tail(20)
+    assert recent_signals.sum() > 15  # Most recent periods should be trending
+
+
+def test_price_above_long_sma_insufficient_data():
+    """Test price_above_long_sma with insufficient data."""
+    # Create data with less than required period
+    dates = pd.date_range('2023-01-01', periods=50, freq='D')
+    prices = [100 + i for i in range(50)]
+    
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.01 for p in prices],
+        'low': [p * 0.99 for p in prices],
+        'close': prices,
+        'volume': [1000] * len(prices)
+    }, index=dates)
+    
+    # Test with 200-day period (more than available data)
+    trend_signals = price_above_long_sma(price_data, period=200)
+    
+    # Should return all False for insufficient data
+    assert isinstance(trend_signals, pd.Series)
+    assert len(trend_signals) == len(price_data)
+    assert trend_signals.sum() == 0  # All False
+
+
+def test_price_above_long_sma_invalid_parameters():
+    """Test price_above_long_sma with invalid parameters."""
+    dates = pd.date_range('2023-01-01', periods=50, freq='D')
+    prices = [100] * 50
+    
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': prices,
+        'low': prices,
+        'close': prices,
+        'volume': [1000] * len(prices)
+    }, index=dates)
+    
+    # Test invalid period
+    with pytest.raises(ValueError, match="SMA period must be positive"):
+        price_above_long_sma(price_data, period=0)
+    
+    with pytest.raises(ValueError, match="SMA period must be positive"):
+        price_above_long_sma(price_data, period=-10)
+
+
+def test_price_above_long_sma_missing_columns():
+    """Test price_above_long_sma with missing required columns."""
+    dates = pd.date_range('2023-01-01', periods=50, freq='D')
+    
+    # Missing 'close' column
+    price_data = pd.DataFrame({
+        'open': [100] * 50,
+        'high': [101] * 50,
+        'low': [99] * 50,
+        'volume': [1000] * 50
+    }, index=dates)
+    
+    with pytest.raises(ValueError, match="Missing required columns"):
+        price_above_long_sma(price_data, period=20)
+
+
+def test_is_volatile_basic():
+    """Test basic functionality of is_volatile using existing ATR."""
+    # Create data with varying volatility
+    dates = pd.date_range('2023-01-01', periods=50, freq='D')
+    
+    # Low volatility period
+    low_vol_prices = [100 + i * 0.01 for i in range(25)]  # Very small moves
+    # High volatility period  
+    high_vol_prices = [100.25 + i * 0.5 for i in range(25)]  # Large moves
+    
+    prices = low_vol_prices + high_vol_prices
+    
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.05 for p in prices[:25]] + [p * 1.10 for p in prices[25:]],  # Higher volatility in second half
+        'low': [p * 0.95 for p in prices[:25]] + [p * 0.90 for p in prices[25:]],   # Higher volatility in second half
+        'close': prices,
+        'volume': [1000] * len(prices)
+    }, index=dates)
+    
+    # Test with default parameters (14-day ATR, 2% threshold)
+    volatility_signals = is_volatile(price_data, period=14, atr_threshold_pct=0.02)
+    
+    assert isinstance(volatility_signals, pd.Series)
+    assert len(volatility_signals) == len(price_data)
+    assert volatility_signals.dtype == bool
+    
+    # Later periods should be more volatile
+    recent_signals = volatility_signals.tail(10)
+    early_signals = volatility_signals.head(20)
+    
+    # More signals in the high volatility period
+    assert recent_signals.sum() >= early_signals.sum()
+
+
+def test_is_volatile_insufficient_data():
+    """Test is_volatile with insufficient data for ATR calculation."""
+    # Create data with less than required period + 1
+    dates = pd.date_range('2023-01-01', periods=5, freq='D')
+    prices = [100, 101, 102, 103, 104]
+    
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.01 for p in prices],
+        'low': [p * 0.99 for p in prices],
+        'close': prices,
+        'volume': [1000] * len(prices)
+    }, index=dates)
+    
+    # Test with 14-day period (more than available data)
+    volatility_signals = is_volatile(price_data, period=14, atr_threshold_pct=0.02)
+    
+    # Should return all False for insufficient data
+    assert isinstance(volatility_signals, pd.Series)
+    assert len(volatility_signals) == len(price_data)
+    assert volatility_signals.sum() == 0  # All False
+
+
+def test_is_volatile_invalid_parameters():
+    """Test is_volatile with invalid parameters."""
+    dates = pd.date_range('2023-01-01', periods=50, freq='D')
+    prices = [100] * 50
+    
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.01 for p in prices],
+        'low': [p * 0.99 for p in prices],
+        'close': prices,
+        'volume': [1000] * len(prices)
+    }, index=dates)
+    
+    # Test invalid period
+    with pytest.raises(ValueError, match="Period and threshold must be positive"):
+        is_volatile(price_data, period=0, atr_threshold_pct=0.02)
+    
+    # Test invalid threshold
+    with pytest.raises(ValueError, match="Period and threshold must be positive"):
+        is_volatile(price_data, period=14, atr_threshold_pct=-0.01)
+
+
+def test_is_volatile_missing_columns():
+    """Test is_volatile with missing required columns."""
+    dates = pd.date_range('2023-01-01', periods=50, freq='D')
+    
+    # Missing required OHLC columns
+    price_data = pd.DataFrame({
+        'close': [100] * 50,
+        'volume': [1000] * 50
+    }, index=dates)
+    
+    with pytest.raises(ValueError, match="Missing required columns"):
+        is_volatile(price_data, period=14, atr_threshold_pct=0.02)
+
+
+def test_is_volatile_mathematical_accuracy():
+    """Test is_volatile mathematical accuracy by manually calculating ATR percentage."""
+    # Create data with known volatility characteristics
+    dates = pd.date_range('2023-01-01', periods=20, freq='D')
+    
+    # Create data where we can predict the ATR
+    high_prices = [100, 102, 104, 103, 105, 107, 106, 108, 110, 109, 
+                   111, 113, 112, 114, 116, 115, 117, 119, 118, 120]
+    low_prices = [98, 100, 102, 101, 103, 105, 104, 106, 108, 107, 
+                  109, 111, 110, 112, 114, 113, 115, 117, 116, 118]
+    close_prices = [99, 101, 103, 102, 104, 106, 105, 107, 109, 108, 
+                    110, 112, 111, 113, 115, 114, 116, 118, 117, 119]
+    
+    price_data = pd.DataFrame({
+        'open': close_prices,
+        'high': high_prices,
+        'low': low_prices,
+        'close': close_prices,
+        'volume': [1000] * len(high_prices)
+    }, index=dates)
+    
+    # Use a short period and low threshold for testing
+    period = 3
+    threshold = 0.01  # 1%
+    
+    volatility_signals = is_volatile(price_data, period=period, atr_threshold_pct=threshold)
+    
+    # Manually calculate ATR for verification (just check that the function runs correctly)
+    from kiss_signal.rules import calculate_atr
+    atr = calculate_atr(price_data, period=period)
+    volatility_pct = atr / price_data['close']
+    expected_signals = volatility_pct > threshold
+    
+    # Compare our function result with manual calculation
+    valid_indices = ~atr.isna()
+    assert (volatility_signals[valid_indices] == expected_signals[valid_indices]).all()
+
+
+def test_is_volatile_zero_volatility():
+    """Test is_volatile with zero volatility data."""
+    dates = pd.date_range('2023-01-01', periods=20, freq='D')
+    # All prices the same - zero volatility
+    prices = [100] * 20
+    
+    price_data = pd.DataFrame({
+        'open': prices,
+        'high': prices,
+        'low': prices,
+        'close': prices,
+        'volume': [1000] * len(prices)
+    }, index=dates)
+    
+    volatility_signals = is_volatile(price_data, period=14, atr_threshold_pct=0.02)
+    
+    # With zero volatility, no signals should be generated
+    assert volatility_signals.sum() == 0
