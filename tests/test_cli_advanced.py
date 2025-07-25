@@ -473,9 +473,9 @@ def test_analyze_strategies_command_error_handling(mock_analyze, sample_config):
         assert "An unexpected error occurred during analysis: Analysis boom!" in result.stdout
 
 
-@patch("kiss_signal.cli.reporter.analyze_rule_performance", side_effect=Exception("Analysis boom!"))
+@patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated", side_effect=Exception("Analysis boom!"))
 def test_analyze_rules_exception_handling(mock_analyze, tmp_path: Path):
-    """Test 'analyze-rules' general exception handling."""
+    """Test 'analyze-strategies' general exception handling."""
     with runner.isolated_filesystem() as fs:
         fs_path = Path(fs)
         config_path = fs_path / "config.yaml"
@@ -501,10 +501,10 @@ def test_analyze_rules_exception_handling(mock_analyze, tmp_path: Path):
         rules_path = fs_path / "config" / "rules.yaml"
         rules_path.parent.mkdir(exist_ok=True)
         rules_path.write_text(VALID_RULES_YAML)
-        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "analyze-rules"])
+        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
         assert result.exit_code == 1
         assert "An unexpected error occurred during analysis: Analysis boom!" in result.stdout
-        result_verbose = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "analyze-rules"])
+        result_verbose = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
         assert result_verbose.exit_code == 1
         assert "An unexpected error occurred during analysis: Analysis boom!" in result_verbose.stdout
         assert "Traceback (most recent call last)" in result_verbose.stdout

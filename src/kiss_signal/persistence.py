@@ -13,10 +13,6 @@ from datetime import datetime, date
 if TYPE_CHECKING:
     from .config import RulesConfig, Config, RuleDef
 
-# Add imports for orchestration logic
-from . import data, backtester
-from .config import get_active_strategy_combinations
-
 __all__ = [
     "create_database",
     "save_strategies_batch",
@@ -29,7 +25,6 @@ __all__ = [
     "generate_config_hash",
     "create_config_snapshot",
     "clear_strategies_for_config",
-    "clear_and_recalculate_strategies",
 ]
 
 logger = logging.getLogger(__name__)
@@ -574,75 +569,3 @@ def clean_duplicate_strategies(db_path: Path, dry_run: bool = False) -> Dict[str
             'duplicates_removed': 0,
             'error': error_msg
         }
-
-
-def clear_and_recalculate_strategies(
-    db_path: Path,
-    app_config: "Config",
-    rules_config: "RulesConfig", 
-    force: bool = False,
-    preserve_all: bool = False,
-    freeze_date: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    Orchestrates the intelligent clearing and recalculation of strategies.
-    This function centralizes the business logic for this command.
-    """
-    cleared_count = 0
-    preserved_count = 0
-    new_strategies_count = 0
-
-    with get_connection(db_path) as conn:
-        if not preserve_all:
-            clear_result = clear_strategies_for_config(conn, app_config, rules_config)
-            cleared_count = clear_result.get('cleared_count', 0)
-            preserved_count = clear_result.get('preserved_count', 0)
-        else:
-            # If preserving all, just get the current count for the summary
-            total_count_result = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()
-            preserved_count = total_count_result[0] if total_count_result else 0
-
-        # Recalculate
-        symbols = data.load_universe(app_config.universe_path)
-
-        bt = backtester.Backtester(
-            hold_period=app_config.hold_period,
-            min_trades_threshold=app_config.min_trades_threshold,
-        )
-
-        freeze_date_obj = date.fromisoformat(freeze_date) if freeze_date else None
-
-        all_results = []
-        for symbol in symbols:
-            try:
-                price_data = data.get_price_data(
-                    symbol=symbol,
-                    cache_dir=Path(app_config.cache_dir),
-                    years=app_config.historical_data_years,
-                    freeze_date=freeze_date_obj,
-                )
-                if price_data is None or len(price_data) < 100:
-                    logger.warning(f"Insufficient data for {symbol} during recalculation, skipping.")
-                    continue
-
-                strategies = bt.find_optimal_strategies(
-                    rules_config=rules_config, price_data=price_data, symbol=symbol,
-                    freeze_date=freeze_date_obj, edge_score_weights=app_config.edge_score_weights,
-                )
-                all_results.extend(strategies)
-            except Exception as e:
-                logger.error(f"Error recalculating for {symbol}: {e}")
-
-        if all_results:
-            run_timestamp = datetime.now().isoformat()
-            rules_dict = rules_config.model_dump()
-            config_snapshot = create_config_snapshot(rules_dict, app_config, freeze_date)
-            config_hash = generate_config_hash(rules_dict, app_config)
-            save_strategies_batch(conn, all_results, run_timestamp, config_snapshot, config_hash)
-            new_strategies_count = len(all_results)
-
-    return {
-        "cleared_count": cleared_count,
-        "preserved_count": preserved_count,
-        "new_strategies": new_strategies_count,
-    }

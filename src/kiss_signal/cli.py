@@ -220,6 +220,81 @@ def _generate_and_save_report(
         logger.error(f"Report generation error: {e}", exc_info=True)
 
 
+def _parse_freeze_date(freeze_data: Optional[str], app_config: Config) -> Optional[date]:
+    """Parse and validate freeze date parameter."""
+    if not freeze_data:
+        return None
+    
+    try:
+        freeze_date_obj = date.fromisoformat(freeze_data)
+        app_config.freeze_date = freeze_date_obj
+        return freeze_date_obj
+    except ValueError:
+        console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
+        raise typer.Exit(1)
+
+
+def _validate_database_path(db_path: Path) -> None:
+    """Validate that database path exists."""
+    if not db_path.exists():
+        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
+        raise typer.Exit(1)
+
+
+def _save_command_log(log_filename: str) -> None:
+    """Save command log to file with error handling."""
+    try:
+        log_path = Path(log_filename)
+        log_path.write_text(console.export_text(clear=False), encoding="utf-8")
+        logger.info(f"Log file saved to {log_path}")
+    except OSError as log_e:
+        error_msg = f"Critical error: Could not save log file to {log_filename}. Reason: {log_e}"
+        logger.error(error_msg, exc_info=True)
+        console.print(f"[red]{error_msg}[/red]")
+
+
+def _handle_command_exception(e: Exception, verbose: bool, context: str = "") -> None:
+    """Handle command exceptions with appropriate logging."""
+    if isinstance(e, (typer.Exit, FileNotFoundError)):
+        console.print(f"[red]Error: {e}[/red]")
+        raise
+    elif isinstance(e, ValueError):
+        # Only treat database corruption ValueErrors as unexpected
+        if "Database corruption" in str(e):
+            if context:
+                console.print(f"[red]An unexpected error occurred {context}: {e}[/red]")
+            else:
+                console.print(f"[red]An unexpected error occurred: {e}[/red]")
+            if verbose:
+                console.print_exception()
+            raise typer.Exit(1)
+        else:
+            # Date parsing and backtesting ValueErrors are expected
+            console.print(f"[red]Error: {e}[/red]")
+            raise
+    else:
+        if context:
+            console.print(f"[red]An unexpected error occurred {context}: {e}[/red]")
+        else:
+            console.print(f"[red]An unexpected error occurred: {e}[/red]")
+        if verbose:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
+def _execute_backtesting_workflow(
+    app_config: Config, 
+    rules_config: Any, 
+    freeze_date: Optional[date], 
+    min_trades: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    """Execute the complete backtesting workflow."""
+    console.print("[3/4] Analyzing strategies for each ticker...")
+    symbols = data.load_universe(app_config.universe_path)
+    threshold = min_trades if min_trades is not None else getattr(app_config, "min_trades_threshold", 0)
+    return _run_backtests(app_config, rules_config, symbols, freeze_date, threshold)
+
+
 def _process_and_save_results(
     db_connection: persistence.Connection, 
     all_results: List[Dict[str, Any]], 
@@ -277,16 +352,9 @@ def run(
     app_config = ctx.obj["config"]
     rules_config = ctx.obj["rules"]
     verbose = ctx.obj["verbose"]
+    
+    freeze_date_obj = _parse_freeze_date(freeze_data, app_config)
     db_connection = None
-
-    freeze_date_obj: Optional[date] = None
-    if freeze_data:
-        try:
-            freeze_date_obj = date.fromisoformat(freeze_data)
-            app_config.freeze_date = freeze_date_obj
-        except ValueError:
-            console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
-            raise typer.Exit(1)
 
     try:
         db_path = Path(app_config.database_path)
@@ -309,12 +377,8 @@ def run(
                     freeze_date=app_config.freeze_date,
                 )
 
-            console.print("[3/4] Analyzing strategies for each ticker...")
-            symbols = data.load_universe(app_config.universe_path)
-            all_results = _run_backtests(app_config, rules_config, symbols, app_config.freeze_date, min_trades)
-
+            all_results = _execute_backtesting_workflow(app_config, rules_config, freeze_date_obj, min_trades)
             console.print("[4/4] Analysis complete. Results summary:")
-            
             _process_and_save_results(db_connection, all_results, app_config, rules_config)
 
         if verbose:
@@ -324,25 +388,10 @@ def run(
                 console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
                 console.print(f"Slowest Function: {perf_summary['slowest_function']}")
 
-    except (typer.Exit, FileNotFoundError, ValueError) as e:
-        console.print(f"[red]Error: {e}[/red]")
-        raise
     except Exception as e:
-        console.print(f"[red]An unexpected error occurred: {e}[/red]")
-        if verbose:
-            console.print_exception()
-        raise typer.Exit(1)
+        _handle_command_exception(e, verbose)
     finally:
-        # Save log regardless of success or failure
-        try:
-            log_path = Path("run_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            logger.info(f"Log file saved to {log_path}")
-        except OSError as log_e:
-            error_msg = f"Critical error: Could not save log file to run_log.txt. Reason: {log_e}"
-            logger.error(error_msg, exc_info=True)
-            console.print(f"[red]{error_msg}[/red]")
-        
+        _save_command_log("run_log.txt")
         if db_connection:
             db_connection.close()
             logger.info("Database connection closed.")
@@ -370,12 +419,11 @@ def analyze_strategies(
     """Analyze and report on the comprehensive performance of all strategies."""
     format_desc = "per-stock strategy" if per_stock else "aggregated strategy"
     console.print(f"[bold blue]Analyzing {format_desc} performance...[/bold blue]")
+    
     app_config = ctx.obj["config"]
+    verbose = ctx.obj.get("verbose", False)
     db_path = Path(app_config.database_path)
-
-    if not db_path.exists():
-        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
-        raise typer.Exit(1)
+    _validate_database_path(db_path)
 
     try:
         # Use provided min_trades or fall back to default of 10
@@ -395,20 +443,9 @@ def analyze_strategies(
         console.print(f"✅ Strategy performance analysis saved to: [cyan]{output_file}[/cyan]")
 
     except Exception as e:
-        console.print(f"[red]An unexpected error occurred during analysis: {e}[/red]")
-        if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose", False):
-            console.print_exception()
-        raise typer.Exit(1)
+        _handle_command_exception(e, verbose, "during analysis")
     finally:
-        # Save log regardless of success or failure
-        try:
-            log_path = Path("analyze_strategies_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            logger.info(f"Log file saved to {log_path}")
-        except OSError as log_e:
-            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
-            logger.error(error_msg, exc_info=True)
-            console.print(f"[red]{error_msg}[/red]")
+        _save_command_log("analyze_strategies_log.txt")
 
 
 @app.command(name="clear-and-recalculate")
@@ -421,29 +458,23 @@ def clear_and_recalculate(
     """Intelligently clear current strategies and recalculate with preservation of historical data."""
     app_config = ctx.obj["config"]
     rules_config = ctx.obj["rules"]
+    verbose = ctx.obj.get("verbose", False)
+    
     db_path = Path(app_config.database_path)
+    _validate_database_path(db_path)
+    freeze_date_obj = _parse_freeze_date(freeze_data, app_config)
 
-    if not db_path.exists():
-        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
-        raise typer.Exit(1)
-
-    db_connection = None
     try:
-        freeze_date_obj = freeze_data  # Keep as string for persistence layer compatibility
-        
         if not preserve_all and not force:
             # Show preview information before confirmation
             from .config import get_active_strategy_combinations
-            import json
             
             with persistence.get_connection(db_path) as conn:
                 rules_dict = rules_config.model_dump()
                 current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
-                
                 active_strategies = get_active_strategy_combinations(rules_config)
 
                 total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
-                
                 delete_count_query = f"""
                     SELECT COUNT(*) FROM strategies
                     WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
@@ -460,29 +491,20 @@ def clear_and_recalculate(
                         console.print("[blue]Operation cancelled.[/blue]")
                         raise typer.Exit(0)
 
-        # Use the extracted business logic function
-        result = persistence.clear_and_recalculate_strategies(
-            db_path, app_config, rules_config, 
-            force=force, preserve_all=preserve_all, freeze_date=freeze_date_obj
-        )
+        # Clear strategies and recalculate using a single connection
+        with persistence.get_connection(db_path) as conn:
+            if not preserve_all:
+                clear_result = persistence.clear_strategies_for_config(conn, app_config, rules_config)
+                console.print(f"✅ Cleared: {clear_result['cleared_count']} strategies")
+                console.print(f"✅ Preserved: {clear_result['preserved_count']} historical strategies")
 
-        console.print(f"✅ [bold green]Operation complete![/bold green]")
-        console.print(f"[green]Cleared: {result['cleared_count']} strategies[/green]")
-        console.print(f"[green]Preserved: {result['preserved_count']} historical strategies[/green]")
-        console.print(f"[green]New strategies found: {result['new_strategies']}[/green]")
+            console.print("Recalculating strategies...")
+            all_results = _execute_backtesting_workflow(app_config, rules_config, freeze_date_obj, app_config.min_trades_threshold)
+            _process_and_save_results(conn, all_results, app_config, rules_config)
+        
+        console.print(f"✅ New strategies found: {len(all_results)}")
 
     except Exception as e:
-        console.print(f"[red]An unexpected error occurred: {e}[/red]")
-        if ctx.obj and isinstance(ctx.obj, dict) and ctx.obj.get("verbose"):
-            console.print_exception()
-        raise typer.Exit(1)
+        _handle_command_exception(e, verbose)
     finally:
-        # Save log regardless of success or failure
-        try:
-            log_path = Path("clear_and_recalculate_log.txt")
-            log_path.write_text(console.export_text(clear=False), encoding="utf-8")
-            logger.info(f"Log file saved to {log_path}")
-        except OSError as log_e:
-            error_msg = f"Critical error: Could not save log file to {log_path}. Reason: {log_e}"
-            logger.error(error_msg, exc_info=True)
-            console.print(f"[red]{error_msg}[/red]")
+        _save_command_log("clear_and_recalculate_log.txt")

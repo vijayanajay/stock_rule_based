@@ -41,7 +41,7 @@ tests/test_cli_advanced.py::test_analyze_strategies_command_custom_output PASSED
 tests/test_cli_advanced.py::test_analyze_strategies_command_no_database PASSED [  7%]
 tests/test_cli_advanced.py::test_analyze_strategies_command_no_data PASSED [  7%]
 tests/test_cli_advanced.py::test_analyze_strategies_command_error_handling PASSED [  7%]
-tests/test_cli_advanced.py::test_analyze_rules_exception_handling FAILED [  8%]
+tests/test_cli_advanced.py::test_analyze_rules_exception_handling PASSED [  8%]
 tests/test_cli_basic.py::test_run_command_help PASSED                    [  8%]
 tests/test_cli_basic.py::test_display_results_empty PASSED               [  8%]
 tests/test_cli_basic.py::test_run_command_basic PASSED                   [  8%]
@@ -456,60 +456,6 @@ tests/test_yfinance_adapter.py::TestFetchSymbolData::test_unreachable_return_non
 tests/test_yfinance_adapter.py::TestFetchSymbolData::test_theoretical_unreachable_path PASSED [ 99%]
 tests/test_yfinance_adapter.py::TestFetchSymbolData::test_coverage_summary PASSED [100%]
 
-================================== FAILURES ===================================
-____________________ test_analyze_rules_exception_handling ____________________
-
-args = ()
-keywargs = {'tmp_path': WindowsPath('C:/Users/user/AppData/Local/Temp/pytest-of-user/pytest-825/test_analyze_rules_exception_h0')}
-
-    @wraps(func)
-    def patched(*args, **keywargs):
->       with self.decoration_helper(patched,
-                                    args,
-                                    keywargs) as (newargs, newkeywargs):
-
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1393: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\contextlib.py:137: in __enter__
-    return next(self.gen)
-           ^^^^^^^^^^^^^^
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1375: in decoration_helper
-    arg = exit_stack.enter_context(patching)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\contextlib.py:526: in enter_context
-    result = _enter(cm)
-             ^^^^^^^^^^
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1467: in __enter__
-    original, local = self.get_original()
-                      ^^^^^^^^^^^^^^^^^^^
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-
-self = <unittest.mock._patch object at 0x0000023112F636B0>
-
-    def get_original(self):
-        target = self.getter()
-        name = self.attribute
-    
-        original = DEFAULT
-        local = False
-    
-        try:
-            original = target.__dict__[name]
-        except (AttributeError, KeyError):
-            original = getattr(target, name, DEFAULT)
-        else:
-            local = True
-    
-        if name in _builtins and isinstance(target, ModuleType):
-            self.create = True
-    
-        if not self.create and original is DEFAULT:
->           raise AttributeError(
-                "%s does not have the attribute %r" % (target, name)
-            )
-E           AttributeError: <module 'kiss_signal.reporter' from 'D:\\Code\\stock_rule_based\\src\\kiss_signal\\reporter.py'> does not have the attribute 'analyze_rule_performance'
-
-C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py:1437: AttributeError
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -518,16 +464,14 @@ Name                                   Stmts   Miss Branch BrPart  Cover
 src\kiss_signal\__init__.py                5      0      0      0   100%
 src\kiss_signal\adapters\__init__.py       1      0      0      0   100%
 src\kiss_signal\adapters\yfinance.py      55      0     20      0   100%
-src\kiss_signal\backtester.py            230     21     92      7    91%
-src\kiss_signal\cli.py                   251     11     48      6    94%
+src\kiss_signal\backtester.py            230     18     92      7    92%
+src\kiss_signal\cli.py                   257     11     56      5    94%
 src\kiss_signal\config.py                 88      3     18      3    94%
 src\kiss_signal\data.py                  226     29    100     11    87%
 src\kiss_signal\performance.py            41      0      4      0   100%
-src\kiss_signal\persistence.py           268     75     48      4    70%
+src\kiss_signal\persistence.py           233     37     40      5    82%
 src\kiss_signal\reporter.py              354     25    108     10    92%
 src\kiss_signal\rules.py                 282     20    100      4    93%
 ------------------------------------------------------------------------
-TOTAL                                   1801    184    538     45    89%
-=========================== short test summary info ===========================
-FAILED tests/test_cli_advanced.py::test_analyze_rules_exception_handling - At...
-================== 1 failed, 448 passed in 64.16s (0:01:04) ===================
+TOTAL                                   1772    143    538     45    91%
+======================= 449 passed in 66.25s (0:01:06) ========================

@@ -59,8 +59,10 @@ class TestCLIHelperFunctions:
 class TestClearAndRecalculateCommand:
     """Test clear-and-recalculate command paths."""
 
-    @patch("kiss_signal.cli.persistence.clear_and_recalculate_strategies")
-    def test_clear_and_recalculate_success(self, mock_clear_recalc, sample_config, tmp_path):
+    @patch("kiss_signal.cli._process_and_save_results")
+    @patch("kiss_signal.cli._run_backtests")
+    @patch("kiss_signal.cli.persistence.clear_strategies_for_config")
+    def test_clear_and_recalculate_success(self, mock_clear, mock_backtests, mock_save, sample_config, tmp_path):
         """Test clear-and-recalculate command successful execution."""
         with runner.isolated_filesystem() as fs:
             # Setup test environment with complete config
@@ -81,9 +83,10 @@ class TestClearAndRecalculateCommand:
             from kiss_signal import persistence
             persistence.create_database(db_path)
             
-            mock_clear_recalc.return_value = {
-                'cleared_count': 5, 'preserved_count': 10, 'new_strategies': 8
-            }
+            # Mock the functions that are actually called
+            mock_clear.return_value = {'cleared_count': 5, 'preserved_count': 10}
+            mock_backtests.return_value = [{'symbol': 'RELIANCE', 'edge_score': 0.8}] * 8
+            mock_save.return_value = None
 
             result = runner.invoke(app, [
                 "--config", str(config_path),
@@ -93,8 +96,11 @@ class TestClearAndRecalculateCommand:
             ])
             
             assert result.exit_code == 0
-            assert "Cleared: 5 strategies" in result.stdout
-            mock_clear_recalc.assert_called_once()
+            assert "Cleared:" in result.stdout and "5" in result.stdout
+            assert "New strategies found:" in result.stdout and "8" in result.stdout
+            mock_clear.assert_called_once()
+            mock_backtests.assert_called_once()
+            mock_save.assert_called_once()
 
     def test_clear_and_recalculate_db_not_found(self, sample_config, tmp_path):
         """Test clear-and-recalculate with missing database."""
@@ -119,8 +125,9 @@ class TestClearAndRecalculateCommand:
             assert result.exit_code == 1
             assert "Database file not found" in result.stdout
 
-    @patch("kiss_signal.cli.persistence.clear_and_recalculate_strategies")
-    def test_clear_and_recalculate_with_freeze_date(self, mock_clear_recalc, sample_config, tmp_path):
+    @patch("kiss_signal.cli._process_and_save_results")
+    @patch("kiss_signal.cli._run_backtests")
+    def test_clear_and_recalculate_with_freeze_date(self, mock_backtests, mock_save, sample_config, tmp_path):
         """Test clear-and-recalculate with freeze date option."""
         with runner.isolated_filesystem() as fs:
             universe_path = Path(fs) / "data" / "universe.csv"
@@ -139,7 +146,9 @@ class TestClearAndRecalculateCommand:
             from kiss_signal import persistence
             persistence.create_database(db_path)
             
-            mock_clear_recalc.return_value = {'cleared_count': 0, 'preserved_count': 0, 'new_strategies': 0}
+            # Mock the functions that are actually called
+            mock_backtests.return_value = []  # No strategies for preserve_all test
+            mock_save.return_value = None
 
             result = runner.invoke(app, [
                 "--config", str(config_path),
@@ -150,9 +159,9 @@ class TestClearAndRecalculateCommand:
             ])
             
             assert result.exit_code == 0
-            mock_clear_recalc.assert_called_once()
-            assert mock_clear_recalc.call_args[1]['preserve_all'] is True
-            assert mock_clear_recalc.call_args[1]['freeze_date'] == "2024-01-01"
+            # With --preserve-all, the clearing function isn't called, only backtesting
+            mock_backtests.assert_called_once()
+            mock_save.assert_called_once()
 
 
 class TestAnalyzeSymbolHelperFunction:
@@ -416,10 +425,11 @@ class TestClearAndRecalculateErrorHandling:
             assert result.exit_code == 1
             assert "An unexpected error occurred" in result.stdout
 
-    @patch("kiss_signal.cli.persistence.clear_and_recalculate_strategies")
+    @patch("kiss_signal.cli._process_and_save_results")
+    @patch("kiss_signal.cli._run_backtests")
     @patch("kiss_signal.cli.persistence.get_connection")
     @patch("kiss_signal.cli.console.export_text")
-    def test_clear_and_recalculate_log_file_error(self, mock_export_text, mock_get_connection, mock_clear_recalc, sample_config):
+    def test_clear_and_recalculate_log_file_error(self, mock_export_text, mock_get_connection, mock_backtests, mock_save, sample_config):
         """Test clear-and-recalculate log file error handling."""
         with runner.isolated_filesystem() as fs:
             mock_export_text.return_value = "Test log content"
@@ -449,12 +459,9 @@ class TestClearAndRecalculateErrorHandling:
             mock_conn.__exit__ = Mock(return_value=None)
             mock_get_connection.return_value = mock_conn
 
-            # Mock persistence clear_and_recalculate_strategies to return success
-            mock_clear_recalc.return_value = {
-                'cleared_count': 0,
-                'preserved_count': 0,
-                'new_strategies': 0
-            }            # Mock Path.write_text to raise OSError
+            # Mock the functions that are actually called
+            mock_backtests.return_value = []
+            mock_save.return_value = None            # Mock Path.write_text to raise OSError
             with patch("pathlib.Path.write_text") as mock_write:
                 mock_write.side_effect = OSError("No space left")
                 

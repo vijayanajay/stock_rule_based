@@ -1,5 +1,23 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Monstrous Function Deletion: SRP Violation in Persistence Layer (2025-07-25)
+- **Issue**: The `clear_and_recalculate_strategies` function in `persistence.py` was a 69-line monster that violated the Single Responsibility Principle by doing database operations, data loading, backtesting logic, and orchestration - all in a persistence module that should only handle database operations.
+- **Structural Root Cause**: Dead code left behind after CLI refactoring. The CLI was already properly using `clear_strategies_for_config` for clearing and helper functions `_run_backtests`/`_process_and_save_results` for orchestration, but the monstrous function remained as unused code that tests were still mocking.
+- **Fix**: Deleted the entire `clear_and_recalculate_strategies` function, removed it from `__all__` exports, cleaned up unnecessary imports (`data`, `backtester`, `get_active_strategy_combinations`), and updated tests to mock the actual functions being called by the CLI.
+- **Lesson**: When CLI commands are refactored to use proper modular design, ensure dead code is immediately deleted. The persistence layer should ONLY handle database operations, not orchestrate business logic. Tests should mock actual dependencies, not dead code. Following Kailash Nadh's philosophy: each module should have a single, focused responsibility.
+
+## CLI DRY Violation: Massive Code Duplication in clear-and-recalculate Command (2025-07-25)
+- **Issue**: The `clear-and-recalculate` command contained a complete, duplicated copy (~50 LOC) of the backtesting and reporting pipeline from the `run` command, violating DRY principles. Tests were also failing because they mocked the old `clear_and_recalculate_strategies` function that was no longer being called in the refactored implementation.
+- **Structural Root Cause**: The command was implemented as a monolithic function instead of reusing the modular helper functions (`_run_backtests`, `_process_and_save_results`) that were already extracted from the `run` command. This created maintenance burden and potential for behavioral drift between the two commands.
+- **Fix**: Gutted the duplicated logic and replaced it with calls to the same helper functions used by the `run` command. Updated tests to verify actual behavior instead of mocking implementation details, testing the real database state rather than expected mock return values.
+- **Lesson**: When adding new commands that share functionality with existing ones, always extract and reuse helper functions rather than duplicating code. Tests should verify behavior, not implementation details - avoid mocking internal functions when possible, and test actual outcomes instead.
+
+## Test Mock Mismatch: Function Name Inconsistency (2025-07-25)
+- **Issue**: Test failure `AttributeError: module 'kiss_signal.reporter' does not have the attribute 'analyze_rule_performance'` in `test_analyze_rules_exception_handling`. The test was trying to mock a function that doesn't exist.
+- **Structural Root Cause**: Naming inconsistency between test expectations and actual implementation. The test expected `analyze-rules` command with `analyze_rule_performance` function, but the actual implementation has `analyze-strategies` command with `analyze_strategy_performance`/`analyze_strategy_performance_aggregated` functions. This represents a classic case of test-implementation drift where the test was never updated to match the final naming conventions.
+- **Fix**: Updated the test to mock the correct function (`analyze_strategy_performance_aggregated`) and use the correct command name (`analyze-strategies`).
+- **Lesson**: Tests must mirror the actual API, not outdated design assumptions. When functions are renamed during development, all tests mocking those functions must be updated simultaneously. Mock targets should always be verified to exist before writing tests.
+
 ## Test Suite Desynchronization: Incomplete CLI Refactoring (2025-07-25)
 - **Issue**: Multiple test failures (`AttributeError`, `AssertionError`) were traced to a structural flaw where the test suite was not updated after a major CLI simplification (Story 22). The refactoring removed the `analyze-rules` command and inverted the default behavior of `analyze-strategies` to show an aggregated view instead of a per-stock view.
 - **Structural Root Cause**: API contract desynchronization. The test suite continued to test the old, more complex CLI API. This resulted in "zombie tests" for deleted code (`analyze-rules`) and assertion failures in tests that incorrectly assumed the default output of `analyze-strategies` was still per-stock.
