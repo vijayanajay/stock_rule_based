@@ -762,7 +762,7 @@ def market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series:
     if 'date' in market_data.columns and not isinstance(market_data.index, pd.DatetimeIndex):
         logger.info("DEBUG Converting date column to index for proper alignment")
         market_data = market_data.copy()
-        market_data['date'] = pd.to_datetime(market_data['date'])
+        market_data['date'] = pd.to_datetime(market_data['date'], format='mixed')
         market_data = market_data.set_index('date')
         logger.info(f"DEBUG After conversion - index type: {type(market_data.index)}")
         logger.info(f"DEBUG After conversion - date range: {market_data.index.min()} to {market_data.index.max()}")
@@ -770,7 +770,7 @@ def market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series:
         # Handle case where reset_index created 'index' column
         logger.info("DEBUG Converting index column to datetime index for proper alignment")
         market_data = market_data.copy()
-        market_data['date'] = pd.to_datetime(market_data['index'])
+        market_data['date'] = pd.to_datetime(market_data['index'], format='mixed')
         market_data = market_data.drop(columns=['index']).set_index('date')
         logger.info(f"DEBUG After conversion - index type: {type(market_data.index)}")
         logger.info(f"DEBUG After conversion - date range: {market_data.index.min()} to {market_data.index.max()}")

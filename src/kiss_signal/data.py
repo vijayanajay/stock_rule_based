@@ -284,7 +284,7 @@ def _load_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
         
         # Handle date column and set as index
         if 'date' in df.columns:
-            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+            df['date'] = pd.to_datetime(df['date'], errors='coerce', format='mixed')
             # Drop rows with invalid dates
             df = df.dropna(subset=['date'])
             df = df.set_index('date')
@@ -294,7 +294,7 @@ def _load_cache(symbol: str, cache_dir: Path) -> pd.DataFrame:
         
         # Ensure index is DatetimeIndex
         if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index, errors='coerce')
+            df.index = pd.to_datetime(df.index, errors='coerce', format='mixed')
             df = df.dropna()
         
         if df.empty:

@@ -196,7 +196,7 @@ def test_run_command_backtest_generic_exception_verbose(
             app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"]
         )
         assert result.exit_code == 1
-        assert "An unexpected error occurred: Generic backtest error" in result.stdout
+        assert "An unexpected error occurred during run pipeline: Generic backtest error" in result.stdout
         assert "Traceback (most recent call last)" in result.stdout
 
 

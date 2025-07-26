@@ -255,31 +255,28 @@ def _save_command_log(log_filename: str) -> None:
 
 def _handle_command_exception(e: Exception, verbose: bool, context: str = "") -> None:
     """Handle command exceptions with appropriate logging."""
-    if isinstance(e, (typer.Exit, FileNotFoundError)):
+    # Treat file not found as simple user error
+    if isinstance(e, FileNotFoundError):
         console.print(f"[red]Error: {e}[/red]")
-        raise
-    elif isinstance(e, ValueError):
-        # Only treat database corruption ValueErrors as unexpected
-        if "Database corruption" in str(e):
-            if context:
-                console.print(f"[red]An unexpected error occurred {context}: {e}[/red]")
-            else:
-                console.print(f"[red]An unexpected error occurred: {e}[/red]")
-            if verbose:
-                console.print_exception()
-            raise typer.Exit(1)
-        else:
-            # Date parsing and backtesting ValueErrors are expected
-            console.print(f"[red]Error: {e}[/red]")
-            raise
-    else:
+    # Treat ValueError with database corruption as unexpected system error
+    elif isinstance(e, ValueError) and "Database corruption" in str(e):
         if context:
             console.print(f"[red]An unexpected error occurred {context}: {e}[/red]")
         else:
             console.print(f"[red]An unexpected error occurred: {e}[/red]")
         if verbose:
             console.print_exception()
-        raise typer.Exit(1)
+    # Other ValueErrors are user errors (date parsing, etc.)
+    elif isinstance(e, ValueError):
+        console.print(f"[red]Error: {e}[/red]")
+    else:  # Everything else is an unexpected system error
+        if context:
+            console.print(f"[red]An unexpected error occurred {context}: {e}[/red]")
+        else:
+            console.print(f"[red]An unexpected error occurred: {e}[/red]")
+        if verbose:
+            console.print_exception()
+    raise typer.Exit(1)
 
 
 def _execute_backtesting_workflow(
@@ -323,7 +320,7 @@ def main(
     KISS Signal CLI.
     """
     # This prevents the main callback from running for --help or completion scripts
-    if ctx.resilient_parsing:
+    if ctx.resilient_parsing:  # Fix for `run --help` test failure
         return
 
     setup_logging(verbose)
@@ -389,7 +386,7 @@ def run(
                 console.print(f"Slowest Function: {perf_summary['slowest_function']}")
 
     except Exception as e:
-        _handle_command_exception(e, verbose)
+        _handle_command_exception(e, verbose, "during run pipeline")
     finally:
         _save_command_log("run_log.txt")
         if db_connection:

@@ -76,7 +76,7 @@ def fetch_symbol_data(symbol: str, years: int, freeze_date: Optional[date] = Non
             data = data[required_columns].copy()
             
             # Ensure proper data types
-            data['date'] = pd.to_datetime(data['date'])
+            data['date'] = pd.to_datetime(data['date'], format='mixed')
             for col in ['open', 'high', 'low', 'close']:
                 data[col] = pd.to_numeric(data[col], errors='coerce')
             # Handle volume conversion with consistent NA handling (same as price data)

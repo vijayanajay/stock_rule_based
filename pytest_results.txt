@@ -469,12 +469,6 @@ tests/test_yfinance_adapter.py::TestFetchSymbolData::test_unreachable_return_non
 tests/test_yfinance_adapter.py::TestFetchSymbolData::test_theoretical_unreachable_path PASSED [ 99%]
 tests/test_yfinance_adapter.py::TestFetchSymbolData::test_coverage_summary PASSED [100%]
 
-============================== warnings summary ===============================
-tests/test_timestamp_comparison_fix.py::TestTimestampComparisonFix::test_load_symbol_cache_empty_after_cleanup_raises_error
-  D:\Code\stock_rule_based\src\kiss_signal\data.py:287: UserWarning: Could not infer format, so each element will be parsed individually, falling back to `dateutil`. To ensure parsing is consistent and as-expected, please specify a format.
-    df['date'] = pd.to_datetime(df['date'], errors='coerce')
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -484,7 +478,7 @@ src\kiss_signal\__init__.py                5      0      0      0   100%
 src\kiss_signal\adapters\__init__.py       1      0      0      0   100%
 src\kiss_signal\adapters\yfinance.py      55      0     20      0   100%
 src\kiss_signal\backtester.py            258     44    104      8    82%
-src\kiss_signal\cli.py                   257     11     56      5    94%
+src\kiss_signal\cli.py                   254     11     56      5    94%
 src\kiss_signal\config.py                 89      3     18      3    94%
 src\kiss_signal\data.py                  201     21     78      7    90%
 src\kiss_signal\performance.py            41      0      4      0   100%
@@ -492,5 +486,5 @@ src\kiss_signal\persistence.py           233     37     40      5    82%
 src\kiss_signal\reporter.py              343     12    106      5    96%
 src\kiss_signal\rules.py                 309     20    108      4    94%
 ------------------------------------------------------------------------
-TOTAL                                   1792    148    534     37    91%
-================== 462 passed, 1 warning in 60.32s (0:01:00) ==================
+TOTAL                                   1789    148    534     37    91%
+============================ 462 passed in 56.26s =============================
