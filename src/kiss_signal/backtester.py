@@ -432,21 +432,17 @@ class Backtester:
     ) -> bool:
         """Check if stock meets all precondition requirements.
         
-        Simplified approach: Check if stock meets preconditions for the 
-        most recent 30 trading days (roughly 6 weeks). Much simpler than
-        the arbitrary 70% threshold.
+        Use full historical data for calculation (to allow indicators like 200-day SMA),
+        but check only the most recent result to determine if the precondition is currently met.
         """
         if not preconditions:
             return True
         
-        recent_days = 30  # Check last 30 trading days
-        recent_data = price_data.tail(recent_days) if len(price_data) > recent_days else price_data
-        
         for precondition in preconditions:
             try:
-                # Apply precondition function to recent data
+                # Apply precondition function to FULL data for proper calculation
                 precondition_params = precondition.params.copy()
-                precondition_signals = getattr(rules, precondition.type)(recent_data, **precondition_params)
+                precondition_signals = getattr(rules, precondition.type)(price_data, **precondition_params)
                 
                 # Simple check: Are we meeting the precondition now (most recent valid period)?
                 recent_valid_signals = precondition_signals.dropna()
