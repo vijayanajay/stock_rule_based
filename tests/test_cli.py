@@ -343,17 +343,22 @@ def test_run_command_persistence_failure_handling(
 
 @patch("kiss_signal.cli.reporter.format_strategy_analysis_as_csv")
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, test_environment):
+def test_analyze_strategies_command_success(mock_analyze, mock_format_csv, test_environment):
     """Test analyze-strategies command with successful execution."""
     # Mock the analyzer to return sample data
     mock_analyze.return_value = [
         {
-            'strategy_key': 'strategy_1',
+            'strategy_rule_stack': 'strategy_1',
+            'frequency': 1,
             'avg_edge_score': 0.75,
             'avg_win_pct': 0.65,
             'avg_sharpe': 1.2,
-            'total_trades': 150,
-            'symbol_count': 10
+            'avg_return': 0.18,
+            'avg_trades': 150.0,
+            'top_symbols': 'RELIANCE, TCS',
+            'config_hash': 'hash123',
+            'run_date': '2024-01-01',
+            'config_details': 'test config'
         }
     ]
     
@@ -386,15 +391,20 @@ def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, test_
         
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
         assert result.exit_code == 0
-        assert "CSV formatted output" in result.stdout
+        assert "Strategy performance analysis saved to:" in result.stdout
     finally:
         os.chdir(original_cwd)
 
 
+@patch("kiss_signal.cli._validate_database_path")
+@patch("kiss_signal.cli.reporter.format_strategy_analysis_as_csv")
 @patch("kiss_signal.cli.persistence.get_connection")
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_custom_output(mock_get_connection, mock_analyze, test_environment):
+def test_analyze_strategies_command_custom_output(mock_analyze, mock_get_connection, mock_format_csv, mock_validate_db, test_environment):
     """Test analyze-strategies command with custom output path."""
+    # Mock database validation to pass
+    mock_validate_db.return_value = None
+    
     # Mock database connection
     mock_conn = MagicMock()
     mock_get_connection.return_value = mock_conn
@@ -410,6 +420,9 @@ def test_analyze_strategies_command_custom_output(mock_get_connection, mock_anal
             'symbol_count': 10
         }
     ]
+    
+    # Mock CSV formatter
+    mock_format_csv.return_value = "CSV content"
 
     # Change to test environment directory and run CLI
     import os
@@ -421,6 +434,10 @@ def test_analyze_strategies_command_custom_output(mock_get_connection, mock_anal
         output_path = test_environment / "custom_output.csv"
         
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--output", str(output_path)])
+        if result.exit_code != 0:
+            print(f"DEBUG: Exit code: {result.exit_code}")
+            print(f"DEBUG: stdout: {result.stdout}")
+            print(f"DEBUG: stderr: {result.stderr if hasattr(result, 'stderr') else 'No stderr'}")
         assert result.exit_code == 0
         # Should create the output file
         assert output_path.exists()
@@ -518,13 +535,17 @@ def test_analyze_strategies_command_error_handling(mock_analyze, test_environmen
 # Clear and Recalculate Command Tests  
 # =============================================================================
 
+@patch("kiss_signal.cli._validate_database_path")
 @patch("kiss_signal.cli.persistence.clear_strategies_for_config")
-@patch("kiss_signal.cli._run_backtests")
+@patch("kiss_signal.cli._execute_backtesting_workflow")
 @patch("kiss_signal.cli._process_and_save_results")
-def test_clear_and_recalculate_basic_flow(mock_process, mock_run, mock_clear, test_environment):
+def test_clear_and_recalculate_basic_flow(mock_process, mock_execute, mock_clear, mock_validate_db, test_environment):
     """Test basic clear-and-recalculate command flow."""
+    # Mock database validation to pass
+    mock_validate_db.return_value = None
+    
     # Mock the backtesting results
-    mock_run.return_value = [
+    mock_execute.return_value = [
         {
             'symbol': 'RELIANCE',
             'rule_stack': [RuleDef(type='sma_crossover', name='test', params={})],
@@ -535,6 +556,9 @@ def test_clear_and_recalculate_basic_flow(mock_process, mock_run, mock_clear, te
             'avg_return': 0.02
         }
     ]
+    
+    # Mock clear operation to return a result dict
+    mock_clear.return_value = {'cleared_count': 5, 'preserved_count': 10}
 
     # Change to test environment directory and run CLI
     import os
@@ -544,13 +568,17 @@ def test_clear_and_recalculate_basic_flow(mock_process, mock_run, mock_clear, te
         config_path = test_environment / "config.yaml"
         rules_path = test_environment / "config" / "rules.yaml"
         
-        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "clear-and-recalculate"])
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "clear-and-recalculate", "--force"])
+        if result.exit_code != 0:
+            print(f"DEBUG: Exit code: {result.exit_code}")
+            print(f"DEBUG: stdout: {result.stdout}")
+            print(f"DEBUG: stderr: {result.stderr if hasattr(result, 'stderr') else 'No stderr'}")
         assert result.exit_code == 0
         
         # Verify the clear function was called
         mock_clear.assert_called_once()
         # Verify backtests were run
-        mock_run.assert_called_once()
+        mock_execute.assert_called_once()
         # Verify results were processed
         mock_process.assert_called_once()
     finally:
@@ -682,19 +710,41 @@ def test_run_command_file_not_found_in_backtest():
             assert "not found" in result.stdout.lower() or result.exit_code != 0
 
 
-def test_run_command_backtest_generic_exception_verbose():
-    """Test run command handles generic exceptions in verbose mode."""
-    with patch("kiss_signal.cli._run_backtests") as mock_run:
-        mock_run.side_effect = Exception("Generic error")
-        
-        with runner.isolated_filesystem() as fs:
-            # Setup minimal config
-            config_path = Path(fs) / "config.yaml"
-            with open(config_path, 'w') as f:
-                yaml.dump({"data_dir": "data/"}, f)
-            
-            result = runner.invoke(app, ["run", "--verbose"])
-            assert "Error" in result.stdout or result.exit_code != 0
+@patch("kiss_signal.cli._run_backtests", side_effect=Exception("Generic backtest error"))
+@patch("kiss_signal.cli.data")
+def test_run_command_backtest_generic_exception_verbose(mock_data, mock_run_backtests):
+    """Test that a generic exception during backtesting is handled with verbose output."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        data_dir = fs_path / "data"
+        data_dir.mkdir()
+        (fs_path / "config").mkdir()
+        universe_path = data_dir / "test_universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+
+        sample_config_dict = {
+            "universe_path": str(universe_path),
+            "historical_data_years": 1,
+            "cache_dir": "cache",
+            "hold_period": 20,
+            "min_trades_threshold": 10,
+            "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
+            "database_path": "test.db",
+            "reports_output_dir": "reports/",
+            "edge_score_threshold": 0.5,
+        }
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(sample_config_dict))
+
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+
+        # Correct invocation order: global options before command
+        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
+
+        assert result.exit_code == 1
+        assert "An unexpected error occurred" in result.stdout
+        assert "Generic backtest error" in result.stdout
 
 
 @patch("kiss_signal.cli.reporter.generate_daily_report")

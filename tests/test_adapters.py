@@ -10,7 +10,7 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-from src.kiss_signal.adapters.yfinance import fetch_symbol_data
+from kiss_signal.adapters.yfinance import fetch_symbol_data
 
 
 class TestFetchSymbolData:
@@ -23,13 +23,13 @@ class TestFetchSymbolData:
         self.log_handler = logging.Handler()
         self.log_handler.emit = lambda record: self.log_messages.append(record.getMessage())
         
-        logger = logging.getLogger('src.kiss_signal.adapters.yfinance')
+        logger = logging.getLogger('kiss_signal.adapters.yfinance')
         logger.addHandler(self.log_handler)
         logger.setLevel(logging.DEBUG)
 
     def teardown_method(self):
         """Clean up test environment."""
-        logger = logging.getLogger('src.kiss_signal.adapters.yfinance')
+        logger = logging.getLogger('kiss_signal.adapters.yfinance')
         logger.removeHandler(self.log_handler)
 
     def create_valid_yfinance_data(self, rows=250):
@@ -417,9 +417,9 @@ class TestFetchSymbolData:
 
     def test_logger_import_and_usage(self):
         """Test that logger is properly imported and used."""
-        from src.kiss_signal.adapters.yfinance import logger
+        from kiss_signal.adapters.yfinance import logger
         
-        assert logger.name == 'src.kiss_signal.adapters.yfinance'
+        assert logger.name == 'kiss_signal.adapters.yfinance'
 
     @patch('yfinance.download')
     def test_time_import_and_usage(self, mock_download):

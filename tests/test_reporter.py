@@ -29,7 +29,7 @@ import pandas as pd
 import pytest
 
 from kiss_signal.config import Config, RuleDef
-from src.kiss_signal import reporter, persistence
+from kiss_signal import reporter, persistence
 from kiss_signal import rules
 
 

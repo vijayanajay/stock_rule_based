@@ -1,5 +1,11 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Test Harness Integrity: Logger Name Mismatch (2025-07-30)
+- **Issue**: A suite of 11 tests in `test_adapters.py` consistently failed because they were unable to capture any log messages from the `yfinance` adapter.
+- **Structural Root Cause**: The test harness was instrumented to listen on the logger `'src.kiss_signal.adapters.yfinance'`, a name derived from the file path. However, the application code uses `logging.getLogger(__name__)`, which resolves to the canonical Python package name `'kiss_signal.adapters.yfinance'`. This mismatch meant the test's log handler was attached to a logger the application never used, making the tests "deaf" to the system's actual output.
+- **Fix**: The logger name in the test setup (`setup_method` and `teardown_method` in `test_adapters.py`) was corrected to use the canonical package name, re-establishing the connection between the test harness and the system under test.
+- **Lesson**: Test instrumentation must be precisely aligned with the application's runtime behavior, not filesystem paths. Canonical logger names (`package.module`) are the correct contract for testing, not source tree paths (`src.package.module`). When tests for side-effects like logging fail, first verify the instrumentation is correctly attached to the component being tested.
+
 ## Monstrous Function Deletion: SRP Violation in Persistence Layer (2025-07-25)
 - **Issue**: The `clear_and_recalculate_strategies` function in `persistence.py` was a 69-line monster that violated the Single Responsibility Principle by doing database operations, data loading, backtesting logic, and orchestration - all in a persistence module that should only handle database operations.
 - **Structural Root Cause**: Dead code left behind after CLI refactoring. The CLI was already properly using `clear_strategies_for_config` for clearing and helper functions `_run_backtests`/`_process_and_save_results` for orchestration, but the monstrous function remained as unused code that tests were still mocking.

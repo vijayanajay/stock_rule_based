@@ -35,7 +35,7 @@ from kiss_signal.rules import (
 )
 
 # Import for ATR exit function integration tests
-from src.kiss_signal.reporter import _find_signals_in_window
+from kiss_signal.reporter import _find_signals_in_window
 
 
 @pytest.fixture

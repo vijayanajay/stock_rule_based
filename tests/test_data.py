@@ -18,8 +18,8 @@ import logging
 import numpy as np
 
 from kiss_signal import data
-from src.kiss_signal.data import get_price_data
-from src.kiss_signal.rules import market_above_sma
+from kiss_signal.data import get_price_data
+from kiss_signal.rules import market_above_sma
 
 
 @pytest.fixture(scope="session")
