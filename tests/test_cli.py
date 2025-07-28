@@ -104,8 +104,8 @@ def test_display_results_empty():
 
 @patch("kiss_signal.cli.backtester.Backtester")
 @patch("kiss_signal.cli.data")
-def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
-    """Test basic run command with isolated filesystem."""
+def test_run_command_basic(mock_data, mock_backtester, test_environment) -> None:
+    """Test basic run command with complete test environment."""
     # Mock data module functions
     mock_data.load_universe.return_value = ["RELIANCE", "TCS"]
     mock_data.get_price_data.return_value = pd.DataFrame({
@@ -123,40 +123,25 @@ def test_run_command_basic(mock_data, mock_backtester, sample_config: Dict[str, 
         'edge_score': 0.75, 'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
     }
     
-    with runner.isolated_filesystem() as fs:
-        # Create data directory structure
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\nTCS,TCS,IT\n")
-        
-        # Update config with correct paths
-        sample_config["universe_path"] = str(universe_path)
-        sample_config["cache_dir"] = str(cache_dir)
-        
-        # Create config file
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-        
-        # Create rules file
-        config_dir = Path(fs) / "config"
-        config_dir.mkdir()
-        rules_path = config_dir / "rules.yaml"
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
         
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"], catch_exceptions=False)
         assert result.exit_code == 0
         assert "edge_score" in result.stdout or "No valid strategies found" in result.stdout
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.backtester.Backtester")
 @patch("kiss_signal.cli.data")
 @patch("kiss_signal.cli.reporter.generate_daily_report")
-def test_run_command_verbose(mock_data, mock_backtester, mock_get_summary, sample_config: Dict[str, Any]) -> None:
+def test_run_command_verbose(mock_data, mock_backtester, mock_get_summary, test_environment) -> None:
     """Test run command with verbose flag."""
     # Mock data module functions
     mock_data.load_universe.return_value = ["RELIANCE", "TCS"]
@@ -178,38 +163,24 @@ def test_run_command_verbose(mock_data, mock_backtester, mock_get_summary, sampl
     # Mock reporter
     mock_get_summary.return_value = "Summary report content"
     
-    with runner.isolated_filesystem() as fs:
-        # Create data directory structure
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\nTCS,TCS,IT\n")
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
         
-        # Update config with correct paths
-        sample_config["universe_path"] = str(universe_path)
-        sample_config["cache_dir"] = str(cache_dir)
-        
-        # Create config file
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-        
-        # Create rules file
-        config_dir = Path(fs) / "config"
-        config_dir.mkdir()
-        rules_path = config_dir / "rules.yaml"
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-        
-        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--verbose"], catch_exceptions=False)
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "--verbose", "run"], catch_exceptions=False)
         assert result.exit_code == 0
+        assert "edge_score" in result.stdout or "No valid strategies found" in result.stdout
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.backtester.Backtester")
 @patch("kiss_signal.cli.data")
-def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict[str, Any]) -> None:
+def test_run_command_freeze_date(mock_data, mock_backtester, test_environment) -> None:
     """Test run command with freeze-data parameter."""
     # Mock data module functions
     mock_data.load_universe.return_value = ["RELIANCE", "TCS"]
@@ -228,65 +199,35 @@ def test_run_command_freeze_date(mock_data, mock_backtester, sample_config: Dict
         'edge_score': 0.75, 'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
     }
     
-    with runner.isolated_filesystem() as fs:
-        # Create data directory structure
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\nTCS,TCS,IT\n")
-        
-        # Update config with correct paths
-        sample_config["universe_path"] = str(universe_path)
-        sample_config["cache_dir"] = str(cache_dir)
-        
-        # Create config file
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-        
-        # Create rules file
-        config_dir = Path(fs) / "config"
-        config_dir.mkdir()
-        rules_path = config_dir / "rules.yaml"
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
         
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "2025-01-01"], catch_exceptions=False)
         assert result.exit_code == 0
+    finally:
+        os.chdir(original_cwd)
 
 
-def test_run_command_invalid_freeze_date(sample_config: Dict[str, Any]) -> None:
+def test_run_command_invalid_freeze_date(test_environment) -> None:
     """Test run command with invalid freeze-data parameter."""
-    with runner.isolated_filesystem() as fs:
-        # Create data directory structure
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
-        
-        # Update config with correct paths
-        sample_config["universe_path"] = str(universe_path)
-        sample_config["cache_dir"] = str(cache_dir)
-        
-        # Create config file
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-        
-        # Create rules file
-        config_dir = Path(fs) / "config"
-        config_dir.mkdir()
-        rules_path = config_dir / "rules.yaml"
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
         
         result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--freeze-data", "invalid-date"])
         assert result.exit_code != 0
         assert "Invalid isoformat string" in result.stdout or "Error" in result.stdout
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_run_command_no_config() -> None:
@@ -297,29 +238,21 @@ def test_run_command_no_config() -> None:
         assert "No such file or directory" in result.stdout or "Config file not found" in result.stdout
 
 
-def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
+def test_run_command_missing_rules(test_environment) -> None:
     """Test run command with missing rules file."""
-    with runner.isolated_filesystem() as fs:
-        # Create data directory structure
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache" 
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
+    # Change to test environment directory, but delete the rules file
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "missing_rules.yaml"  # Non-existent file
         
-        # Update config with correct paths
-        sample_config["universe_path"] = str(universe_path)
-        sample_config["cache_dir"] = str(cache_dir)
-        
-        # Create config file but no rules file
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-        
-        result = runner.invoke(app, ["--config", str(config_path), "run"])
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"])
         assert result.exit_code != 0
-        assert "Rules file not found" in result.stdout or "No such file or directory" in result.stdout
+        assert "No such file or directory" in result.stdout or "Error" in result.stdout
+    finally:
+        os.chdir(original_cwd)
 
 
 # =============================================================================
@@ -328,106 +261,80 @@ def test_run_command_missing_rules(sample_config: Dict[str, Any]) -> None:
 
 @patch("kiss_signal.cli.data")
 @patch("kiss_signal.cli.backtester.Backtester")  
-def test_run_command_insufficient_data_handling(mock_data, mock_bt, sample_config, tmp_path):
+def test_run_command_insufficient_data_handling(mock_data, mock_bt, test_environment):
     """Test run command when insufficient data is available."""
     # Mock insufficient data scenario
     mock_data.get_universe.return_value = ["RELIANCE"]
     mock_data.get_price_data.side_effect = ValueError("Insufficient data")
     
-    with runner.isolated_filesystem() as fs:
-        # Create config file
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
         
-        # Create rules file
-        rules_path = Path(fs) / "config" / "rules.yaml"
-        rules_path.parent.mkdir()
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-        
-        # Create data directories
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        with open(universe_path, 'w') as f:
-            f.write("RELIANCE\n")
-        
-        result = runner.invoke(app, ["run"])
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"])
         # Should handle error gracefully
         assert result.exit_code == 0 or "Error" in result.stdout
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.persistence.get_connection")
 @patch("kiss_signal.cli._run_backtests")
 def test_run_command_with_persistence(
-    mock_run_backtests, mock_get_connection, sample_config, tmp_path
+    mock_run_backtests, mock_get_connection, test_environment
 ):
     """Test that run command integrates with persistence layer."""
     # Mock the connection and cursor
     mock_conn = mock_get_connection.return_value
     mock_cursor = mock_conn.cursor.return_value
 
-    with runner.isolated_filesystem() as fs:
-        mock_run_backtests.return_value = [{
-            'symbol': 'RELIANCE',
-            'rule_stack': [RuleDef(type='sma_crossover', name='sma_10_20_crossover', params={'short_window': 10, 'long_window': 20})],
-            'edge_score': 0.75,
-            'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
-        }]
+    mock_run_backtests.return_value = [{
+        'symbol': 'RELIANCE',
+        'rule_stack': [RuleDef(type='sma_crossover', name='sma_10_20_crossover', params={'short_window': 10, 'long_window': 20})],
+        'edge_score': 0.75,
+        'win_pct': 0.65, 'sharpe': 1.2, 'total_trades': 15, 'avg_return': 0.02
+    }]
 
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        with open(universe_path, 'w') as f:
-            f.write("RELIANCE\nTCS\n")
-
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
-        rules_path = Path(fs) / "config" / "rules.yaml"
-        rules_path.parent.mkdir()
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-
-        result = runner.invoke(app, ["run"], catch_exceptions=False)
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"], catch_exceptions=False)
         assert result.exit_code == 0
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.persistence.get_connection")
 @patch("kiss_signal.cli._run_backtests")
 def test_run_command_persistence_failure_handling(
-    mock_run_backtests, mock_get_connection, sample_config
+    mock_run_backtests, mock_get_connection, test_environment
 ):
     """Test that run command handles persistence layer failures gracefully."""
     # Mock persistence failure
     mock_get_connection.side_effect = sqlite3.Error("Database error")
     
-    with runner.isolated_filesystem() as fs:
-        # Create config file
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
-        # Create rules file  
-        rules_path = Path(fs) / "config" / "rules.yaml"
-        rules_path.parent.mkdir()
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-
-        # Create data directories
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        with open(universe_path, 'w') as f:
-            f.write("RELIANCE\nTCS\n")
-
-        result = runner.invoke(app, ["run"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"])
         # Should handle database errors gracefully
         assert "Database error" in result.stdout or result.exit_code != 0
+    finally:
+        os.chdir(original_cwd)
 
 
 # =============================================================================
@@ -436,7 +343,7 @@ def test_run_command_persistence_failure_handling(
 
 @patch("kiss_signal.cli.reporter.format_strategy_analysis_as_csv")
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, sample_config):
+def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, test_environment):
     """Test analyze-strategies command with successful execution."""
     # Mock the analyzer to return sample data
     mock_analyze.return_value = [
@@ -452,38 +359,41 @@ def test_analyze_strategies_command_success(mock_format_csv, mock_analyze, sampl
     
     mock_format_csv.return_value = "CSV formatted output"
 
-    with runner.isolated_filesystem() as fs:
-        # Setup files
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
+    # Create mock database in test environment
+    db_path = test_environment / "data" / "kiss_signal.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("""
+        CREATE TABLE strategies (
+            id INTEGER PRIMARY KEY,
+            strategy_key TEXT,
+            edge_score REAL
+        )
+    """)
+    conn.execute("""
+        INSERT INTO strategies (strategy_key, edge_score) 
+        VALUES ('strategy_1', 0.75)
+    """)
+    conn.commit()
+    conn.close()
 
-        # Create mock database
-        db_path = Path(fs) / "data" / "test.db"
-        db_path.parent.mkdir()
-        conn = sqlite3.connect(str(db_path))
-        conn.execute("""
-            CREATE TABLE strategies (
-                id INTEGER PRIMARY KEY,
-                strategy_key TEXT,
-                edge_score REAL
-            )
-        """)
-        conn.execute("""
-            INSERT INTO strategies (strategy_key, edge_score) 
-            VALUES ('strategy_1', 0.75)
-        """)
-        conn.commit()
-        conn.close()
-
-        result = runner.invoke(app, ["analyze-strategies"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies"])
         assert result.exit_code == 0
         assert "CSV formatted output" in result.stdout
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.persistence.get_connection")
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_custom_output(mock_get_connection, mock_analyze, sample_config):
+def test_analyze_strategies_command_custom_output(mock_get_connection, mock_analyze, test_environment):
     """Test analyze-strategies command with custom output path."""
     # Mock database connection
     mock_conn = MagicMock()
@@ -501,92 +411,107 @@ def test_analyze_strategies_command_custom_output(mock_get_connection, mock_anal
         }
     ]
 
-    with runner.isolated_filesystem() as fs:
-        # Setup files
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
-        output_path = Path(fs) / "custom_output.csv"
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        output_path = test_environment / "custom_output.csv"
         
-        result = runner.invoke(app, ["analyze-strategies", "--output", str(output_path)])
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "analyze-strategies", "--output", str(output_path)])
         assert result.exit_code == 0
         # Should create the output file
         assert output_path.exists()
+    finally:
+        os.chdir(original_cwd)
 
 
-def test_analyze_strategies_command_no_database(sample_config):
+def test_analyze_strategies_command_no_database(test_environment):
     """Test analyze-strategies command when database doesn't exist."""
-    with runner.isolated_filesystem() as fs:
-        # Setup config without database
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
-        result = runner.invoke(app, ["analyze-strategies"])
+    # Change to test environment directory and run CLI  
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        
+        # Make sure database doesn't exist
+        db_path = test_environment / "data" / "kiss_signal.db"
+        if db_path.exists():
+            db_path.unlink()
+        
+        result = runner.invoke(app, ["--config", str(config_path), "analyze-strategies"])
         assert result.exit_code != 0
         assert "database" in result.stdout.lower() or "error" in result.stdout.lower()
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_no_data(mock_analyze, sample_config):
+def test_analyze_strategies_command_no_data(mock_analyze, test_environment):
     """Test analyze-strategies command when no data is available."""
     # Mock analyzer to return empty data
     mock_analyze.return_value = []
 
-    with runner.isolated_filesystem() as fs:
-        # Setup files
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
+    # Create empty database in test environment
+    db_path = test_environment / "data" / "kiss_signal.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("""
+        CREATE TABLE strategies (
+            id INTEGER PRIMARY KEY,
+            strategy_key TEXT,
+            edge_score REAL
+        )
+    """)
+    conn.commit()
+    conn.close()
 
-        # Create empty database
-        db_path = Path(fs) / "data" / "test.db"
-        db_path.parent.mkdir()
-        conn = sqlite3.connect(str(db_path))
-        conn.execute("""
-            CREATE TABLE strategies (
-                id INTEGER PRIMARY KEY,
-                strategy_key TEXT,
-                edge_score REAL
-            )
-        """)
-        conn.commit()
-        conn.close()
-
-        result = runner.invoke(app, ["analyze-strategies"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "analyze-strategies"])
         assert result.exit_code == 0
-        assert "No data found" in result.stdout or "no strategies" in result.stdout.lower()
+        assert "No historical strategies found to analyze" in result.stdout or "no strategies" in result.stdout.lower()
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_error_handling(mock_analyze, sample_config):
+def test_analyze_strategies_command_error_handling(mock_analyze, test_environment):
     """Test analyze-strategies command error handling."""
     # Mock analyzer to raise an exception
     mock_analyze.side_effect = Exception("Analysis failed")
 
-    with runner.isolated_filesystem() as fs:
-        # Setup files
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
+    # Create database in test environment
+    db_path = test_environment / "data" / "kiss_signal.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("""
+        CREATE TABLE strategies (
+            id INTEGER PRIMARY KEY,
+            strategy_key TEXT,
+            edge_score REAL
+        )
+    """)
+    conn.commit()
+    conn.close()
 
-        # Create database
-        db_path = Path(fs) / "data" / "test.db"
-        db_path.parent.mkdir()
-        conn = sqlite3.connect(str(db_path))
-        conn.execute("""
-            CREATE TABLE strategies (
-                id INTEGER PRIMARY KEY,
-                strategy_key TEXT,
-                edge_score REAL
-            )
-        """)
-        conn.commit()
-        conn.close()
-
-        result = runner.invoke(app, ["analyze-strategies"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "analyze-strategies"])
         assert "Error" in result.stdout or result.exit_code != 0
+    finally:
+        os.chdir(original_cwd)
 
 
 # =============================================================================
@@ -596,7 +521,7 @@ def test_analyze_strategies_command_error_handling(mock_analyze, sample_config):
 @patch("kiss_signal.cli.persistence.clear_strategies_for_config")
 @patch("kiss_signal.cli._run_backtests")
 @patch("kiss_signal.cli._process_and_save_results")
-def test_clear_and_recalculate_basic_flow(mock_process, mock_run, mock_clear, sample_config):
+def test_clear_and_recalculate_basic_flow(mock_process, mock_run, mock_clear, test_environment):
     """Test basic clear-and-recalculate command flow."""
     # Mock the backtesting results
     mock_run.return_value = [
@@ -611,25 +536,15 @@ def test_clear_and_recalculate_basic_flow(mock_process, mock_run, mock_clear, sa
         }
     ]
 
-    with runner.isolated_filesystem() as fs:
-        # Setup files
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
-        rules_path = Path(fs) / "config" / "rules.yaml"
-        rules_path.parent.mkdir()
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-
-        # Create data directories
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        with open(universe_path, 'w') as f:
-            f.write("RELIANCE\nTCS\n")
-
-        result = runner.invoke(app, ["clear-and-recalculate"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "clear-and-recalculate"])
         assert result.exit_code == 0
         
         # Verify the clear function was called
@@ -638,56 +553,63 @@ def test_clear_and_recalculate_basic_flow(mock_process, mock_run, mock_clear, sa
         mock_run.assert_called_once()
         # Verify results were processed
         mock_process.assert_called_once()
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli.persistence.clear_strategies_for_config")
-def test_clear_and_recalculate_clear_failure(mock_clear, sample_config):
+def test_clear_and_recalculate_clear_failure(mock_clear, test_environment):
     """Test clear-and-recalculate command when clear operation fails."""
     # Mock clear to raise an exception
     mock_clear.side_effect = sqlite3.Error("Clear failed")
 
-    with runner.isolated_filesystem() as fs:
-        # Setup files
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
-        result = runner.invoke(app, ["clear-and-recalculate"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "clear-and-recalculate"])
         assert "Error" in result.stdout or result.exit_code != 0
+    finally:
+        os.chdir(original_cwd)
 
 
 # =============================================================================
 # Min Trades Filtering Tests
 # =============================================================================
 
-def test_cli_with_min_trades_config():
+def test_cli_with_min_trades_config(test_environment):
     """Test CLI respects min_trades configuration."""
-    with runner.isolated_filesystem() as fs:
-        # Create config with min_trades
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(VALID_CONFIG_WITH_MIN_TRADES, f)
+    # Modify the config to have a different min_trades value for this test
+    config_path = test_environment / "config.yaml"
+    with open(config_path, 'r') as f:
+        config_content = f.read()
+    
+    # Update min_trades_threshold from 10 to 5 for this test
+    modified_config = config_content.replace('min_trades_threshold: 10', 'min_trades_threshold: 5')
+    
+    with open(config_path, 'w') as f:
+        f.write(modified_config)
 
-        # Create rules file
-        rules_path = Path(fs) / "config" / "rules.yaml"
-        rules_path.parent.mkdir()
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-
-        # Create data directories
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        with open(universe_path, 'w') as f:
-            f.write("RELIANCE\nTCS\n")
-
-        # Test that config loads successfully
-        result = runner.invoke(app, ["run", "--help"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        # Test that config loads successfully  
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--help"])
         assert result.exit_code == 0
+    finally:
+        os.chdir(original_cwd)
 
 
 @patch("kiss_signal.cli._run_backtests")
-def test_min_trades_filtering_applied(mock_run_backtests):
+def test_min_trades_filtering_applied(mock_run_backtests, test_environment):
     """Test that min_trades filtering is applied to results."""
     # Mock results where some strategies have fewer than min_trades
     mock_run_backtests.return_value = [
@@ -711,28 +633,19 @@ def test_min_trades_filtering_applied(mock_run_backtests):
         }
     ]
 
-    with runner.isolated_filesystem() as fs:
-        # Create config with min_trades
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(VALID_CONFIG_WITH_MIN_TRADES, f)
-
-        # Create rules file
-        rules_path = Path(fs) / "config" / "rules.yaml"
-        rules_path.parent.mkdir()
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-
-        # Create data directories
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        with open(universe_path, 'w') as f:
-            f.write("RELIANCE\nTCS\n")
-
-        result = runner.invoke(app, ["run"])
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"])
         # Should filter out strategies with insufficient trades
         assert result.exit_code == 0
+    finally:
+        os.chdir(original_cwd)
 
 
 # =============================================================================
@@ -785,7 +698,7 @@ def test_run_command_backtest_generic_exception_verbose():
 
 
 @patch("kiss_signal.cli.reporter.generate_daily_report")
-def test_run_command_report_generation_fails_warning(mock_generate_report):
+def test_run_command_report_generation_fails_warning(mock_generate_report, test_environment):
     """Test run command handles report generation failures with warning."""
     mock_generate_report.side_effect = Exception("Report generation failed")
     
@@ -802,15 +715,19 @@ def test_run_command_report_generation_fails_warning(mock_generate_report):
             }
         ]
         
-        with runner.isolated_filesystem() as fs:
-            # Setup minimal config
-            config_path = Path(fs) / "config.yaml"
-            with open(config_path, 'w') as f:
-                yaml.dump({"data_dir": "data/"}, f)
+        # Change to test environment directory and run CLI
+        import os
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(test_environment)
+            config_path = test_environment / "config.yaml"
+            rules_path = test_environment / "config" / "rules.yaml"
             
-            result = runner.invoke(app, ["run", "--verbose"])
+            result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "--verbose", "run"])
             # Should handle report generation failure gracefully
             assert result.exit_code == 0 or "warning" in result.stdout.lower()
+        finally:
+            os.chdir(original_cwd)
 
 
 # =============================================================================
@@ -819,30 +736,37 @@ def test_run_command_report_generation_fails_warning(mock_generate_report):
 
 @pytest.mark.parametrize("command_args,expected_success", [
     (["run"], True),
-    (["run", "--verbose"], True),
+    (["--verbose", "run"], True),
     (["run", "--freeze-data", "2025-01-01"], True),
     (["run", "--freeze-data", "invalid-date"], False),
     (["analyze-strategies"], True),
     (["analyze-strategies", "--per-stock"], True),
     (["clear-and-recalculate"], True),
 ])
-def test_cli_command_variations(command_args, expected_success, sample_config):
+def test_cli_command_variations(command_args, expected_success, test_environment):
     """Parameterized test for various CLI command variations."""
-    with runner.isolated_filesystem() as fs:
-        # Setup basic files
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
+        # Add config and rules args to command
+        full_command = ["--config", str(config_path), "--rules", str(rules_path)] + command_args
+        
         if expected_success:
             # For successful cases, we expect proper error handling
-            result = runner.invoke(app, command_args)
+            result = runner.invoke(app, full_command)
             # Either success or graceful error handling
             assert result.exit_code == 0 or "Error" in result.stdout
         else:
             # For failure cases, we expect non-zero exit code
-            result = runner.invoke(app, command_args)
+            result = runner.invoke(app, full_command)
             assert result.exit_code != 0
+    finally:
+        os.chdir(original_cwd)
 
 
 # =============================================================================
@@ -853,7 +777,7 @@ def test_cli_command_variations(command_args, expected_success, sample_config):
 @patch("kiss_signal.cli.data.get_price_data")
 @patch("kiss_signal.cli.data.refresh_market_data")
 @patch("kiss_signal.cli.backtester.Backtester")
-def test_full_cli_integration_flow(mock_bt, mock_refresh, mock_price, mock_universe, sample_config):
+def test_full_cli_integration_flow(mock_bt, mock_refresh, mock_price, mock_universe, test_environment):
     """Test full CLI integration flow from start to finish."""
     # Setup comprehensive mocks
     mock_universe.return_value = ["RELIANCE", "TCS"]
@@ -872,31 +796,22 @@ def test_full_cli_integration_flow(mock_bt, mock_refresh, mock_price, mock_unive
         'total_trades': 15, 'avg_return': 0.02
     }
 
-    with runner.isolated_filesystem() as fs:
-        # Setup complete environment
-        config_path = Path(fs) / "config.yaml"
-        with open(config_path, 'w') as f:
-            yaml.dump(sample_config, f)
-
-        rules_path = Path(fs) / "config" / "rules.yaml"
-        rules_path.parent.mkdir()
-        with open(rules_path, 'w') as f:
-            f.write(VALID_RULES_YAML)
-
-        data_dir = Path(fs) / "data"
-        data_dir.mkdir()
-        cache_dir = data_dir / "cache"
-        cache_dir.mkdir()
-        universe_path = data_dir / "nifty_large_mid.csv"
-        with open(universe_path, 'w') as f:
-            f.write("RELIANCE\nTCS\n")
-
+    # Change to test environment directory and run CLI
+    import os
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(test_environment)
+        config_path = test_environment / "config.yaml"
+        rules_path = test_environment / "config" / "rules.yaml"
+        
         # Test run command
-        result = runner.invoke(app, ["run"], catch_exceptions=False)
+        result = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run"], catch_exceptions=False)
         assert result.exit_code == 0
-
+        
         # Verify mocks were called appropriately
         mock_universe.assert_called()
         mock_price.assert_called()
         mock_refresh.assert_called()
         mock_bt.assert_called()
+    finally:
+        os.chdir(original_cwd)

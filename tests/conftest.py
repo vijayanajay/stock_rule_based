@@ -18,12 +18,11 @@ def temp_dir():
 
 @pytest.fixture
 def sample_config() -> Dict[str, Any]:
-    """Sample configuration for testing."""
+    """Sample configuration for testing - COMPLETE config with all required fields."""
     return {
         "universe_path": "data/test_universe.csv",
         "historical_data_years": 1,
         "cache_dir": "data/test_cache",
-        "cache_refresh_days": 30,
         "hold_period": 20,
         "min_trades_threshold": 10,
         "edge_score_weights": {

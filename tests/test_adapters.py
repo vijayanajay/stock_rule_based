@@ -1,6 +1,7 @@
-"""Comprehensive tests for yfinance adapter module.
+"""Comprehensive tests for adapters module.
 
-Tests cover all code paths, error scenarios, and edge cases to achieve >95% coverage.
+Tests cover all code paths, error scenarios, and edge cases for data adapters.
+Currently focuses on yfinance adapter functionality.
 """
 
 import logging
