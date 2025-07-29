@@ -606,6 +606,61 @@ class TestSignalIdentification:
         # All values should be boolean (True/False)
         assert result.dtype == bool
 
+    def test_find_signals_string_parameter_conversion(self, mock_price_data):
+        """Test that string parameters are properly converted to numeric types."""
+        # Create rule stack with string parameters that need conversion
+        rule_stack_defs = [
+            {
+                'type': 'sma_crossover',
+                'params': {
+                    'fast_period': '10',  # String that should become int
+                    'slow_period': '20.0'  # String that should become float
+                }
+            }
+        ]
+        
+        # Mock the sma_crossover function to verify it gets proper parameter types
+        with patch('kiss_signal.reporter.rules.sma_crossover') as mock_sma:
+            mock_sma.return_value = pd.Series([False] * len(mock_price_data), index=mock_price_data.index)
+            
+            result = reporter._find_signals_in_window(mock_price_data, rule_stack_defs)
+            
+            # Verify the function was called with converted parameters
+            mock_sma.assert_called_once()
+            called_args, called_kwargs = mock_sma.call_args
+            
+            # Check that string parameters were converted to proper types
+            assert called_kwargs['fast_period'] == 10  # int conversion
+            assert called_kwargs['slow_period'] == 20.0  # float conversion
+            assert isinstance(called_kwargs['fast_period'], int)
+            assert isinstance(called_kwargs['slow_period'], float)
+            
+            # Verify result is proper boolean Series
+            assert isinstance(result, pd.Series)
+            assert result.dtype == bool
+
+    def test_find_signals_no_valid_rules(self, mock_price_data):
+        """Test that when no rules generate signals, returns all False Series."""
+        # Create rule stack with only ATR exit functions (should be skipped)
+        rule_stack_defs = [
+            {
+                'type': 'stop_loss_atr',
+                'params': {'multiplier': 2.0}
+            },
+            {
+                'type': 'take_profit_atr', 
+                'params': {'multiplier': 3.0}
+            }
+        ]
+        
+        result = reporter._find_signals_in_window(mock_price_data, rule_stack_defs)
+        
+        # Verify that when no valid rules exist, returns all False
+        assert isinstance(result, pd.Series)
+        assert result.dtype == bool
+        assert len(result) == len(mock_price_data)
+        assert not result.any()  # All values should be False
+
 
 # =============================================================================
 # Formatting and Display Tests
@@ -837,6 +892,27 @@ class TestErrorHandling:
         # and the function should handle this gracefully
         result = reporter._find_signals_in_window(price_data, rule_stack)
         assert len(result) == 3  # Should return False series with same length as price_data
+
+    def test_find_signals_string_parameter_conversion(self):
+        """Test signal finding with string parameters that need conversion."""
+        price_data = pd.DataFrame({
+            'Close': [100, 101, 102, 103, 104]
+        }, index=pd.date_range('2023-01-01', periods=5))
+        
+        # Test with string parameters that should be converted to numbers
+        rule_stack = [{
+            "type": "sma_crossover", 
+            "params": {
+                "fast_period": "3",  # String that should convert to int
+                "slow_period": "5"   # String that should convert to int
+            }
+        }]
+        
+        # This should hit line 112 where string parameters are converted
+        result = reporter._find_signals_in_window(price_data, rule_stack)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(price_data)
+        assert result.dtype == bool
 
 
 # =============================================================================

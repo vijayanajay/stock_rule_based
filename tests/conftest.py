@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Dict, Any
 
 import yaml
-from kiss_signal.config import Config
 
 
 @pytest.fixture
@@ -79,6 +78,8 @@ def rules_file(temp_dir, sample_rules):
 @pytest.fixture
 def reporter_config_obj_fixture(tmp_path: Path) -> "Config":
     """Fixture for a Config object for reporter tests."""
+    from kiss_signal.config import Config
+    
     db_file = tmp_path / "test.db"
     reports_dir = tmp_path / "test_reports/"
     # Create the dummy universe file that the Config object will validate
