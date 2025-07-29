@@ -78,6 +78,7 @@ def rules_file(temp_dir, sample_rules):
 @pytest.fixture
 def reporter_config_obj_fixture(tmp_path: Path) -> "Config":
     """Fixture for a Config object for reporter tests."""
+    # Import moved inside fixture to avoid early module loading before coverage instrumentation
     from kiss_signal.config import Config
     
     db_file = tmp_path / "test.db"

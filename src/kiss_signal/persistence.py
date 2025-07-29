@@ -25,6 +25,7 @@ __all__ = [
     "generate_config_hash",
     "create_config_snapshot",
     "clear_strategies_for_config",
+    "clean_duplicate_strategies",
 ]
 
 logger = logging.getLogger(__name__)

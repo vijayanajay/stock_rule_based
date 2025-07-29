@@ -4,9 +4,11 @@ import sys
 from pathlib import Path
 
 # Add src directory to Python path so tests import from development source, not installed packages
-src_path = Path(__file__).parent / "src"
-if str(src_path) not in sys.path:
-    sys.path.insert(0, str(src_path))
+# Moved inside pytest_configure to avoid early import before coverage instrumentation
+def add_src_to_path():
+    src_path = Path(__file__).parent / "src"
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
 
 import pytest
 import tempfile
@@ -257,6 +259,9 @@ def benchmark_price_data():
 
 def pytest_configure(config):
     """Configure pytest for performance optimization."""
+    # Add src path after coverage is set up
+    add_src_to_path()
+    
     # Add custom markers
     config.addinivalue_line(
         "markers", "benchmark: mark test as a performance benchmark"
