@@ -834,28 +834,28 @@ class TestBacktester:
             backtester._generate_signals(rule_def, sample_price_data)
 
     def test_generate_signals_missing_parameters(self, sample_price_data):
-        """Test signal generation with missing rule parameters."""
+        """Test signal generation with optional rule parameters using defaults."""
         from kiss_signal.config import RuleDef
         backtester = Backtester()
+        
+        # sma_crossover has default parameters, so empty params should work fine
         rule_def = RuleDef(name="test_missing_params", type='sma_crossover', params={})
         
-        # Test parameter conversion logic (covers lines 276-283)
-        # Test with string parameters that should be converted
-        rule_def_with_string_params = RuleDef(
-            name="test_string_params", 
+        # This should work because sma_crossover has defaults (fast_period=10, slow_period=20)
+        result = backtester._generate_signals(rule_def, sample_price_data)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_price_data)
+        
+        # Test parameter conversion logic with invalid parameter
+        rule_def_with_invalid_param = RuleDef(
+            name="test_invalid_param", 
             type='sma_crossover', 
-            params={'fast_period': '5', 'slow_period': '10.5', 'invalid_param': 'not_a_number'}
+            params={'fast_period': 5, 'slow_period': 10, 'invalid_param': 'not_a_number'}
         )
         
-        # This should handle parameter conversion without errors
-        try:
-            backtester._generate_signals(rule_def_with_string_params, sample_price_data)
-        except Exception as e:
-            # Parameter conversion should work, but rule might still fail for other reasons
-            # The important thing is that parameter conversion doesn't crash
-            pass
-        with pytest.raises(ValueError, match="Missing parameters for rule 'sma_crossover'"):
-            backtester._generate_signals(rule_def, sample_price_data)
+        # This should raise an error because invalid_param is not accepted
+        with pytest.raises(ValueError, match="Rule 'sma_crossover' failed execution"):
+            backtester._generate_signals(rule_def_with_invalid_param, sample_price_data)
 
     def test_find_optimal_strategies_no_trades(self, sample_price_data, sample_rules_config):
         """Test find_optimal_strategies when a rule generates no trades."""

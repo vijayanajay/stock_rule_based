@@ -31,6 +31,7 @@ import pytest
 from kiss_signal.config import Config, RuleDef
 from kiss_signal import reporter, persistence
 from kiss_signal import rules
+from kiss_signal.backtester import Backtester
 
 
 # =============================================================================
@@ -601,13 +602,13 @@ class TestSignalIdentification:
     
     def test_find_signals_filters_index_symbol_parameter(self):
         """Test that index_symbol parameters are filtered from rule definitions."""
-        # Sample price data with enough points for SMA calculation and proper column names
+        # Sample price data with enough points for SMA calculation
+        # Use consistent column naming to avoid duplication after normalization
         price_data = pd.DataFrame({
             'Open': range(100, 115),
             'High': range(102, 117), 
             'Low': range(99, 114),
             'Close': range(101, 116),
-            'close': range(101, 116),  # Lowercase for rule functions
             'Volume': [1000] * 15
         }, index=pd.date_range('2023-01-01', periods=15))
         
@@ -623,7 +624,8 @@ class TestSignalIdentification:
         
         # Test behavior: function should handle index_symbol parameter filtering gracefully
         # and return a boolean Series of the same length as input data
-        result = reporter._find_signals_in_window(price_data, rule_stack_defs)
+        bt = Backtester()
+        result = bt.generate_signals_for_stack(rule_stack_defs, price_data)
         
         # Verify behavior: function returns Series of correct length
         assert isinstance(result, pd.Series)
@@ -645,10 +647,11 @@ class TestSignalIdentification:
         ]
         
         # Mock the sma_crossover function to verify it gets proper parameter types
-        with patch('kiss_signal.reporter.rules.sma_crossover') as mock_sma:
+        with patch('kiss_signal.rules.sma_crossover') as mock_sma:
             mock_sma.return_value = pd.Series([False] * len(mock_price_data), index=mock_price_data.index)
             
-            result = reporter._find_signals_in_window(mock_price_data, rule_stack_defs)
+            bt = Backtester()
+            result = bt.generate_signals_for_stack(rule_stack_defs, mock_price_data)
             
             # Verify the function was called with converted parameters
             mock_sma.assert_called_once()
@@ -678,7 +681,8 @@ class TestSignalIdentification:
             }
         ]
         
-        result = reporter._find_signals_in_window(mock_price_data, rule_stack_defs)
+        bt = Backtester()
+        result = bt.generate_signals_for_stack(rule_stack_defs, mock_price_data)
         
         # Verify that when no valid rules exist, returns all False
         assert isinstance(result, pd.Series)
@@ -1021,7 +1025,8 @@ class TestErrorHandling:
             'Close': [100, 101, 102]
         }, index=pd.date_range('2023-01-01', periods=3))
         
-        result = reporter._find_signals_in_window(price_data, [])
+        bt = Backtester()
+        result = bt.generate_signals_for_stack([], price_data)
         # Should return a Series of False values matching the price data length
         assert len(result) == 3
         assert not result.any()  # All values should be False
@@ -1029,23 +1034,26 @@ class TestErrorHandling:
     def test_find_signals_empty_dataframe(self):
         """Test signal finding with empty DataFrame."""
         empty_data = pd.DataFrame()
-        rule_stack = [{"type": "sma_crossover", "params": {}}]
+        # Use a rule with default parameters that can handle empty params
+        rule_stack = [{"type": "engulfing_pattern", "params": {}}]
         
-        result = reporter._find_signals_in_window(empty_data, rule_stack)
+        bt = Backtester()
+        result = bt.generate_signals_for_stack(rule_stack, empty_data)
         assert len(result) == 0
     
     def test_find_signals_rule_function_error(self):
-        """Test signal finding with rule function error."""
+        """Test signal finding with non-existent rule function."""
         price_data = pd.DataFrame({
             'Close': [100, 101, 102]
         }, index=pd.date_range('2023-01-01', periods=3))
-        
+
         rule_stack = [{"type": "non_existent_rule", "params": {}}]
-        
-        # Since non_existent_rule doesn't exist in rules module, getattr will return None
-        # and the function should handle this gracefully
-        result = reporter._find_signals_in_window(price_data, rule_stack)
-        assert len(result) == 3  # Should return False series with same length as price_data
+
+        # non_existent_rule doesn't exist in rules module
+        # The backtester should properly raise ValueError for invalid rules
+        bt = Backtester()
+        with pytest.raises(ValueError, match="Rule function 'non_existent_rule' not found in rules module"):
+            bt.generate_signals_for_stack(rule_stack, price_data)
 
     def test_find_signals_string_parameter_conversion(self):
         """Test signal finding with string parameters that need conversion."""
@@ -1063,7 +1071,8 @@ class TestErrorHandling:
         }]
         
         # This should hit line 112 where string parameters are converted
-        result = reporter._find_signals_in_window(price_data, rule_stack)
+        bt = Backtester()
+        result = bt.generate_signals_for_stack(rule_stack, price_data)
         assert isinstance(result, pd.Series)
         assert len(result) == len(price_data)
         assert result.dtype == bool

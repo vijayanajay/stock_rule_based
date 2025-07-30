@@ -34,8 +34,8 @@ from kiss_signal.rules import (
     is_volatile,
 )
 
-# Import for ATR exit function integration tests
-from kiss_signal.reporter import _find_signals_in_window
+# Import for backtester integration tests
+from kiss_signal.backtester import Backtester
 
 
 @pytest.fixture
@@ -1562,7 +1562,8 @@ class TestATRExitFunctionsFix:
         ]
         
         # This should not raise an exception (ATR functions are skipped)
-        signals = _find_signals_in_window(price_data, rule_stack_defs)
+        bt = Backtester()
+        signals = bt.generate_signals_for_stack(rule_stack_defs, price_data)
         
         # Should return a valid boolean series
         assert isinstance(signals, pd.Series)
@@ -1593,7 +1594,8 @@ class TestATRExitFunctionsFix:
         ]
         
         # Should return all False signals since all rules are skipped
-        signals = _find_signals_in_window(price_data, rule_stack_defs)
+        bt = Backtester()
+        signals = bt.generate_signals_for_stack(rule_stack_defs, price_data)
         
         assert isinstance(signals, pd.Series)
         assert len(signals) == len(price_data)
@@ -1623,7 +1625,7 @@ class TestATRExitFunctionsFix:
             },
             {
                 'type': 'rsi_oversold',  # Entry signal
-                'params': {'period': 14, 'threshold': 30}
+                'params': {'period': 14, 'oversold_threshold': 30}
             },
             {
                 'type': 'take_profit_atr',  # Exit function, should be skipped
@@ -1632,7 +1634,8 @@ class TestATRExitFunctionsFix:
         ]
         
         # Should work and only process the entry signal functions
-        signals = _find_signals_in_window(price_data, rule_stack_defs)
+        bt = Backtester()
+        signals = bt.generate_signals_for_stack(rule_stack_defs, price_data)
         
         assert isinstance(signals, pd.Series)
         assert len(signals) == len(price_data)

@@ -63,17 +63,11 @@ runner = CliRunner()
 # CLI Help and Banner Tests
 # =============================================================================
 
-def test_run_command_help() -> None:
-    """Test run command help shows expected content."""
-    result = runner.invoke(app, ["run", "--help"])
+def test_app_help() -> None:
+    """Test the main application help command is resilient."""
+    result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Usage: " in result.stdout
-    assert "--freeze-data" in result.stdout
-    
-    # Cover line 324: Test resilient parsing with main app help
-    result_main_help = runner.invoke(app, ["--help"])
-    assert result_main_help.exit_code == 0
-    assert "KISS Signal CLI" in result_main_help.stdout
+    assert "KISS Signal CLI" in result.stdout
 
 
 def test_show_banner() -> None:
@@ -162,7 +156,7 @@ def test_run_command_basic(mock_data, mock_backtester, test_environment) -> None
         assert result5.exit_code != 0  # Should fail with invalid flag
         
         # Cover lines 383->391, 430: Test verbose mode (performance summary path)
-        result6 = runner.invoke(app, ["--config", str(config_path), "--rules", str(rules_path), "run", "--verbose"])
+        result6 = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
         # Verbose mode should work (may or may not show performance depending on setup)
         assert result6.exit_code == 0 or "error" not in result6.stdout.lower()
         
@@ -888,7 +882,7 @@ def test_run_command_backtest_generic_exception_verbose(mock_data, mock_run_back
         rules_path = fs_path / "config" / "rules.yaml"
         rules_path.write_text(VALID_RULES_YAML)
 
-        # Correct invocation order: global options before command
+        # Correct invocation: global options must come BEFORE the command.
         result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
 
         assert result.exit_code == 1

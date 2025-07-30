@@ -18,6 +18,7 @@ from io import StringIO
 
 from . import data, rules, persistence
 from .config import Config
+from .backtester import Backtester
 
 # Import config functions from persistence for convenience
 from .persistence import generate_config_hash, create_config_snapshot
@@ -73,60 +74,7 @@ def _fetch_best_strategies(db_path: Path, run_timestamp: str, threshold: float) 
         return []
 
 
-def _find_signals_in_window(price_data: pd.DataFrame, rule_stack_defs: List[Dict[str, Any]]) -> pd.Series:
-    """
-    Private helper to apply a full rule stack and find all signal triggers.
-    
-    Args:
-        price_data: DataFrame with OHLCV data.
-        rule_stack_defs: A list of rule definitions to apply.
-        
-    Returns:
-        A boolean Series with True for any day a signal triggered.
-    """
-    try:
-        if not rule_stack_defs or price_data.empty:
-            return pd.Series(False, index=price_data.index)
 
-        # Correctly initialize with the first rule's signals, then AND subsequent rules.
-        # This fixes a critical bug where signals were being improperly combined.
-        combined_signals: Optional[pd.Series] = None
-
-        for rule_def in rule_stack_defs:
-            # Skip ATR exit functions as they are exit conditions, not entry signals
-            # ATR functions require entry_price parameter which is not available during signal generation
-            if rule_def['type'] in ['stop_loss_atr', 'take_profit_atr']:
-                logger.debug(f"Skipping ATR exit function {rule_def['type']} in signal generation")
-                continue
-                
-            rule_func = getattr(rules, rule_def['type'])
-            
-            # Convert string parameters to appropriate types (defensive programming)
-            rule_params = rule_def.get('params', {})
-            converted_rule_params = {}
-            for key, value in rule_params.items():
-                # Filter out index_symbol parameter as it's not accepted by rule functions
-                if key == 'index_symbol':
-                    continue
-                if isinstance(value, str) and value.replace('.', '').replace('-', '').isdigit():
-                    converted_rule_params[key] = float(value) if '.' in value else int(value)
-                else:
-                    converted_rule_params[key] = value
-            
-            rule_signals = rule_func(price_data, **converted_rule_params)
-
-            if combined_signals is None:
-                combined_signals = rule_signals.copy()
-            else:
-                combined_signals &= rule_signals
-
-        if combined_signals is not None:
-            return combined_signals.fillna(False)
-        else:
-            return pd.Series(False, index=price_data.index)
-    except Exception as e:
-        logger.error(f"Error finding signals for rule stack: {e}")
-        return pd.Series(False, index=price_data.index)
 
 
 def _identify_new_signals(
@@ -150,6 +98,7 @@ def _identify_new_signals(
         return []
 
     signals = []
+    bt = Backtester(hold_period=config.hold_period, min_trades_threshold=config.min_trades_threshold)
     for strategy in strategies:
         try:
             symbol = strategy['symbol']
@@ -166,8 +115,8 @@ def _identify_new_signals(
             if price_data.empty:
                 continue
 
-            # Find all signals for the given strategy
-            all_signals = _find_signals_in_window(price_data, rule_stack_defs)
+            # Use the centralized backtester method to get signals
+            all_signals = bt.generate_signals_for_stack(rule_stack_defs, price_data)
             
             # Determine the start date for recent signals
             run_date = config.freeze_date or date.today()

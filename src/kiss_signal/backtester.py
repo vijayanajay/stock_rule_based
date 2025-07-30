@@ -76,16 +76,9 @@ class Backtester:
                 context_signals = pd.Series(True, index=price_data.index)
             
             # Generate combined signal for the rule combination
-            entry_signals: Optional[pd.Series] = None
-            for rule_def in combo:
-                rule_signals = self._generate_signals(rule_def, price_data)
-                if entry_signals is None:
-                    entry_signals = rule_signals.copy()
-                else:
-                    entry_signals &= rule_signals
+            entry_signals = self.generate_signals_for_stack(combo, price_data)
             
-            if entry_signals is None:
-                # This case should ideally not be reached if combos are always non-empty
+            if entry_signals is None or not entry_signals.any():
                 logger.warning(f"Could not generate entry signals for combo: {[r.name for r in combo]}")
                 return None
             
@@ -183,7 +176,7 @@ class Backtester:
         """Find optimal rule combinations through backtesting.
         
         Args:
-            rules_config: RulesConfig Pydantic model with 'baseline' and 'layers' rule configs.
+            rules_config: RulesConfig Pydantic model with entry_signals and exit_conditions.
             price_data: OHLCV price data for backtesting
             symbol: The stock symbol being tested, for logging purposes.
             freeze_date: Optional cutoff date for data (for deterministic testing)
@@ -252,9 +245,15 @@ class Backtester:
         Raises:
             ValueError: If rule definition is invalid or rule not found
         """
-        # Enforce Pydantic model contract
-        rule_type = rule_def.type
-        rule_params = rule_def.params
+        # Handle both object and dict formats
+        if hasattr(rule_def, 'type'):
+            # Pydantic model format
+            rule_type = rule_def.type
+            rule_params = rule_def.params
+        else:
+            # Dict format (from JSON)
+            rule_type = rule_def.get('type')
+            rule_params = rule_def.get('params', {})
 
         if not rule_type:
             raise ValueError(f"Rule definition missing 'type' field: {rule_def}")
@@ -263,20 +262,35 @@ class Backtester:
         if rule_func is None:
             raise ValueError(f"Rule function '{rule_type}' not found in rules module")
 
-        if not rule_params:
-            raise ValueError(f"Missing parameters for rule '{rule_type}'") # This is the new, better message
-
+        # Remove overly strict parameter validation - let Python handle it naturally
+        # Some rules have optional parameters with defaults and should work with empty params
+        
+        # Handle empty DataFrame - return empty Series immediately
+        if price_data.empty:
+            return pd.Series(dtype=bool, name='signals')
+        
+        # Normalize column names to lowercase for consistent data contract
+        # Many rules expect lowercase column names ('close', 'open', 'high', 'low')
+        price_data_normalized = price_data.copy()
+        if len(price_data_normalized.columns) > 0:
+            price_data_normalized.columns = price_data_normalized.columns.str.lower()
+        
         try:
             # Defensive parameter type conversion - ensure numeric strings become numbers
             converted_params: Dict[str, Any] = {}
             for key, value in rule_params.items():
+                # Filter out index_symbol parameter as it's not accepted by rule functions
+                if key == 'index_symbol':
+                    continue
                 if isinstance(value, str):
                     # Try to convert string to number if it looks numeric
                     try:
-                        if '.' in value:
+                        if '.' in value and value.replace('.', '').replace('-', '').isdigit():
                             converted_params[key] = float(value)
-                        else:
+                        elif value.replace('-', '').isdigit():
                             converted_params[key] = int(value)
+                        else:
+                            converted_params[key] = str(value)
                     except ValueError:
                         # If conversion fails, keep as string (might be a symbol/name)
                         converted_params[key] = str(value)
@@ -284,7 +298,7 @@ class Backtester:
                     converted_params[key] = value
                     
             # Call the actual rule function from the rules module
-            entry_signals = rule_func(price_data, **converted_params)
+            entry_signals = rule_func(price_data_normalized, **converted_params)
         except Exception as e:
             logger.error(f"Error executing rule '{rule_type}' with params {rule_params}: {e}")
             raise ValueError(f"Rule '{rule_type}' failed execution") from e
@@ -294,6 +308,41 @@ class Backtester:
         logger.info(f"Rule '{rule_type}' generated {signal_count} signals on {len(price_data)} data points")
 
         return entry_signals
+
+    def generate_signals_for_stack(
+        self, rule_stack: List[Any], price_data: pd.DataFrame
+    ) -> pd.Series:
+        """Generates combined entry signals for a given rule stack.
+        
+        This is the single, reusable implementation for running a rule stack.
+        It filters out ATR exit functions and combines entry signals using AND logic.
+        
+        Args:
+            rule_stack: List of rule definitions to combine (can be objects or dicts)
+            price_data: DataFrame with OHLCV data
+            
+        Returns:
+            Combined boolean Series with entry signals
+        """
+        combined_signals: Optional[pd.Series] = None
+        
+        # Filter out ATR exit functions - handle both object and dict formats
+        entry_rules = []
+        for r in rule_stack:
+            rule_type = r.type if hasattr(r, 'type') else r.get('type')
+            if rule_type not in ['stop_loss_atr', 'take_profit_atr']:
+                entry_rules.append(r)
+
+        for rule_def in entry_rules:
+            rule_signals = self._generate_signals(rule_def, price_data)
+            if combined_signals is None:
+                combined_signals = rule_signals.copy()
+            else:
+                combined_signals &= rule_signals
+
+        if combined_signals is not None:
+            return combined_signals.fillna(False)
+        return pd.Series(False, index=price_data.index)
 
     def _generate_exit_signals(
         self, 
