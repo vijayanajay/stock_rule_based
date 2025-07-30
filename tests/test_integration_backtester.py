@@ -65,12 +65,12 @@ class TestBacktesterRuleIntegration:
         """Test backtester with actual rule configurations."""
         # Create a minimal rules config as a dict
         rules_config = {
-            'baseline': {
-                'name': 'sma_10_20_crossover',
-                'type': 'sma_crossover',
-                'params': {'fast_period': 10, 'slow_period': 20}
-            },
-            'layers': [
+            'entry_signals': [
+                {
+                    'name': 'sma_10_20_crossover',
+                    'type': 'sma_crossover',
+                    'params': {'fast_period': 10, 'slow_period': 20}
+                },
                 {
                     'name': 'rsi_oversold_30',
                     'type': 'rsi_oversold',

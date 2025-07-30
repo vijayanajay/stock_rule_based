@@ -559,10 +559,9 @@ class TestCompleteRuleStack:
         """Test that rule combinations work with sell condition rules."""
         backtester = Backtester()
         rules_config = RulesConfig(
-            baseline=RuleDef(name="baseline", type="sma_crossover", params={}),
-            layers=[],
+            entry_signals=[RuleDef(name="baseline", type="sma_crossover", params={})],
             context_filters=[],
-            sell_conditions=[
+            exit_conditions=[
                 RuleDef(name="stop_loss", type="stop_loss_pct", params={"percentage": 5.0}),
                 RuleDef(name="take_profit", type="take_profit_pct", params={"percentage": 10.0})
             ]
@@ -659,8 +658,8 @@ class TestBacktesterIntegration:
         """Test backtester performance with edge case scenarios."""
         backtester = Backtester()
         rules_config = RulesConfig(
-            baseline=RuleDef(name="always_true", type="sma_crossover", params={}),
-            layers=[], context_filters=[], sell_conditions=[]
+            entry_signals=[RuleDef(name="always_true", type="sma_crossover", params={})],
+            context_filters=[], exit_conditions=[]
         )
         
         with patch('kiss_signal.rules.sma_crossover') as mock_rule_func:
@@ -1152,11 +1151,13 @@ def sample_rules_config():
         
         # Create rules config with preconditions that should pass
         rules_config = RulesConfig(
-            baseline=RuleDef(
-                name="test_baseline",
-                type="sma_crossover",
-                params={"fast_period": 5, "slow_period": 10}
-            ),
+            entry_signals=[
+                RuleDef(
+                    name="test_baseline",
+                    type="sma_crossover",
+                    params={"fast_period": 5, "slow_period": 10}
+                )
+            ],
             preconditions=[
                 RuleDef(
                     name="trend_filter",
@@ -1166,7 +1167,7 @@ def sample_rules_config():
             ]
         )
         
-        combo = [rules_config.baseline]
+        combo = rules_config.entry_signals
         
         result = backtester._backtest_combination(
             combo, sample_price_data, rules_config, sample_edge_score_weights, "TEST"
@@ -1183,11 +1184,13 @@ def sample_rules_config():
         
         # Create rules config with preconditions that should fail
         rules_config = RulesConfig(
-            baseline=RuleDef(
-                name="test_baseline",
-                type="sma_crossover",
-                params={"fast_period": 5, "slow_period": 10}
-            ),
+            entry_signals=[
+                RuleDef(
+                    name="test_baseline",
+                    type="sma_crossover",
+                    params={"fast_period": 5, "slow_period": 10}
+                )
+            ],
             preconditions=[
                 RuleDef(
                     name="impossible_volatility",
@@ -1197,7 +1200,7 @@ def sample_rules_config():
             ]
         )
         
-        combo = [rules_config.baseline]
+        combo = rules_config.entry_signals
         
         result = backtester._backtest_combination(
             combo, sample_price_data, rules_config, sample_edge_score_weights, "TEST"
@@ -1283,20 +1286,21 @@ class TestBacktesterIntegration:
 
 
     def test_find_optimal_strategies_no_baseline_rule(self, sample_price_data, sample_rules_config):
-        """Test find_optimal_strategies when baseline rule is effectively missing."""
+        """Test find_optimal_strategies when entry signals generate no trades."""
         backtester = Backtester()
 
-        # Create a valid RulesConfig first
-        config_with_baseline = sample_rules_config
-
-        # Mock the baseline attribute to be None for this specific test case
-        with patch.object(config_with_baseline, 'baseline', None):
+        # Use a valid config but mock the signal generation to return no signals
+        with patch.object(backtester, '_generate_signals') as mock_generate:
+            # Mock to return all False signals (no entry signals)
+            mock_generate.return_value = pd.Series([False] * len(sample_price_data), index=sample_price_data.index)
+            
             result = backtester.find_optimal_strategies(
-                rules_config=config_with_baseline,
+                rules_config=sample_rules_config,
                 price_data=sample_price_data,
                 symbol="TEST.NS"
             )
-        assert result == []
+            # Should return empty list when no signals generate trades
+            assert result == []
 
     def test_find_optimal_strategies_infer_freq_none(self, sample_price_data_no_freq, sample_rules_config):
         """Test find_optimal_strategies when frequency cannot be inferred."""
@@ -1364,9 +1368,8 @@ class TestBacktesterIntegration:
         backtester = Backtester(min_trades_threshold=0) # Ensure it runs even if no trades
 
         rules_config_with_sell = RulesConfig(
-            baseline=RuleDef(name='sma_baseline', type='sma_crossover', params={'fast_period': 5, 'slow_period': 10}),
-            layers=[],
-            sell_conditions=[
+            entry_signals=[RuleDef(name='sma_baseline', type='sma_crossover', params={'fast_period': 5, 'slow_period': 10})],
+            exit_conditions=[
                 RuleDef(name="sl", type="stop_loss_pct", params={"percentage": 0.05}),
                 RuleDef(name="tp", type="take_profit_pct", params={"percentage": 0.10})
             ]
@@ -1488,10 +1491,8 @@ class TestBacktesterIntegration:
         def faulty_generate_signals(rule_def, price_data_arg):
             nonlocal call_count
             call_count += 1
-            # Let baseline (first call for first combo) pass
-            # Let baseline (first call for second combo) pass
-            # Fail on the layer rule of the second combo (third call overall if one layer)
-            if sample_rules_config.layers and rule_def.name == sample_rules_config.layers[0].name and call_count > 1:
+            # Let first entry signal pass, fail on subsequent entry signals
+            if len(sample_rules_config.entry_signals) > 1 and rule_def.name == sample_rules_config.entry_signals[1].name and call_count > 1:
                  raise ValueError("Simulated processing error")
             return original_generate_signals(rule_def, price_data_arg)
 
@@ -1504,11 +1505,11 @@ class TestBacktesterIntegration:
                 )
 
         assert any("Error processing rule combination" in message for message in caplog.messages)
-        # Check if at least the baseline strategy (first combo) was processed if layers exist
-        if sample_rules_config.layers:
-             assert len(result) < len([sample_rules_config.baseline] + [[sample_rules_config.baseline, layer] for layer in sample_rules_config.layers])
-        else: # Only baseline
-            assert len(result) == 1 # Assuming baseline doesn't error out by itself
+        # Check if at least the first strategy was processed if multiple entry signals exist
+        if len(sample_rules_config.entry_signals) > 1:
+             assert len(result) < len(sample_rules_config.entry_signals)
+        else: # Only one entry signal
+            assert len(result) == 1 # Assuming first entry signal doesn't error out by itself
 
 
 @pytest.fixture
@@ -1545,12 +1546,12 @@ def sample_rules_config_empty_combo():
     # This is tricky to achieve reliably without specific rule logic that can return None
     # or by mocking _generate_signals to return None for a specific rule in a combo.
     return RulesConfig(
-        baseline=RuleDef(
-            name='sma_crossover_baseline',
-            type='sma_crossover',
-            params={'fast_period': 5, 'slow_period': 10}
-        ),
-        layers=[
+        entry_signals=[
+            RuleDef(
+                name='sma_crossover_baseline',
+                type='sma_crossover',
+                params={'fast_period': 5, 'slow_period': 10}
+            ),
             RuleDef(
                 name='empty_layer_rule', # A hypothetical name for a rule that might cause issues
                 type='rsi_oversold', # Using a real type, but imagine it's configured to fail/return None
