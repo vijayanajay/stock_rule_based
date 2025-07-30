@@ -610,12 +610,12 @@ class TestMigrationV2:
         # Create mock config objects using proper RulesConfig structure
         from kiss_signal.config import RulesConfig, RuleDef
         rules_config = RulesConfig(
-            baseline=RuleDef(
-                type="sma_crossover", 
-                name="sma_10_20_crossover", 
-                params={"fast": 10, "slow": 20}
-            ),
-            layers=[
+            entry_signals=[
+                RuleDef(
+                    type="sma_crossover", 
+                    name="sma_10_20_crossover", 
+                    params={"fast": 10, "slow": 20}
+                ),
                 RuleDef(
                     type="rsi_oversold", 
                     name="rsi_oversold_30", 
@@ -655,7 +655,7 @@ class TestMigrationV2:
         # Test get_active_strategy_combinations (expects RulesConfig object)
         from kiss_signal.config import get_active_strategy_combinations
         combinations = get_active_strategy_combinations(rules_config)
-        assert len(combinations) >= 2  # At least the buy rules
+        assert len(combinations) >= 1  # At least one combined strategy
         for combo in combinations:
             parsed = json.loads(combo)
             assert isinstance(parsed, list)
@@ -754,7 +754,7 @@ class TestConfigHashAndSnapshot:
         universe_file = tmp_path / "universe.csv"
         universe_file.write_text("RELIANCE\nINFY\n")
         
-        rules_config = {"baseline": {"type": "sma_crossover"}, "layers": []}
+        rules_config = {"entry_signals": [{"type": "sma_crossover"}]}
         
         app_config = Config(
             database_path=str(tmp_path / "test.db"),
@@ -785,8 +785,8 @@ class TestConfigHashAndSnapshot:
         universe_file = tmp_path / "universe.csv"
         universe_file.write_text("RELIANCE\nINFY\n")
         
-        rules_config1 = {"baseline": {"type": "sma_crossover"}, "layers": []}
-        rules_config2 = {"baseline": {"type": "rsi_oversold"}, "layers": []}
+        rules_config1 = {"entry_signals": [{"type": "sma_crossover"}]}
+        rules_config2 = {"entry_signals": [{"type": "rsi_oversold"}]}
         
         app_config = Config(
             database_path=str(tmp_path / "test.db"),
@@ -815,7 +815,7 @@ class TestConfigHashAndSnapshot:
         universe_file = tmp_path / "universe.csv"
         universe_file.write_text("RELIANCE\nINFY\n")
         
-        rules_config = {"baseline": {"type": "sma_crossover"}, "layers": []}
+        rules_config = {"entry_signals": [{"type": "sma_crossover"}]}
         
         app_config = Config(
             database_path=str(tmp_path / "test.db"),
@@ -848,7 +848,7 @@ class TestConfigHashAndSnapshot:
         universe_file = tmp_path / "universe.csv"
         universe_file.write_text("RELIANCE\nINFY\n")
         
-        rules_config = {"baseline": {"type": "sma_crossover"}, "layers": []}
+        rules_config = {"entry_signals": [{"type": "sma_crossover"}]}
         
         app_config = Config(
             database_path=str(tmp_path / "test.db"),
@@ -1311,8 +1311,10 @@ class TestClearCurrentStrategies:
         )
         
         rules_config = RulesConfig(
-            baseline=RuleDef(name="test_baseline", type="sma_crossover", params={"fast_period": 5, "slow_period": 10}),
-            layers=[RuleDef(name="test_layer", type="rsi_oversold", params={"period": 14})]
+            entry_signals=[
+                RuleDef(name="test_baseline", type="sma_crossover", params={"fast_period": 5, "slow_period": 10}),
+                RuleDef(name="test_layer", type="rsi_oversold", params={"period": 14})
+            ]
         )
         
         # Insert some test strategies
@@ -1322,8 +1324,8 @@ class TestClearCurrentStrategies:
             config_hash = persistence.generate_config_hash(rules_dict, app_config)
             
             # Insert strategies that match current config - need to match the exact format
-            baseline_rule = rules_config.baseline.model_dump()
-            matching_rule_stack = json.dumps([baseline_rule])
+            entry_rules = [rule.model_dump() for rule in rules_config.entry_signals]
+            matching_rule_stack = json.dumps(entry_rules)
             
             conn.execute("""
                 INSERT INTO strategies (symbol, rule_stack, edge_score, run_timestamp, 
@@ -1356,8 +1358,8 @@ class TestClearCurrentStrategies:
         with sqlite3.connect(str(temp_db_path)) as conn:
             # Insert more strategies with same config hash and matching rule stack
             config_hash = persistence.generate_config_hash(rules_config.model_dump(), app_config)
-            baseline_rule = rules_config.baseline.model_dump()
-            matching_rule_stack = json.dumps([baseline_rule])
+            entry_rules = [rule.model_dump() for rule in rules_config.entry_signals]
+            matching_rule_stack = json.dumps(entry_rules)
             
             conn.execute("""
                 INSERT INTO strategies (symbol, rule_stack, edge_score, run_timestamp, 
@@ -1473,8 +1475,10 @@ class TestClearCurrentStrategies:
         )
         
         rules_config = RulesConfig(
-            baseline=RuleDef(name="test_baseline", type="sma_crossover", params={"fast_period": 5, "slow_period": 10}),
-            layers=[RuleDef(name="test_layer", type="rsi_oversold", params={"period": 14})]
+            entry_signals=[
+                RuleDef(name="test_baseline", type="sma_crossover", params={"fast_period": 5, "slow_period": 10}),
+                RuleDef(name="test_layer", type="rsi_oversold", params={"period": 14})
+            ]
         )
         
         # Insert strategies that DON'T match current config

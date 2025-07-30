@@ -71,11 +71,10 @@ class RuleDef(BaseModel):
 
 class RulesConfig(BaseModel):
     """Defines the structure of the rules.yaml file."""
-    baseline: RuleDef
-    layers: List[RuleDef] = []
-    sell_conditions: List[RuleDef] = Field(default_factory=list)
-    context_filters: List[RuleDef] = Field(default_factory=list)  # NEW SIMPLE FIELD
-    preconditions: List[RuleDef] = Field(default_factory=list)  # NEW FIELD (Story 023)
+    preconditions: List[RuleDef] = Field(default_factory=list)
+    context_filters: List[RuleDef] = Field(default_factory=list)
+    entry_signals: List[RuleDef] = Field(..., min_length=1)  # Required and non-empty
+    exit_conditions: List[RuleDef] = Field(default_factory=list)
     validation: Optional[Dict[str, Any]] = None # Allow validation block
 
 # impure
@@ -119,11 +118,12 @@ def get_active_strategy_combinations(rules_config: RulesConfig) -> List[str]:
     """Generate all active strategy combinations from rules configuration as JSON strings."""
     import json
     combinations: List[str] = []
-    if rules_config.baseline:
-        # Baseline alone
-        combinations.append(json.dumps([rules_config.baseline.model_dump()]))
-        # Baseline + each layer
-        for layer in rules_config.layers:
-            combo = [rules_config.baseline.model_dump(), layer.model_dump()]
-            combinations.append(json.dumps(combo))
+    
+    if not rules_config.entry_signals:
+        return combinations
+        
+    # Current behavior: All entry_signals AND together
+    combo = [rule.model_dump() for rule in rules_config.entry_signals]
+    combinations.append(json.dumps(combo))
+    
     return combinations

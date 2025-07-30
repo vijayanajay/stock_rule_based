@@ -92,9 +92,9 @@ class Backtester:
             # Apply context filters to final signals
             final_entry_signals = entry_signals & context_signals
             
-            # Generate exit signals from sell_conditions and time-based exits
+            # Generate exit signals from exit_conditions and time-based exits
             exit_signals, sl_stop, tp_stop = self._generate_exit_signals(
-                final_entry_signals, price_data, rules_config.sell_conditions
+                final_entry_signals, price_data, rules_config.exit_conditions
             )
             
             # Debug logging
@@ -192,15 +192,14 @@ class Backtester:
         Returns:
             List of strategies with edge scores and performance metrics, ranked by edge score
         """
-        baseline_rule = rules_config.baseline
-        layers = rules_config.layers
+        entry_signals = rules_config.entry_signals
 
-        if not baseline_rule:
-            logger.warning("No baseline rule found in configuration for %s.", symbol)
+        if not entry_signals:
+            logger.warning("No entry signals found in configuration for %s.", symbol)
             return []
 
-        # Create combinations to test: baseline alone, and baseline + each layer
-        combinations_to_test = [[baseline_rule]] + [[baseline_rule, layer] for layer in layers]
+        # Use all entry_signals as a single combination
+        combinations_to_test = [entry_signals]
 
         if freeze_date is not None:
             price_data = price_data[price_data.index.date <= freeze_date]
@@ -236,9 +235,9 @@ class Backtester:
 
         # Augment the rule_stack for each successful strategy to include the full context.
         # This ensures the persisted strategy reflects all rules used in the backtest.
-        full_context_and_sell_rules = rules_config.context_filters + rules_config.sell_conditions
+        full_context_and_exit_rules = rules_config.context_filters + rules_config.exit_conditions
         for strategy in strategies:
-            strategy["rule_stack"].extend(full_context_and_sell_rules)
+            strategy["rule_stack"].extend(full_context_and_exit_rules)
 
         strategies.sort(key=lambda x: x["edge_score"], reverse=True)
         return strategies
@@ -300,14 +299,14 @@ class Backtester:
         self, 
         entry_signals: pd.Series, 
         price_data: pd.DataFrame, 
-        sell_conditions: List[Any]
+        exit_conditions: List[Any]
     ) -> tuple[pd.Series, Optional[float], Optional[float]]:
-        """Generate combined exit signals from sell_conditions and time-based exits.
+        """Generate combined exit signals from exit_conditions and time-based exits.
         
         Args:
             entry_signals: Boolean series of entry signals
             price_data: DataFrame with OHLCV data
-            sell_conditions: List of RuleDef objects for exit conditions
+            exit_conditions: List of RuleDef objects for exit conditions
             
         Returns:
             Tuple of (exit_signals, sl_stop, tp_stop)
@@ -317,9 +316,9 @@ class Backtester:
         tp_stop = None
         exit_signals_list = []
         
-        # Process sell_conditions
-        if sell_conditions:
-            for rule_def in sell_conditions:
+        # Process exit_conditions
+        if exit_conditions:
+            for rule_def in exit_conditions:
                 if rule_def.type == 'stop_loss_pct':
                     if sl_stop is None:
                         sl_stop = rule_def.params['percentage']

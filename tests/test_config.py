@@ -71,10 +71,10 @@ def test_load_config_empty_file(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "invalid_content, error_match",
     [
-        ("layers: []", "Field required"),  # Missing baseline
-        ("baseline: 123", "Input should be a valid dictionary"),  # Baseline not a dict
-        ("baseline: {}\nlayers: {}", "Field required"),  # Baseline missing fields
-        ("baseline: {name: a, type: b, params: {}}\nlayers: {}", "Input should be a valid list"), # Layers not a list
+        ("exit_conditions: []", "entry_signals"),  # Missing entry_signals
+        ("entry_signals: 123", "Input should be a valid list"),  # entry_signals not a list
+        ("entry_signals: [{}]", "Field required"),  # entry_signals item missing fields
+        ("entry_signals: [{name: a, type: b}]", "Field required"), # entry_signals item missing params
     ],
 )
 def test_load_rules_invalid_structure_pydantic(
@@ -95,7 +95,7 @@ def test_load_rules_missing_file(tmp_path: Path) -> None:
 def test_load_rules_invalid_yaml(tmp_path: Path) -> None:
     """Test loading a rules file with invalid YAML content."""
     rules_file = tmp_path / "invalid_rules.yaml"
-    rules_file.write_text("baseline:\n  name: base\n  type: t\n  params: {}\n bad_indent: true")
+    rules_file.write_text("entry_signals:\n  - name: base\n    type: t\n    params: {}\n bad_indent: true")
     with pytest.raises(ValueError, match="Invalid YAML in rules file"): # Expecting this to be wrapped by load_rules
         load_rules(rules_file)
 
@@ -116,18 +116,17 @@ def test_load_rules_empty_file(tmp_path: Path) -> None:
 def test_rules_config_with_context_filters(tmp_path: Path) -> None:
     """Test that RulesConfig properly loads context_filters field."""
     rules_content = """
-baseline:
-  name: "test_baseline"
-  type: "close_above_sma"
-  params:
-    period: 20
-layers:
+entry_signals:
+  - name: "test_entry"
+    type: "close_above_sma"
+    params:
+      period: 20
   - name: "test_layer"
     type: "volume_above_sma"
     params:
       period: 10
-sell_conditions:
-  - name: "test_sell"
+exit_conditions:
+  - name: "test_exit"
     type: "close_below_sma"
     params:
       period: 5
@@ -145,9 +144,9 @@ context_filters:
     rules_config = load_rules(rules_file)
     
     # Verify all fields are properly loaded
-    assert rules_config.baseline.name == "test_baseline"
-    assert len(rules_config.layers) == 1
-    assert len(rules_config.sell_conditions) == 1
+    assert len(rules_config.entry_signals) == 2
+    assert rules_config.entry_signals[0].name == "test_entry"
+    assert len(rules_config.exit_conditions) == 1
     assert len(rules_config.context_filters) == 1
     
     # Verify context_filters specific content
@@ -161,11 +160,11 @@ context_filters:
 def test_rules_config_without_context_filters(tmp_path: Path) -> None:
     """Test that RulesConfig works with empty context_filters (backward compatibility)."""
     rules_content = """
-baseline:
-  name: "test_baseline"
-  type: "close_above_sma"
-  params:
-    period: 20
+entry_signals:
+  - name: "test_baseline"
+    type: "close_above_sma"
+    params:
+      period: 20
 """
     rules_file = tmp_path / "minimal_rules.yaml"
     rules_file.write_text(rules_content)
@@ -193,11 +192,11 @@ preconditions:
       period: 14
       atr_threshold_pct: 0.02
 
-baseline:
-  name: "test_baseline"
-  type: "close_above_sma"
-  params:
-    period: 20
+entry_signals:
+  - name: "test_baseline"
+    type: "close_above_sma"
+    params:
+      period: 20
 """
     rules_file = tmp_path / "rules_with_preconditions.yaml"
     rules_file.write_text(rules_content)
@@ -224,11 +223,11 @@ baseline:
 def test_rules_config_without_preconditions(tmp_path: Path) -> None:
     """Test that RulesConfig works with empty preconditions (backward compatibility)."""
     rules_content = """
-baseline:
-  name: "test_baseline"
-  type: "close_above_sma"
-  params:
-    period: 20
+entry_signals:
+  - name: "test_baseline"
+    type: "close_above_sma"
+    params:
+      period: 20
 """
     rules_file = tmp_path / "minimal_rules.yaml"
     rules_file.write_text(rules_content)

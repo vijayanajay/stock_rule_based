@@ -344,8 +344,8 @@ def _process_open_positions(
                 'days_held': days_held
             })
 
-            sell_conditions = _get_sell_conditions(rules_config)
-            exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, sell_conditions, days_held, config.hold_period)
+            exit_conditions = _get_exit_conditions(rules_config)
+            exit_reason = _check_exit_conditions(pos, price_data, current_low, current_high, exit_conditions, days_held, config.hold_period)
             
             if exit_reason:
                 pos.update({
@@ -448,10 +448,10 @@ def _calculate_nifty_return(
         return 0.0
 
 
-def _get_sell_conditions(rules_config: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Extract sell conditions from rules configuration."""
-    sell_conditions = getattr(rules_config, 'sell_conditions', None) if hasattr(rules_config, 'sell_conditions') else rules_config.get('sell_conditions', [])
-    return sell_conditions if sell_conditions is not None else []
+def _get_exit_conditions(rules_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract exit conditions from rules configuration."""
+    exit_conditions = getattr(rules_config, 'exit_conditions', None) if hasattr(rules_config, 'exit_conditions') else rules_config.get('exit_conditions', [])
+    return exit_conditions if exit_conditions is not None else []
 
 
 def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]], aggregate: bool = False) -> str:
@@ -521,14 +521,14 @@ def _check_exit_conditions(
     price_data: pd.DataFrame,
     current_low: float,
     current_high: float,
-    sell_conditions: List[Any],  # Can be RuleDef objects or dicts
+    exit_conditions: List[Any],  # Can be RuleDef objects or dicts
     days_held: int,
     hold_period: int
 ) -> Optional[str]:
     """Check exit conditions for an open position in priority order."""
     entry_price = position['entry_price']
 
-    for condition in sell_conditions:
+    for condition in exit_conditions:
         # Handle both RuleDef objects and dictionaries
         if hasattr(condition, 'type'):  # RuleDef object
             rule_type = condition.type

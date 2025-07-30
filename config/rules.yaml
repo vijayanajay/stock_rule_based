@@ -37,25 +37,19 @@ context_filters:
       period: 50
 
 # -----------------------------------------------------------------------------
-# BASELINE SIGNAL: Make the entry signal EXTREMELY selective.
+# ENTRY SIGNALS: Make the entry signal EXTREMELY selective.
+# All entry signals must be true for a buy signal (AND logic)
 # -----------------------------------------------------------------------------
-baseline:
-  name: "strong_bullish_engulfing"
-  type: "engulfing_pattern"
-  description: "Baseline: Enter on an EXTREMELY strong bullish engulfing pattern. The body of the green candle must be at least 2.5x the prior red candle."
-  params:
-    min_body_ratio: 2.5  # TIGHTENED from 1.5. We only want explosive reversals.
-
-# -----------------------------------------------------------------------------
-# LAYERS: Simplify and tighten. Remove what doesn't work.
-# -----------------------------------------------------------------------------
-layers:
-  # DELETED: The RSI layer is proven ineffective by the performance report. Kill it.
-  # - name: "confirm_with_rsi_recovering" ...
+entry_signals:
+  - name: "strong_bullish_engulfing"
+    type: "engulfing_pattern"
+    description: "Entry 1: Enter on an EXTREMELY strong bullish engulfing pattern. The body of the green candle must be at least 2.5x the prior red candle."
+    params:
+      min_body_ratio: 2.5  # TIGHTENED from 1.5. We only want explosive reversals.
 
   - name: "confirm_with_extreme_volume"
     type: "volume_spike"
-    description: "Confirmation 1: The reversal must be backed by overwhelming volume (3x average)."
+    description: "Entry 2: The reversal must be backed by overwhelming volume (3x average)."
     params:
       period: 20
       spike_multiplier: 3.0  # TIGHTENED from 2.0. We need institutional conviction.
@@ -63,14 +57,14 @@ layers:
 
   - name: "confirm_with_medium_term_uptrend"
     type: "price_above_sma"
-    description: "Confirmation 2: The stock itself must be in a medium-term uptrend (Price > 50-day SMA)."
+    description: "Entry 3: The stock itself must be in a medium-term uptrend (Price > 50-day SMA)."
     params:
       period: 50 # No change. This is a sound rule.
 
 # -----------------------------------------------------------------------------
-# SELL CONDITIONS: Be more realistic.
+# EXIT CONDITIONS: Be more realistic.
 # -----------------------------------------------------------------------------
-sell_conditions:
+exit_conditions:
   # --- Primary Risk Management ---
   - name: "atr_stop_loss_1.5x"
     type: "stop_loss_atr"

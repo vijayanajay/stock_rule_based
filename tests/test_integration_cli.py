@@ -96,8 +96,10 @@ INFY,Infosys Ltd,IT
         
         # Create rules.yaml
         rules_content = {
-            'baseline': {'name': 'sma_10_20_crossover', 'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}},
-            'layers': [{'name': 'rsi_oversold_30', 'type': 'rsi_oversold', 'params': {'period': 14, 'oversold_threshold': 30.0}}]
+            'entry_signals': [
+                {'name': 'sma_10_20_crossover', 'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}},
+                {'name': 'rsi_oversold_30', 'type': 'rsi_oversold', 'params': {'period': 14, 'oversold_threshold': 30.0}}
+            ]
         }
         rules_path = config_dir / "rules.yaml"
         rules_path.write_text(yaml.dump(rules_content))
@@ -117,11 +119,10 @@ INFY,Infosys Ltd,IT
         assert config.hold_period == 20
         assert config.min_trades_threshold == 10
         # Verify rules structure
-        assert hasattr(rules, 'baseline') and isinstance(rules.baseline, RuleDef)
-        assert hasattr(rules, 'layers') and isinstance(rules.layers, list)
-        assert len(rules.layers) > 0
-        assert rules.baseline.name == 'sma_10_20_crossover'
-        assert rules.layers[0].name == 'rsi_oversold_30'
+        assert hasattr(rules, 'entry_signals') and isinstance(rules.entry_signals, list)
+        assert len(rules.entry_signals) == 2
+        assert rules.entry_signals[0].name == 'sma_10_20_crossover'
+        assert rules.entry_signals[1].name == 'rsi_oversold_30'
     
     def test_data_loading_integration(self, integration_env):
         """Test that data loading works with real cache files."""

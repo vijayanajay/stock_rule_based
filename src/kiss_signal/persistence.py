@@ -10,6 +10,8 @@ import hashlib
 import shutil
 from datetime import datetime, date
 
+from .config import get_active_strategy_combinations
+
 if TYPE_CHECKING:
     from .config import RulesConfig, Config, RuleDef
 
@@ -461,10 +463,8 @@ def clear_strategies_for_config(
     rules_dict = rules_config.model_dump()
     current_config_hash = generate_config_hash(rules_dict, app_config)
 
-    combinations = [[rules_config.baseline]] + [
-        [rules_config.baseline, layer] for layer in rules_config.layers
-    ]
-    active_strategies = [json.dumps([r.model_dump() for r in combo]) for combo in combinations]
+    # Use entry_signals instead of baseline + layers
+    active_strategies = get_active_strategy_combinations(rules_config)
 
     total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
     

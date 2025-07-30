@@ -38,12 +38,12 @@ from kiss_signal import persistence
 
 # Test data constants
 VALID_RULES_YAML = """
-baseline:
-  name: "test_baseline"
-  type: "sma_crossover"
-  params:
-    fast_period: 5
-    slow_period: 10
+entry_signals:
+  - name: "test_baseline"
+    type: "sma_crossover"
+    params:
+      fast_period: 5
+      slow_period: 10
 """
 
 VALID_CONFIG_WITH_MIN_TRADES = {

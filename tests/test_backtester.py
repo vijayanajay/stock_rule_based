@@ -73,14 +73,15 @@ def market_data():
 def rules_config_basic():
     """Basic rules configuration for testing."""
     return RulesConfig(
-        baseline=RuleDef(
-            name="test_sma",
-            type="sma_crossover",
-            params={'fast_period': 5, 'slow_period': 10}
-        ),
-        layers=[],
+        entry_signals=[
+            RuleDef(
+                name="test_sma",
+                type="sma_crossover",
+                params={'fast_period': 5, 'slow_period': 10}
+            )
+        ],
         context_filters=[],
-        sell_conditions=[]
+        exit_conditions=[]
     )
 
 
@@ -88,12 +89,12 @@ def rules_config_basic():
 def rules_config_with_context():
     """Rules configuration with context filters."""
     return RulesConfig(
-        baseline=RuleDef(
-            name="strong_bullish_engulfing",
-            type="engulfing_pattern",
-            params={"min_body_ratio": 1.5}
-        ),
-        layers=[
+        entry_signals=[
+            RuleDef(
+                name="strong_bullish_engulfing",
+                type="engulfing_pattern",
+                params={"min_body_ratio": 1.5}
+            ),
             RuleDef(
                 name="confirm_with_rsi_recovering",
                 type="rsi_oversold",
@@ -112,7 +113,7 @@ def rules_config_with_context():
                 params={"min_volume": 100000}
             )
         ],
-        sell_conditions=[
+        exit_conditions=[
             RuleDef(
                 name="stop_loss_5_percent",
                 type="stop_loss_pct",
@@ -260,7 +261,7 @@ class TestBacktesterCore:
         # Import here to avoid circular dependency during test setup
         from kiss_signal.config import RuleDef
         rules_config_with_preconditions = RulesConfig(
-            baseline=RuleDef(name="test_baseline", type="sma_crossover", params={"fast_period": 5, "slow_period": 10}),
+            entry_signals=[RuleDef(name="test_baseline", type="sma_crossover", params={"fast_period": 5, "slow_period": 10})],
             preconditions=[
                 RuleDef(name="impossible_volatility", type="is_volatile", params={"period": 14, "atr_threshold_pct": 50.0})
             ]
@@ -460,8 +461,8 @@ class TestPandasDowncasting:
             
             # Test find_optimal_strategies which involves portfolio operations
             rules_config = RulesConfig(
-                baseline=RuleDef(name="test", type="sma_crossover", params={'fast_period': 5, 'slow_period': 10}),
-                layers=[], context_filters=[], sell_conditions=[]
+                entry_signals=[RuleDef(name="test", type="sma_crossover", params={'fast_period': 5, 'slow_period': 10})],
+                context_filters=[], exit_conditions=[]
             )
             
             with patch('kiss_signal.rules.sma_crossover') as mock_rule_func:
@@ -484,12 +485,12 @@ class TestPandasDowncasting:
 class TestCompleteRuleStack:
     """Test suite for complete rule stack verification."""
 
-    def test_rule_stack_includes_baseline(self, sample_price_data):
-        """Test that rule_stack includes baseline rule."""
+    def test_rule_stack_includes_entry_signals(self, sample_price_data):
+        """Test that rule_stack includes entry signal rules."""
         backtester = Backtester()
         rules_config = RulesConfig(
-            baseline=RuleDef(name="baseline_rule", type="sma_crossover", params={}),
-            layers=[], context_filters=[], sell_conditions=[]
+            entry_signals=[RuleDef(name="entry_rule", type="sma_crossover", params={})],
+            context_filters=[], exit_conditions=[]
         )
         
         with patch('kiss_signal.rules.sma_crossover') as mock_rule_func:
@@ -501,26 +502,26 @@ class TestCompleteRuleStack:
             # Results should include baseline rule in combination (though may be empty if insufficient trades)
             assert isinstance(results, list)
 
-    def test_rule_stack_includes_all_layers(self, sample_price_data):
-        """Test that rule combinations include all layer rules."""
+    def test_rule_stack_includes_all_entry_signals(self, sample_price_data):
+        """Test that rule combinations include all entry signal rules."""
         backtester = Backtester()
         rules_config = RulesConfig(
-            baseline=RuleDef(name="baseline", type="sma_crossover", params={}),
-            layers=[
-                RuleDef(name="layer1", type="rsi_oversold", params={}),
-                RuleDef(name="layer2", type="volume_spike", params={})
+            entry_signals=[
+                RuleDef(name="signal1", type="sma_crossover", params={}),
+                RuleDef(name="signal2", type="rsi_oversold", params={}),
+                RuleDef(name="signal3", type="volume_spike", params={})
             ],
-            context_filters=[], sell_conditions=[]
+            context_filters=[], exit_conditions=[]
         )
         
-        with patch('kiss_signal.rules.sma_crossover') as mock_baseline, \
-             patch('kiss_signal.rules.rsi_oversold') as mock_layer1, \
-             patch('kiss_signal.rules.volume_spike') as mock_layer2:
+        with patch('kiss_signal.rules.sma_crossover') as mock_signal1, \
+             patch('kiss_signal.rules.rsi_oversold') as mock_signal2, \
+             patch('kiss_signal.rules.volume_spike') as mock_signal3:
             
             # Mock all rules to return alternating signals for realistic trades
-            mock_baseline.return_value = pd.Series([True if i % 6 == 0 else False for i in range(100)], index=sample_price_data.index)
-            mock_layer1.return_value = pd.Series([True if i % 7 == 0 else False for i in range(100)], index=sample_price_data.index)
-            mock_layer2.return_value = pd.Series([True if i % 8 == 0 else False for i in range(100)], index=sample_price_data.index)
+            mock_signal1.return_value = pd.Series([True if i % 6 == 0 else False for i in range(100)], index=sample_price_data.index)
+            mock_signal2.return_value = pd.Series([True if i % 7 == 0 else False for i in range(100)], index=sample_price_data.index)
+            mock_signal3.return_value = pd.Series([True if i % 8 == 0 else False for i in range(100)], index=sample_price_data.index)
             
             results = backtester.find_optimal_strategies(sample_price_data, rules_config, "TEST", None)
             
@@ -531,13 +532,12 @@ class TestCompleteRuleStack:
         """Test that rule combinations work with context filter rules."""
         backtester = Backtester()
         rules_config = RulesConfig(
-            baseline=RuleDef(name="baseline", type="sma_crossover", params={}),
-            layers=[],
+            entry_signals=[RuleDef(name="baseline", type="sma_crossover", params={})],
             context_filters=[
                 RuleDef(name="market_filter", type="market_above_sma", params={"index_symbol": "^NSEI"}),
                 RuleDef(name="volume_spike", type="volume_spike", params={})
             ],
-            sell_conditions=[]
+            exit_conditions=[]
         )
         
         with patch('kiss_signal.rules.sma_crossover') as mock_baseline, \
@@ -690,12 +690,12 @@ class TestBacktesterIntegration:
         backtester = Backtester()
         
         strategies = [
-            RulesConfig(baseline=RuleDef(name="strategy1", type="sma_crossover", params={}),
-                       layers=[], context_filters=[], sell_conditions=[]),
-            RulesConfig(baseline=RuleDef(name="strategy2", type="ema_crossover", params={}),
-                       layers=[], context_filters=[], sell_conditions=[]),
-            RulesConfig(baseline=RuleDef(name="strategy3", type="rsi_oversold", params={}),
-                       layers=[], context_filters=[], sell_conditions=[])
+            RulesConfig(entry_signals=[RuleDef(name="strategy1", type="sma_crossover", params={})],
+                       context_filters=[], exit_conditions=[]),
+            RulesConfig(entry_signals=[RuleDef(name="strategy2", type="ema_crossover", params={})],
+                       context_filters=[], exit_conditions=[]),
+            RulesConfig(entry_signals=[RuleDef(name="strategy3", type="rsi_oversold", params={})],
+                       context_filters=[], exit_conditions=[])
         ]
         
         all_results = []
@@ -1068,12 +1068,12 @@ def sample_rules_config():
     """Generate a sample rules config Pydantic model for testing."""
     from kiss_signal.config import RulesConfig, RuleDef
     return RulesConfig(
-        baseline=RuleDef(
-            name='sma_crossover_test',
-            type='sma_crossover',
-            params={'fast_period': 10, 'slow_period': 20}
-        ),
-        layers=[
+        entry_signals=[
+            RuleDef(
+                name='sma_crossover_test',
+                type='sma_crossover',
+                params={'fast_period': 10, 'slow_period': 20}
+            ),
             RuleDef(
                 name='rsi_oversold_test',
                 type='rsi_oversold',

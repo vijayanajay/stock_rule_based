@@ -41,19 +41,17 @@ edge_score_threshold: 0.50
 """
 
 VALID_RULES_YAML = """
-baseline:
-  name: "test_baseline"
-  type: "sma_crossover"
-  params:
-    fast_period: 5
-    slow_period: 10
-
-momentum:
-  name: "test_momentum"
-  type: "rsi_oversold"
-  params:
-    period: 14
-    oversold_threshold: 30
+entry_signals:
+  - name: "test_baseline"
+    type: "sma_crossover"
+    params:
+      fast_period: 5
+      slow_period: 10
+  - name: "test_momentum"
+    type: "rsi_oversold"
+    params:
+      period: 14
+      oversold_threshold: 30
 """
 
 SAMPLE_UNIVERSE = "symbol\nRELIANCE\nTCS\nINFY\nHDFCBANK\nICICIBANK\n"
