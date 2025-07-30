@@ -1439,13 +1439,15 @@ class TestClearCurrentStrategies:
             assert 'error' in result_error
             assert result_error['error'] is not None
         
-        # Verify database state
+        # Verify database state - Should have 2 strategies remaining (1 unique + 1 kept from duplicates)
         with sqlite3.connect(str(temp_db_path)) as conn:
             remaining = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
-            assert remaining == 1, "Should have 1 strategy remaining"
+            assert remaining == 2, "Should have 2 strategies remaining (1 unique + 1 kept from duplicates)"
             
-            preserved = conn.execute("SELECT symbol FROM strategies").fetchone()[0]
-            assert preserved == 'TEST2', "Should preserve the non-matching strategy"
+            # Verify both strategies are present
+            symbols = [row[0] for row in conn.execute("SELECT DISTINCT symbol FROM strategies").fetchall()]
+            assert 'DUPLICATE' in symbols, "Should keep one instance of DUPLICATE strategy"
+            assert 'UNIQUE' in symbols, "Should keep the UNIQUE strategy"
     
     def test_clear_current_strategies_no_matches(self, temp_db_path: Path) -> None:
         """Test clearing when no strategies match current config."""

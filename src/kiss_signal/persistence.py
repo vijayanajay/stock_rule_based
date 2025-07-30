@@ -504,12 +504,17 @@ def clean_duplicate_strategies(db_path: Path, dry_run: bool = False) -> Dict[str
     
     try:
         with sqlite3.connect(str(db_path)) as conn:
-            # First, count duplicates
+            # First, count total rows and unique combinations
+            cursor = conn.execute("SELECT COUNT(*) FROM strategies")
+            total_count = cursor.fetchone()[0]
+            
             cursor = conn.execute("""
-                SELECT COUNT(*) - COUNT(DISTINCT symbol, rule_stack, config_hash) as duplicate_count
+                SELECT COUNT(DISTINCT symbol || '|' || rule_stack || '|' || config_hash) 
                 FROM strategies
             """)
-            duplicate_count = cursor.fetchone()[0]
+            unique_count = cursor.fetchone()[0]
+            
+            duplicate_count = total_count - unique_count
             
             if duplicate_count == 0:
                 logger.info("No duplicate strategies found")
