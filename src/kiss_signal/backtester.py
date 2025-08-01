@@ -15,7 +15,7 @@ import vectorbt as vbt
 pd.set_option('future.no_silent_downcasting', True)
 
 from . import rules
-from .config import RulesConfig, EdgeScoreWeights
+from .config import RulesConfig, EdgeScoreWeights, RuleDef, Config
 from .performance import performance_monitor
 
 __all__ = ["Backtester"]
@@ -171,9 +171,10 @@ class Backtester:
         rules_config: RulesConfig,
         symbol: str = "",  # Added symbol for logging
         freeze_date: Optional[date] = None,
-        edge_score_weights: Optional[EdgeScoreWeights] = None
+        edge_score_weights: Optional[EdgeScoreWeights] = None,
+        config: Optional[Config] = None  # Add config parameter
     ) -> Any:
-        """Find optimal rule combinations through backtesting.
+        """Find optimal strategy through simple combination testing.
         
         Args:
             rules_config: RulesConfig Pydantic model with entry_signals and exit_conditions.
@@ -181,6 +182,7 @@ class Backtester:
             symbol: The stock symbol being tested, for logging purposes.
             freeze_date: Optional cutoff date for data (for deterministic testing)
             edge_score_weights: Optional EdgeScoreWeights model for edge score calculation
+            config: Optional Config object for seeker thresholds
             
         Returns:
             List of strategies with edge scores and performance metrics, ranked by edge score
@@ -191,8 +193,9 @@ class Backtester:
             logger.warning("No entry signals found in configuration for %s.", symbol)
             return []
 
-        # Use all entry_signals as a single combination
-        combinations_to_test = [entry_signals]
+        # Simple thresholds
+        min_edge_score = config.seeker_min_edge_score if config else 0.60
+        min_trades = config.seeker_min_trades if config else 20
 
         if freeze_date is not None:
             price_data = price_data[price_data.index.date <= freeze_date]
@@ -216,24 +219,54 @@ class Backtester:
         if edge_score_weights is None:
             edge_score_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
         
-        logger.info(f"Backtesting {len(combinations_to_test)} rule combinations for {symbol}")
-        strategies = []
+        best_result = None
         
-        for combo in combinations_to_test:
-            strategy_result = self._backtest_combination(
-                combo, price_data, rules_config, edge_score_weights, symbol
-            )
-            if strategy_result:
-                strategies.append(strategy_result)
-
+        # Phase 1: Test individual rules
+        logger.info(f"Testing {len(entry_signals)} individual rules for {symbol}")
+        for rule in entry_signals:
+            result = self._test_single_rule([rule], price_data, rules_config, edge_score_weights, symbol)
+            if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
+                logger.info(f"Good enough individual rule found: {rule.name} (EdgeScore: {result['edge_score']:.3f})")
+                # Augment with full context before returning
+                full_context_and_exit_rules = rules_config.context_filters + rules_config.exit_conditions
+                result["rule_stack"].extend(full_context_and_exit_rules)
+                return [result]
+            best_result = self._track_best(result, best_result)
+        
+        # Phase 2: Test best individual + one confirmation (if needed)
+        # Only test if we have multiple rules and didn't find good enough individual
+        if len(entry_signals) > 1 and best_result:
+            best_rule = None
+            # Find the best individual rule from the result
+            for rule in entry_signals:
+                if rule.name == best_result["rule_stack"][0].name:
+                    best_rule = rule
+                    break
+            
+            if best_rule:
+                logger.info(f"Testing combinations with best individual rule: {best_rule.name}")
+                for confirmation in entry_signals:
+                    if confirmation.name != best_rule.name:
+                        combo = [best_rule, confirmation]
+                        result = self._test_single_rule(combo, price_data, rules_config, edge_score_weights, symbol)
+                        if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
+                            logger.info(f"Good enough combination found: {best_rule.name} + {confirmation.name}")
+                            # Augment with full context before returning
+                            full_context_and_exit_rules = rules_config.context_filters + rules_config.exit_conditions
+                            result["rule_stack"].extend(full_context_and_exit_rules)
+                            return [result]
+                        best_result = self._track_best(result, best_result)
+        
+        # Return best found and augment with full context
+        final_strategies = [best_result] if best_result else []
+        
         # Augment the rule_stack for each successful strategy to include the full context.
         # This ensures the persisted strategy reflects all rules used in the backtest.
         full_context_and_exit_rules = rules_config.context_filters + rules_config.exit_conditions
-        for strategy in strategies:
+        for strategy in final_strategies:
             strategy["rule_stack"].extend(full_context_and_exit_rules)
-
-        strategies.sort(key=lambda x: x["edge_score"], reverse=True)
-        return strategies
+        
+        return final_strategies
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
         """Generate exit signals based on holding period after entry signals."""
@@ -588,3 +621,17 @@ class Backtester:
                 freeze_date=getattr(self, 'freeze_date', None)
             )
         return self._market_cache[index_symbol]
+
+    def _test_single_rule(self, entry_rules: List[RuleDef], price_data: pd.DataFrame, 
+                          rules_config: RulesConfig, edge_score_weights: EdgeScoreWeights, 
+                          symbol: str) -> Optional[Dict[str, Any]]:
+        """Test a specific combination of entry rules."""
+        return self._backtest_combination(entry_rules, price_data, rules_config, edge_score_weights, symbol)
+
+    def _track_best(self, current: Optional[Dict[str, Any]], best: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Track the best result by edge score."""
+        if not current:
+            return best
+        if not best or current["edge_score"] > best["edge_score"]:
+            return current
+        return best

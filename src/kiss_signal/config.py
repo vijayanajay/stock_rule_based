@@ -46,6 +46,10 @@ class Config(BaseModel):
     edge_score_threshold: float = Field(..., ge=0.0, le=1.0)
     freeze_date: Optional[date] = None
     verbose: bool = False
+    
+    # Strategy seeker configuration
+    seeker_min_edge_score: float = Field(default=0.60, ge=0.0, le=1.0)
+    seeker_min_trades: int = Field(default=20, ge=5)
 
     # The following are not in config.yaml but can be part of the object
     # for runtime convenience, hence they are optional.

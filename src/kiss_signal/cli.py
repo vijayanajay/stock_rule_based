@@ -98,6 +98,8 @@ def _analyze_symbol(
             price_data=price_data,
             symbol=symbol,
             freeze_date=freeze_date,
+            edge_score_weights=app_config.edge_score_weights,
+            config=app_config  # Add config parameter
         )
         
         result = []

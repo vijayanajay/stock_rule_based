@@ -27,3 +27,7 @@ database_path: "data/kiss_signal.db"
 # Reporting configuration
 reports_output_dir: "reports/"
 edge_score_threshold: 0.50
+
+# Strategy seeker configuration (for adaptive rule combination testing)
+seeker_min_edge_score: 0.60
+seeker_min_trades: 20
