@@ -1,11 +1,13 @@
 """CLI entry point using Typer framework."""
 
+import json
 import logging
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import sys
 
+import pandas as pd
 import typer
 import rich.progress as progress
 from rich.console import Console
@@ -78,7 +80,8 @@ def _analyze_symbol(
     app_config: Config, 
     rules_config: Any, 
     freeze_date: Optional[date], 
-    bt: backtester.Backtester
+    bt: backtester.Backtester,
+    market_data: Optional[pd.DataFrame] = None
 ) -> List[Dict[str, Any]]:
     """Helper to run backtest analysis for a single symbol."""
     try:
@@ -94,8 +97,9 @@ def _analyze_symbol(
             return []
 
         strategies = bt.find_optimal_strategies(
-            rules_config=rules_config,
             price_data=price_data,
+            rules_config=rules_config,
+            market_data=market_data,
             symbol=symbol,
             freeze_date=freeze_date,
             edge_score_weights=app_config.edge_score_weights,
@@ -129,11 +133,30 @@ def _run_backtests(
         min_trades_threshold=threshold,
     )
     
+    # Fetch market data once if context filters are present
+    market_data = None
+    context_filters = getattr(rules_config, 'context_filters', [])
+    if context_filters:
+        for filter_def in context_filters:
+            if hasattr(filter_def, 'type') and filter_def.type == "market_above_sma":
+                index_symbol = filter_def.params.get("index_symbol", "^NSEI")
+                try:
+                    market_data = data.get_price_data(
+                        symbol=index_symbol,
+                        cache_dir=Path(app_config.cache_dir),
+                        years=2,  # Buffer for lookback calculations
+                        freeze_date=freeze_date,
+                    )
+                    logger.info(f"Loaded market data for {index_symbol}")
+                    break  # Only need to load once
+                except Exception as e:
+                    logger.warning(f"Could not load market data for {index_symbol}: {e}")
+    
     all_results = []
     with console.status("[bold green]Running backtests...") as status:
         for i, symbol in enumerate(symbols):
             status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
-            all_results.extend(_analyze_symbol(symbol, app_config, rules_config, freeze_date, bt))
+            all_results.extend(_analyze_symbol(symbol, app_config, rules_config, freeze_date, bt, market_data))
     return all_results
 
 
@@ -201,25 +224,290 @@ def _save_results(
         logger.error(f"Persistence error: {e}", exc_info=True)
 
 
-def _generate_and_save_report(
-    app_config: Config, rules_config: Dict[str, Any], run_timestamp: str
-) -> None:
-    """Generate and save the daily report, handling errors gracefully."""
-    console.print("[5/5] Generating report...", style="blue")
+# Position management helper functions moved from reporter.py
+
+def _check_exit_conditions(
+    position: Dict[str, Any],
+    price_data: pd.DataFrame,
+    current_low: float,
+    current_high: float,
+    exit_conditions: List[Any],
+    days_held: int,
+    hold_period: int
+) -> Optional[str]:
+    """Check if position should be closed based on exit conditions."""
+    entry_price = float(position['entry_price'])
+    
+    # Check stop loss conditions
+    for condition in exit_conditions:
+        condition_type = condition.get('type') if isinstance(condition, dict) else getattr(condition, 'type', None)
+        condition_params = condition.get('params', {}) if isinstance(condition, dict) else getattr(condition, 'params', {})
+        
+        if condition_type == 'stop_loss_pct':
+            stop_pct = condition_params.get('percentage', 0.05)
+            stop_price = entry_price * (1 - stop_pct)
+            if current_low <= stop_price:
+                return f"Stop-loss triggered at {current_low:.2f} (target: {stop_price:.2f})"
+                
+        elif condition_type == 'take_profit_pct':
+            profit_pct = condition_params.get('percentage', 0.10)
+            profit_price = entry_price * (1 + profit_pct)
+            if current_high >= profit_price:
+                return f"Take-profit triggered at {current_high:.2f} (target: {profit_price:.2f})"
+                
+        elif condition_type == 'stop_loss_atr':
+            try:
+                from . import rules
+                period = condition_params.get('period', 14)
+                multiplier = condition_params.get('multiplier', 2.0)
+                if rules.stop_loss_atr(price_data, entry_price, period, multiplier):
+                    return f"ATR stop-loss triggered (period: {period}, multiplier: {multiplier})"
+            except Exception as e:
+                logger.warning(f"ATR stop loss check failed: {e}")
+                
+        elif condition_type == 'take_profit_atr':
+            try:
+                from . import rules
+                period = condition_params.get('period', 14)
+                multiplier = condition_params.get('multiplier', 4.0)
+                if rules.take_profit_atr(price_data, entry_price, period, multiplier):
+                    return f"ATR take-profit triggered (period: {period}, multiplier: {multiplier})"
+            except Exception as e:
+                logger.warning(f"ATR take profit check failed: {e}")
+                
+        elif condition_type in ['sma_cross_under', 'sma_crossover']:
+            try:
+                from . import rules
+                fast_period = condition_params.get('fast_period', 10)
+                slow_period = condition_params.get('slow_period', 20)
+                
+                if condition_type == 'sma_cross_under':
+                    signals = rules.sma_cross_under(price_data, fast_period, slow_period)
+                else:
+                    signals = rules.sma_crossover(price_data, fast_period, slow_period)
+                
+                # Check if signal triggered recently (last value)
+                if not signals.empty and signals.iloc[-1]:
+                    return f"Indicator exit triggered: {condition_type}"
+            except Exception as e:
+                logger.warning(f"Indicator exit check failed: {e}")
+    
+    # Check time-based exit
+    if days_held >= hold_period:
+        return f"End of {hold_period}-day holding period"
+        
+    return None
+
+
+def _get_position_pricing(symbol: str, app_config: Config) -> Optional[Dict[str, float]]:
+    """Get current pricing data for a position."""
     try:
-        report_path = reporter.generate_daily_report(
-            db_path=Path(app_config.database_path),
-            run_timestamp=run_timestamp,
-            config=app_config,
-            rules_config=rules_config,
+        price_data = data.get_price_data(
+            symbol=symbol,
+            cache_dir=Path(app_config.cache_dir),
+            years=1,  # Only need recent data for pricing
+            freeze_date=app_config.freeze_date,
         )
-        if report_path: # Only print if report was generated
-            console.print(f"* Report generated: {report_path}", style="green")
-        else:
-            console.print("(WARN) Report generation failed", style="yellow")
+        
+        if price_data is None or len(price_data) == 0:
+            logger.warning(f"No price data available for {symbol}")
+            return None
+            
+        latest = price_data.iloc[-1]
+        return {
+            'current_price': float(latest['close']),
+            'current_high': float(latest['high']),
+            'current_low': float(latest['low']),
+        }
     except Exception as e:
-        console.print(f"(WARN) Report error: {e}", style="yellow")
-        logger.error(f"Report generation error: {e}", exc_info=True)
+        logger.error(f"Failed to get pricing for {symbol}: {e}")
+        return None
+
+
+def _calculate_position_returns(position: Dict[str, Any], current_price: float, nifty_data: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
+    """Calculate returns for a position."""
+    entry_price = float(position['entry_price'])
+    return_pct = (current_price - entry_price) / entry_price * 100
+    
+    # Calculate NIFTY return for comparison if data available
+    nifty_return_pct = None
+    if nifty_data is not None:
+        try:
+            entry_date = pd.to_datetime(position['entry_date']).date()
+            nifty_entry_idx = nifty_data.index.searchsorted(entry_date)
+            if nifty_entry_idx < len(nifty_data):
+                nifty_entry_price = nifty_data.iloc[nifty_entry_idx]['close']
+                nifty_current_price = nifty_data.iloc[-1]['close']
+                nifty_return_pct = (nifty_current_price - nifty_entry_price) / nifty_entry_price * 100
+        except Exception as e:
+            logger.debug(f"Could not calculate NIFTY return: {e}")
+    
+    return {
+        'return_pct': return_pct,
+        'nifty_return_pct': nifty_return_pct,
+    }
+
+
+def _process_open_positions(
+    db_path: Path, 
+    app_config: Config, 
+    exit_conditions: List[Any],
+    nifty_data: Optional[pd.DataFrame] = None
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Process open positions and determine which to hold vs close."""
+    open_positions = persistence.get_open_positions(db_path)
+    positions_to_hold = []
+    positions_to_close = []
+    
+    current_date = app_config.freeze_date or date.today()
+    
+    for pos in open_positions:
+        symbol = pos['symbol']
+        entry_date = pd.to_datetime(pos['entry_date']).date()
+        days_held = (current_date - entry_date).days
+        
+        # Get current pricing
+        pricing = _get_position_pricing(symbol, app_config)
+        if pricing is None:
+            logger.warning(f"Could not get pricing for {symbol}, keeping position open")
+            positions_to_hold.append(pos)
+            continue
+            
+        # Get price data for exit condition checking
+        price_data = data.get_price_data(
+            symbol=symbol,
+            cache_dir=Path(app_config.cache_dir),
+            years=1,
+            freeze_date=app_config.freeze_date,
+        )
+        
+        if price_data is None:
+            logger.warning(f"No price data for exit checking on {symbol}")
+            positions_to_hold.append(pos)
+            continue
+        
+        # Check exit conditions
+        exit_reason = _check_exit_conditions(
+            pos, price_data, pricing['current_low'], pricing['current_high'],
+            exit_conditions, days_held, app_config.hold_period
+        )
+        
+        if exit_reason:
+            # Calculate final returns
+            returns = _calculate_position_returns(pos, pricing['current_price'], nifty_data)
+            
+            pos_to_close = {
+                'id': pos['id'],
+                'symbol': symbol,
+                'exit_date': current_date.isoformat(),
+                'exit_price': pricing['current_price'],
+                'final_return_pct': returns['return_pct'],
+                'final_nifty_return_pct': returns['nifty_return_pct'],
+                'days_held': days_held,
+                'exit_reason': exit_reason,
+            }
+            positions_to_close.append(pos_to_close)
+            logger.info(f"Position {symbol} marked for closure: {exit_reason}")
+        else:
+            # Calculate current returns for reporting
+            returns = _calculate_position_returns(pos, pricing['current_price'], nifty_data)
+            
+            pos_to_hold = {
+                **pos,
+                'current_price': pricing['current_price'],
+                'return_pct': returns['return_pct'],
+                'nifty_return_pct': returns['nifty_return_pct'],
+                'days_held': days_held,
+            }
+            positions_to_hold.append(pos_to_hold)
+    
+    return positions_to_hold, positions_to_close
+
+
+def _identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path) -> List[Dict[str, Any]]:
+    """Identify new buy signals that don't conflict with existing positions."""
+    if not all_results:
+        return []
+        
+    # Get symbols that already have open positions
+    open_positions = persistence.get_open_positions(db_path)
+    open_symbols = {pos['symbol'] for pos in open_positions}
+    
+    # Filter out signals for stocks that already have open positions
+    new_signals = []
+    current_date = date.today()
+    
+    for result in all_results:
+        symbol = result['symbol']
+        
+        if symbol in open_symbols:
+            logger.info(f"Skipping new signal for {symbol} - position already open")
+            continue
+            
+        # Format for position tracking
+        rule_stack_names = " + ".join([getattr(r, 'name', r.type) for r in result['rule_stack']])
+        
+        signal = {
+            'ticker': symbol,
+            'date': current_date.isoformat(),
+            'entry_price': 0.0,  # Will be filled with actual price when position is opened
+            'rule_stack': rule_stack_names,
+            'rule_stack_used': json.dumps([{'name': getattr(r, 'name', r.type), 'type': r.type} for r in result['rule_stack']]),
+            'edge_score': result['edge_score'],
+        }
+        new_signals.append(signal)
+        
+    logger.info(f"Identified {len(new_signals)} new signals (filtered {len(all_results) - len(new_signals)} existing positions)")
+    return new_signals
+
+
+def _update_positions_and_generate_report_data(
+    db_path: Path,
+    run_timestamp: str,
+    config: Config,
+    rules_config: Any,
+    all_results: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Handles all position management and prepares data for the report."""
+    
+    # Get exit conditions from rules config
+    exit_conditions = getattr(rules_config, 'exit_conditions', [])
+    
+    # Load NIFTY data for benchmark comparison
+    nifty_data = None
+    try:
+        nifty_data = data.get_price_data(
+            symbol="^NSEI",
+            cache_dir=Path(config.cache_dir),
+            years=1,
+            freeze_date=config.freeze_date,
+        )
+    except Exception as e:
+        logger.warning(f"Could not load NIFTY data for benchmark: {e}")
+    
+    # Process existing positions
+    positions_to_hold, positions_to_close = _process_open_positions(
+        db_path, config, exit_conditions, nifty_data
+    )
+    
+    # Close positions that meet exit criteria
+    if positions_to_close:
+        persistence.close_positions_batch(db_path, positions_to_close)
+        logger.info(f"Closed {len(positions_to_close)} positions")
+    
+    # Identify new signals
+    new_signals = _identify_new_signals(all_results, db_path)
+    
+    # Add new positions to database
+    if new_signals:
+        persistence.add_new_positions_from_signals(db_path, new_signals)
+        logger.info(f"Added {len(new_signals)} new positions")
+    
+    return {
+        "new_buys": new_signals,
+        "open": positions_to_hold,
+        "closed": positions_to_close,
+    }
 
 
 def _parse_freeze_date(freeze_data: Optional[str], app_config: Config) -> Optional[date]:
@@ -300,7 +588,7 @@ def _process_and_save_results(
     app_config: Config, 
     rules_config: Any
 ) -> None:
-    """Helper to display, save, and report results."""
+    """Helper to display, save, update positions, and report results."""
     run_timestamp = datetime.now().isoformat()
     rules_dict = rules_config.model_dump() if hasattr(rules_config, 'model_dump') else dict(rules_config)
     config_snapshot = persistence.create_config_snapshot(rules_dict, app_config, app_config.freeze_date.isoformat() if app_config.freeze_date else None)
@@ -308,7 +596,29 @@ def _process_and_save_results(
     
     _display_results(all_results)
     _save_results(db_connection, all_results, run_timestamp, config_snapshot, config_hash)
-    _generate_and_save_report(app_config, rules_config, run_timestamp)
+
+    # New pipeline step: update positions and get report data
+    console.print("[5/5] Generating report...", style="blue")
+    try:
+        report_data = _update_positions_and_generate_report_data(
+            Path(app_config.database_path), run_timestamp, app_config, rules_config, all_results
+        )
+
+        # Call the new, simpler reporter
+        report_path = reporter.generate_daily_report(
+            new_buy_signals=report_data["new_buys"],
+            open_positions=report_data["open"],
+            closed_positions=report_data["closed"],
+            config=app_config,
+        )
+        
+        if report_path:
+            console.print(f"* Report generated: {report_path}", style="green")
+        else:
+            console.print("(WARN) Report generation failed", style="yellow")
+    except Exception as e:
+        console.print(f"(WARN) Report error: {e}", style="yellow")
+        logger.error(f"Report generation error: {e}", exc_info=True)
 
 
 @app.callback()

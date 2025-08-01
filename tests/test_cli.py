@@ -63,7 +63,7 @@ runner = CliRunner()
 # CLI Help and Banner Tests
 # =============================================================================
 
-def test_app_help() -> None:
+def test_run_command_help() -> None:
     """Test the main application help command is resilient."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
@@ -853,17 +853,16 @@ def test_run_command_file_not_found_in_backtest():
             assert "not found" in result.stdout.lower() or result.exit_code != 0
 
 
-@patch("kiss_signal.cli._run_backtests", side_effect=Exception("Generic backtest error"))
-@patch("kiss_signal.cli.data")
-def test_run_command_backtest_generic_exception_verbose(mock_data, mock_run_backtests):
+@patch("kiss_signal.cli._execute_backtesting_workflow", side_effect=Exception("Generic backtest error"))
+def test_run_command_backtest_generic_exception_verbose(mock_execute_workflow):
     """Test that a generic exception during backtesting is handled with verbose output."""
     with runner.isolated_filesystem() as fs:
         fs_path = Path(fs)
         data_dir = fs_path / "data"
         data_dir.mkdir()
         (fs_path / "config").mkdir()
-        universe_path = data_dir / "test_universe.csv"
-        universe_path.write_text("symbol\nTEST\n")
+        universe_path = data_dir / "nifty_large_mid.csv"
+        universe_path.write_text("symbol,name,sector\nRELIANCE,Reliance,Energy\n")
 
         sample_config_dict = {
             "universe_path": str(universe_path),
@@ -883,9 +882,9 @@ def test_run_command_backtest_generic_exception_verbose(mock_data, mock_run_back
         rules_path.write_text(VALID_RULES_YAML)
 
         # Correct invocation: global options must come BEFORE the command.
-        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"])
+        result = runner.invoke(app, ["--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"], catch_exceptions=False)
 
-        assert result.exit_code == 1
+        assert result.exit_code == 1, f"Expected exit code 1, got {result.exit_code}. Output: {result.stdout}"
         assert "An unexpected error occurred" in result.stdout
         assert "Generic backtest error" in result.stdout
 

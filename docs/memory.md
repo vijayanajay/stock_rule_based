@@ -1,7 +1,21 @@
 # KISS Signal CLI - Memory & Learning Log
 
 ## Test Suite Desynchronization: Parameter Validation and Data Contract Changes (2025-07-31)
-- **Issue**: Three test failures were traced to test expectations that were out of sync with the current application behavior after parameter validation refactoring. Tests expected ValueError for missing parameters when rules have defaults, DataFrame column duplication caused Series/DataFrame type mismatch, and tests expected "graceful handling" of invalid rules when proper fail-fast validation was implemented.
+- **Issue**: Three test failures were traced to test expectations that were out of sync with the current application behavior after parameter validation refactoring. Tests expected ValueError for missing parameters when rules have defaults, DataFrame column duplication caused Series/- **Prevention**: Use framework-provided fixtures (like `tmp_path`) for resource management over manual implementations to avoid platform-specific issues like file locking.
+
+## Test Harness Integrity: Configuration and Fixture Desynchronization (2025-07-22)
+- **Issue**: A large number of test failures in the `reporter` and `backtester` modules were caused by a structural desynchronization between the test suite and the application code. This included:
+    1.  **API Contract Drift**: Function signatures (e.g., `_apply_context_filters`, `generate_daily_report`) were modified in the implementation without updating test calls, leading to `TypeError`.
+    2.  **Incomplete Refactoring**: A data-fetching helper (`_get_market_data_cached`) was removed from the backtester, but tests continued to patch it, creating "zombie tests" that failed with `AttributeError`.
+    3.  **Brittle Tests**: Some tests used incorrect assertion patterns (alphabetical vs. score-based ordering) or were not self-contained (CLI help test), making them fragile.
+- **Structural Root Cause**: The test suite, a first-class consumer of the application's API, was not maintained in lockstep with refactoring efforts. This broke the API contract between tests and the application, eroding the test suite's reliability.
+- **Fix**: A comprehensive cleanup was performed:
+    1.  Corrected the function signatures in all failing test calls to match their required data contracts.
+    2.  Removed patches for non-existent methods.
+    3.  Refactored brittle tests to use robust assertion patterns and valid mocks (e.g., correcting result ordering, making CLI tests self-contained).
+- **Lesson**: The test suite must be treated as a first-class consumer of the application's API. Any refactoring or signature change is incomplete until the corresponding tests are updated or removed. Maintaining test-code synchronization is critical to prevent architectural drift and ensure the test suite remains a reliable safety net.
+
+## Test Harness Integrity: Flawed Invocation and Resource Leaks (2025-07-22)aFrame type mismatch, and tests expected "graceful handling" of invalid rules when proper fail-fast validation was implemented.
 - **Structural Root Cause**: API contract desynchronization between test suite and application code. This is a repeat of the "Test Suite Desynchronization" pattern where tests continue to validate old behavior after refactoring. The tests weren't updated when the backtester's parameter validation was simplified to remove overly strict checks (documented in the previous memory entry). Additionally, test data had both 'Close' and 'close' columns, violating the data contract when column normalization creates duplicates.
 - **Fix**: 
   1. Updated `test_generate_signals_missing_parameters` to verify that rules with default parameters work correctly with empty params, and test error handling for invalid parameters instead

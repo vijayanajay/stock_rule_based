@@ -47,6 +47,7 @@ class Backtester:
         rules_config: RulesConfig,
         edge_score_weights: EdgeScoreWeights,
         symbol: str,
+        market_data: Optional[pd.DataFrame] = None,
     ) -> Optional[Dict[str, Any]]:
         """Backtest a single rule combination and return its performance metrics."""
         try:
@@ -64,7 +65,7 @@ class Backtester:
             # NEW: Apply context filters first if any are defined
             if rules_config.context_filters:
                 context_signals = self._apply_context_filters(
-                    price_data, rules_config.context_filters, symbol
+                    price_data, rules_config.context_filters, symbol, market_data
                 )
                 
                 # If no favorable context periods, skip expensive rule evaluation
@@ -166,10 +167,11 @@ class Backtester:
 
     @performance_monitor.profile_performance
     def find_optimal_strategies(
-        self, 
+        self,
         price_data: pd.DataFrame,
         rules_config: RulesConfig,
-        symbol: str = "",  # Added symbol for logging
+        symbol: str = "",  # Keep symbol before market_data for backward compatibility
+        market_data: Optional[pd.DataFrame] = None,
         freeze_date: Optional[date] = None,
         edge_score_weights: Optional[EdgeScoreWeights] = None,
         config: Optional[Config] = None  # Add config parameter
@@ -224,7 +226,7 @@ class Backtester:
         # Phase 1: Test individual rules
         logger.info(f"Testing {len(entry_signals)} individual rules for {symbol}")
         for rule in entry_signals:
-            result = self._test_single_rule([rule], price_data, rules_config, edge_score_weights, symbol)
+            result = self._test_single_rule([rule], price_data, rules_config, edge_score_weights, symbol, market_data)
             if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
                 logger.info(f"Good enough individual rule found: {rule.name} (EdgeScore: {result['edge_score']:.3f})")
                 # Augment with full context before returning
@@ -248,7 +250,7 @@ class Backtester:
                 for confirmation in entry_signals:
                     if confirmation.name != best_rule.name:
                         combo = [best_rule, confirmation]
-                        result = self._test_single_rule(combo, price_data, rules_config, edge_score_weights, symbol)
+                        result = self._test_single_rule(combo, price_data, rules_config, edge_score_weights, symbol, market_data)
                         if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
                             logger.info(f"Good enough combination found: {best_rule.name} + {confirmation.name}")
                             # Augment with full context before returning
@@ -550,7 +552,8 @@ class Backtester:
         self,
         stock_data: pd.DataFrame,
         context_filters: List[Any],
-        symbol: str
+        symbol: str,
+        market_data: Optional[pd.DataFrame],
     ) -> pd.Series:
         """Apply context filters and return combined boolean series."""
         if not context_filters:
@@ -561,9 +564,10 @@ class Backtester:
         for filter_def in context_filters:
             try:
                 if filter_def.type == "market_above_sma":
-                    # Get market data
-                    index_symbol = filter_def.params["index_symbol"]
-                    market_data = self._get_market_data_cached(index_symbol)
+                    # Check if market data is provided
+                    if market_data is None:
+                        logger.warning(f"Market data not provided for context filter on {symbol}")
+                        return pd.Series(False, index=stock_data.index)
                     
                     # Apply the filter with only valid parameters for market_above_sma
                     valid_params = {}
@@ -606,27 +610,11 @@ class Backtester:
         
         return combined_signals
 
-    def _get_market_data_cached(self, index_symbol: str) -> pd.DataFrame:
-        """Get market data with caching for backtesting."""
-        if not hasattr(self, '_market_cache'):
-            self._market_cache: Dict[str, pd.DataFrame] = {}
-        
-        if index_symbol not in self._market_cache:
-            from pathlib import Path
-            from .data import get_price_data
-            self._market_cache[index_symbol] = get_price_data(
-                symbol=index_symbol,
-                cache_dir=Path("data"),  # TODO: Get from config
-                years=2,  # Buffer for lookback calculations
-                freeze_date=getattr(self, 'freeze_date', None)
-            )
-        return self._market_cache[index_symbol]
-
     def _test_single_rule(self, entry_rules: List[RuleDef], price_data: pd.DataFrame, 
                           rules_config: RulesConfig, edge_score_weights: EdgeScoreWeights, 
-                          symbol: str) -> Optional[Dict[str, Any]]:
+                          symbol: str, market_data: Optional[pd.DataFrame] = None) -> Optional[Dict[str, Any]]:
         """Test a specific combination of entry rules."""
-        return self._backtest_combination(entry_rules, price_data, rules_config, edge_score_weights, symbol)
+        return self._backtest_combination(entry_rules, price_data, rules_config, edge_score_weights, symbol, market_data)
 
     def _track_best(self, current: Optional[Dict[str, Any]], best: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Track the best result by edge score."""

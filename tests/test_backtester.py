@@ -284,7 +284,9 @@ class TestContextFilters:
     def test_apply_context_filters_empty_list(self, sample_price_data):
         """Test context filter application with empty filter list."""
         backtester = Backtester()
-        result = backtester._apply_context_filters(sample_price_data, [], "TEST")
+        result = backtester._apply_context_filters(
+            sample_price_data, [], "TEST", market_data=None
+        )
         
         # Should return all True (no filtering)
         assert isinstance(result, pd.Series)
@@ -301,14 +303,15 @@ class TestContextFilters:
             params={"period": 20, "index_symbol": "^NSEI"}
         )
         
-        with patch('kiss_signal.rules.market_above_sma') as mock_rule_func, \
-             patch.object(backtester, '_get_market_data_cached', return_value=market_data):
+        with patch('kiss_signal.rules.market_above_sma') as mock_rule_func:
             
             # Mock filter that returns mostly True
             filter_result = pd.Series([True] * 80 + [False] * 20, index=sample_price_data.index)
             mock_rule_func.return_value = filter_result
             
-            result = backtester._apply_context_filters(sample_price_data, [context_filter], "TEST")
+            result = backtester._apply_context_filters(
+                sample_price_data, [context_filter], "TEST", market_data=market_data
+            )
             
             assert isinstance(result, pd.Series)
             assert len(result) == len(sample_price_data)
@@ -323,8 +326,7 @@ class TestContextFilters:
             RuleDef(name="filter2", type="market_above_sma", params={"period": 50, "index_symbol": "^NSEI"})
         ]
         
-        with patch('kiss_signal.rules.market_above_sma') as mock_market_rule, \
-             patch.object(backtester, '_get_market_data_cached', return_value=market_data):
+        with patch('kiss_signal.rules.market_above_sma') as mock_market_rule:
             
             # Mock filters with different patterns that will create overlap
             # First call (period=20): 60 True, 40 False
@@ -336,7 +338,9 @@ class TestContextFilters:
             ]
             mock_market_rule.side_effect = filter_results
             
-            result = backtester._apply_context_filters(sample_price_data, filters, "TEST")
+            result = backtester._apply_context_filters(
+                sample_price_data, filters, "TEST", market_data=market_data
+            )
             
             assert isinstance(result, pd.Series)
             assert len(result) == len(sample_price_data)
@@ -350,14 +354,15 @@ class TestContextFilters:
         # This should not raise TypeError about 'NoneType and bool'
         filter_def = RuleDef(name="test", type="market_above_sma", params={"period": 10, "index_symbol": "^NSEI"})
         
-        with patch('kiss_signal.rules.market_above_sma') as mock_rule_func, \
-             patch.object(backtester, '_get_market_data_cached', return_value=sample_price_data):
+        with patch('kiss_signal.rules.market_above_sma') as mock_rule_func:
             
             mock_rule_func.return_value = pd.Series([True] * len(sample_price_data), 
                                                    index=sample_price_data.index)
             
             # Should not raise TypeError
-            result = backtester._apply_context_filters(sample_price_data, [filter_def], "TEST")
+            result = backtester._apply_context_filters(
+                sample_price_data, [filter_def], "TEST", market_data=sample_price_data
+            )
             assert isinstance(result, pd.Series)
 
     def test_context_filter_integration_with_backtest(self, sample_price_data, rules_config_with_context):
@@ -368,8 +373,7 @@ class TestContextFilters:
              patch('kiss_signal.rules.rsi_oversold') as mock_layer, \
              patch('kiss_signal.rules.market_above_sma') as mock_context1, \
              patch('kiss_signal.rules.volume_spike') as mock_context2, \
-             patch('kiss_signal.rules.stop_loss_pct') as mock_sell, \
-             patch.object(backtester, '_get_market_data_cached', return_value=sample_price_data):
+             patch('kiss_signal.rules.stop_loss_pct') as mock_sell:
             
             # Mock all rule functions with alternating patterns for more trades
             mock_baseline.return_value = pd.Series([True if i % 6 == 0 else False for i in range(100)], index=sample_price_data.index)
@@ -379,7 +383,10 @@ class TestContextFilters:
             mock_sell.return_value = pd.Series([False] * 100, index=sample_price_data.index)
             
             results = backtester.find_optimal_strategies(
-                sample_price_data, rules_config_with_context, "TEST", None
+                price_data=sample_price_data,
+                rules_config=rules_config_with_context,
+                symbol="TEST",
+                market_data=sample_price_data  # Use sample_price_data as stand-in for market data
             )
             
             assert isinstance(results, list)
@@ -417,7 +424,9 @@ class TestPandasDowncasting:
             warnings.simplefilter("always")
             
             # Test with empty filters (uses fillna internally)
-            result = backtester._apply_context_filters(sample_price_data, [], "TEST")
+            result = backtester._apply_context_filters(
+                sample_price_data, [], "TEST", market_data=None
+            )
             
             # Check for downcasting warnings
             downcasting_warnings = [warning for warning in w 
@@ -542,15 +551,19 @@ class TestCompleteRuleStack:
         
         with patch('kiss_signal.rules.sma_crossover') as mock_baseline, \
              patch('kiss_signal.rules.market_above_sma') as mock_context1, \
-             patch('kiss_signal.rules.volume_spike') as mock_context2, \
-             patch.object(backtester, '_get_market_data_cached', return_value=sample_price_data):
+             patch('kiss_signal.rules.volume_spike') as mock_context2:
             
             # Mock baseline with alternating signals, context filters allow all
             mock_baseline.return_value = pd.Series([True if i % 6 == 0 else False for i in range(100)], index=sample_price_data.index)
             mock_context1.return_value = pd.Series([True] * 100, index=sample_price_data.index)
             mock_context2.return_value = pd.Series([True] * 100, index=sample_price_data.index)
             
-            results = backtester.find_optimal_strategies(sample_price_data, rules_config, "TEST", None)
+            results = backtester.find_optimal_strategies(
+                price_data=sample_price_data,
+                rules_config=rules_config,
+                symbol="TEST",
+                market_data=sample_price_data
+            )
             
             # Should work with context filters applied
             assert isinstance(results, list)
@@ -589,8 +602,7 @@ class TestCompleteRuleStack:
              patch('kiss_signal.rules.rsi_oversold') as mock_layer, \
              patch('kiss_signal.rules.market_above_sma') as mock_context1, \
              patch('kiss_signal.rules.volume_spike') as mock_context2, \
-             patch('kiss_signal.rules.stop_loss_pct') as mock_sell, \
-             patch.object(backtester, '_get_market_data_cached', return_value=sample_price_data):
+             patch('kiss_signal.rules.stop_loss_pct') as mock_sell:
             
             # Return alternating signals for multiple trade cycles
             mock_baseline.return_value = pd.Series([True if i % 6 == 0 else False for i in range(100)], index=sample_price_data.index)
@@ -599,7 +611,12 @@ class TestCompleteRuleStack:
             mock_context2.return_value = pd.Series([True] * 100, index=sample_price_data.index)
             mock_sell.return_value = pd.Series([False] * 100, index=sample_price_data.index)
             
-            results = backtester.find_optimal_strategies(sample_price_data, rules_config_with_context, "TEST", None)
+            results = backtester.find_optimal_strategies(
+                price_data=sample_price_data,
+                rules_config=rules_config_with_context,
+                symbol="TEST",
+                market_data=sample_price_data
+            )
             
             # Should handle complete configuration with all rule types
             assert isinstance(results, list)
@@ -864,9 +881,10 @@ class TestBacktester:
         with patch.object(backtester, '_generate_signals') as mock_generate:
             mock_generate.return_value = pd.Series(False, index=sample_price_data.index)
             result = backtester.find_optimal_strategies(
-                rules_config=sample_rules_config,
                 price_data=sample_price_data,
-                symbol="TEST.NS"
+                rules_config=sample_rules_config,
+                symbol="TEST.NS",
+                market_data=None
             )
             assert result == []
 

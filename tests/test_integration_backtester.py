@@ -84,9 +84,10 @@ class TestBacktesterRuleIntegration:
         
         # This should not raise an exception
         strategies = backtester.find_optimal_strategies(
-            rules_config=rules_config_obj,
             price_data=sample_price_data,
+            rules_config=rules_config_obj,
             symbol='TEST',
+            market_data=None,
             freeze_date=date(2023, 3, 31),
         )
         
