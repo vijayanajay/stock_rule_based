@@ -115,15 +115,9 @@ def load_rules(rules_path: Path) -> RulesConfig:
 
 
 def get_active_strategy_combinations(rules_config: RulesConfig) -> List[str]:
-    """Generate all active strategy combinations from rules configuration as JSON strings."""
-    import json
-    combinations: List[str] = []
-    
+    """Generate the active strategy combination from the entry_signals list."""
     if not rules_config.entry_signals:
-        return combinations
-        
-    # Current behavior: All entry_signals AND together
+        return []
+    # The single strategy is all entry signals combined.
     combo = [rule.model_dump() for rule in rules_config.entry_signals]
-    combinations.append(json.dumps(combo))
-    
-    return combinations
+    return [json.dumps(combo)]

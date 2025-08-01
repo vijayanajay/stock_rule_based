@@ -400,12 +400,12 @@ src\kiss_signal\adapters\__init__.py       1      0      0      0   100%
 src\kiss_signal\adapters\yfinance.py      55      0     20      0   100%
 src\kiss_signal\backtester.py            275     25    118     12    90%
 src\kiss_signal\cli.py                   254     23     56      7    88%
-src\kiss_signal\config.py                 87      2     16      3    95%
+src\kiss_signal\config.py                 84      2     16      3    95%
 src\kiss_signal\data.py                  201     21     78      8    90%
 src\kiss_signal\performance.py            41      0      4      0   100%
 src\kiss_signal\persistence.py           236      4     40      4    97%
 src\kiss_signal\reporter.py              317     34     90     16    87%
 src\kiss_signal\rules.py                 309     17    108      3    95%
 ------------------------------------------------------------------------
-TOTAL                                   1781    126    530     53    92%
-======================= 383 passed in 108.39s (0:01:48) =======================
+TOTAL                                   1778    126    530     53    92%
+======================= 383 passed in 107.90s (0:01:47) =======================
