@@ -21,7 +21,7 @@ from .config import Config
 # Import config functions from persistence for convenience
 from .persistence import generate_config_hash, create_config_snapshot
 
-__all__ = ["generate_daily_report", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot"]
+__all__ = ["generate_daily_report", "analyze_strategy_performance", "analyze_strategy_performance_aggregated", "format_strategy_analysis_as_csv", "generate_config_hash", "create_config_snapshot", "WalkForwardReport", "format_walk_forward_results"]
 
 logger = logging.getLogger(__name__)
 
@@ -407,3 +407,120 @@ def _fetch_best_strategies(db_path: Path, run_timestamp: str, edge_threshold: fl
     except Exception as e:
         logger.error(f"Unexpected error in _fetch_best_strategies: {e}")
         return []
+
+
+class WalkForwardReport:
+    """Class for generating walk-forward analysis reports."""
+    
+    def __init__(self, oos_results: List[Dict[str, Any]]):
+        """Initialize with out-of-sample results."""
+        self.oos_results = oos_results
+        self.consolidated_metrics = self._calculate_consolidated_metrics()
+    
+    def _calculate_consolidated_metrics(self) -> Dict[str, Any]:
+        """Calculate consolidated metrics from all OOS periods."""
+        if not self.oos_results:
+            return {}
+        
+        total_trades = sum(r.get("total_trades", 0) for r in self.oos_results)
+        profitable_periods = sum(1 for r in self.oos_results if r.get("edge_score", 0) > 0.5)
+        
+        # Calculate weighted averages based on number of trades
+        weighted_edge_score = sum(r.get("edge_score", 0) * r.get("total_trades", 0) for r in self.oos_results) / max(total_trades, 1)
+        weighted_win_pct = sum(r.get("win_pct", 0) * r.get("total_trades", 0) for r in self.oos_results) / max(total_trades, 1)
+        weighted_sharpe = sum(r.get("sharpe", 0) * r.get("total_trades", 0) for r in self.oos_results) / max(total_trades, 1)
+        avg_return = sum(r.get("avg_return", 0) for r in self.oos_results) / len(self.oos_results)
+        
+        return {
+            "total_periods": len(self.oos_results),
+            "total_trades": total_trades,
+            "profitable_periods": profitable_periods,
+            "consistency_score": profitable_periods / len(self.oos_results) if self.oos_results else 0,
+            "avg_edge_score": weighted_edge_score,
+            "avg_win_pct": weighted_win_pct,
+            "avg_sharpe": weighted_sharpe,
+            "avg_return": avg_return
+        }
+    
+    def generate_report(self, symbol: str) -> str:
+        """Generate formatted walk-forward analysis report."""
+        if not self.oos_results:
+            return f"No walk-forward results available for {symbol}"
+        
+        # Get strategy name from first result
+        first_result = self.oos_results[0]
+        rule_stack = first_result.get("rule_stack", [])
+        strategy_name = " + ".join([r.get("name", r.get("type", "unknown")) for r in rule_stack])
+        
+        report = StringIO()
+        report.write("WALK-FORWARD ANALYSIS RESULTS (Out-of-Sample Only)\n")
+        report.write("=" * 60 + "\n\n")
+        report.write(f"Symbol: {symbol}\n")
+        report.write(f"Strategy: [{strategy_name}]\n\n")
+        
+        # Period-by-period results
+        report.write("Period-by-Period Out-of-Sample Performance:\n")
+        for i, result in enumerate(self.oos_results, 1):
+            start_date = result.get("oos_test_start", "Unknown")
+            end_date = result.get("oos_test_end", "Unknown")
+            sharpe = result.get("sharpe", 0)
+            edge_score = result.get("edge_score", 0)
+            trades = result.get("total_trades", 0)
+            win_pct = result.get("win_pct", 0)
+            
+            if hasattr(start_date, 'date'):
+                start_str = start_date.date()
+            else:
+                start_str = str(start_date)
+            
+            if hasattr(end_date, 'date'):
+                end_str = end_date.date()
+            else:
+                end_str = str(end_date)
+            
+            report.write(f"Period {i:2d} ({start_str} to {end_str}): ")
+            report.write(f"EdgeScore {edge_score:.2f}, Sharpe {sharpe:.2f}, Win% {win_pct:.1%}, Trades: {trades}\n")
+        
+        report.write("\n")
+        
+        # Consolidated metrics
+        metrics = self.consolidated_metrics
+        report.write("CONSOLIDATED OUT-OF-SAMPLE METRICS:\n")
+        report.write(f"- Edge Score: {metrics['avg_edge_score']:.3f} (realistic expectation)\n")
+        report.write(f"- Win Rate: {metrics['avg_win_pct']:.1%} (realistic expectation)\n")
+        report.write(f"- Sharpe Ratio: {metrics['avg_sharpe']:.2f} (realistic expectation)\n")
+        report.write(f"- Average Return: {metrics['avg_return']:.2f} (realistic expectation)\n")
+        report.write(f"- Total Trades: {metrics['total_trades']} across {metrics['total_periods']} periods\n")
+        report.write(f"- Consistency Score: {metrics['profitable_periods']}/{metrics['total_periods']} periods profitable ({metrics['consistency_score']:.1%})\n\n")
+        
+        report.write("WARNING: These are the ONLY metrics that matter for live trading.\n")
+        report.write("         In-sample optimization metrics are discarded.\n")
+        
+        return report.getvalue()
+
+
+def format_walk_forward_results(results: List[Dict[str, Any]]) -> str:
+    """Format walk-forward results for display in CLI."""
+    if not results:
+        return "No walk-forward results to display."
+    
+    # Group results by symbol
+    symbol_results = defaultdict(list)
+    for result in results:
+        if result.get("is_oos", False):  # Only include out-of-sample results
+            symbol_results[result["symbol"]].append(result)
+    
+    if not symbol_results:
+        return "No out-of-sample results found."
+    
+    output = StringIO()
+    output.write("WALK-FORWARD ANALYSIS SUMMARY\n")
+    output.write("=" * 50 + "\n\n")
+    
+    for symbol, symbol_data in symbol_results.items():
+        if symbol_data:
+            report = WalkForwardReport(symbol_data)
+            output.write(report.generate_report(symbol))
+            output.write("\n" + "-" * 50 + "\n\n")
+    
+    return output.getvalue()

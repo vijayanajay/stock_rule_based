@@ -1,4 +1,4 @@
-[2025-08-02 22:29:55] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:18] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -9,7 +9,7 @@
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
 [3/4] Analyzing strategies for each ticker...
-                      WARNING  Insufficient data for RELIANCE, skipping        
+[2025-08-02 23:09:19] WARNING  Insufficient data for RELIANCE, skipping        
                       WARNING  Insufficient data for TCS, skipping             
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
@@ -17,10 +17,10 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 0.04s                
+                      INFO     full_backtest completed in 0.02s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:55] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:19] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -71,7 +71,7 @@ No valid strategies found. Check data quality and rule configurations.
                                Traceback (most recent call last):              
                                  File                                          
                                "D:\Code\stock_rule_based\src\kiss_signal\cli.py
-                               ", line 538, in _save_command_log               
+                               ", line 554, in _save_command_log               
                                    log_path.write_text(console.export_text(clea
                                r=False), encoding="utf-8")                     
                                  File                                          
@@ -121,10 +121,10 @@ No valid strategies found. Check data quality and rule configurations.
 Critical error: Could not save log file to run_log.txt. Reason: Permission 
 denied
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:55] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:19] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: [Errno 2] No such file or directory: 
-'C:\\Users\\user\\AppData\\Local\\Temp\\tmp9avxkr_z\\nonexistent.yaml'
-[2025-08-02 22:29:55] INFO     === KISS Signal CLI Run Started ===             
+'C:\\Users\\user\\AppData\\Local\\Temp\\tmp10xwogz5\\nonexistent.yaml'
+[2025-08-02 23:09:19] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -150,14 +150,14 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 0.01s                
+                      INFO     full_backtest completed in 0.02s                
 
 Performance Summary:
-Total Duration: 0.02s
+Total Duration: 0.03s
 Slowest Function: full_backtest
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:55] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:19] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -176,10 +176,10 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 0.01s                
+                      INFO     full_backtest completed in 0.02s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:56] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:19] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -202,15 +202,15 @@ No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 0 open positions.                       
 * Report generated: <MagicMock name='generate_daily_report()' 
-id='2272606275680'>
+id='2628450244544'>
                       INFO     full_backtest completed in 0.01s                
 
 Performance Summary:
-Total Duration: 0.01s
+Total Duration: 0.02s
 Slowest Function: full_backtest
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:56] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:19] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -231,36 +231,36 @@ Slowest Function: full_backtest
                       INFO     full_backtest completed in 0.00s                
 An unexpected error occurred during run pipeline: Report error
 ┌───────────────────── Traceback (most recent call last) ─────────────────────┐
-│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:689 in run                  │
+│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:712 in run                  │
 │                                                                             │
-│   686 │   │   │   │   │   freeze_date=app_config.freeze_date,               │
-│   687 │   │   │   │   )                                                     │
-│   688 │   │   │                                                             │
-│ > 689 │   │   │   all_results = _execute_backtesting_workflow(app_config, r │
-│   690 │   │   │   console.print("[4/4] Analysis complete. Results summary:" │
-│   691 │   │   │   _process_and_save_results(db_connection, all_results, app │
-│   692                                                                       │
+│   709 │   │   │   │   │   freeze_date=app_config.freeze_date,               │
+│   710 │   │   │   │   )                                                     │
+│   711 │   │   │                                                             │
+│ > 712 │   │   │   all_results = _execute_backtesting_workflow(app_config, r │
+│   713 │   │   │   console.print("[4/4] Analysis complete. Results summary:" │
+│   714 │   │   │   _process_and_save_results(db_connection, all_results, app │
+│   715                                                                       │
 │                                                                             │
-│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:582 in                      │
+│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:599 in                      │
 │ _execute_backtesting_workflow                                               │
 │                                                                             │
-│   579 │   console.print("[3/4] Analyzing strategies for each ticker...")    │
-│   580 │   symbols = data.load_universe(app_config.universe_path)            │
-│   581 │   threshold = min_trades if min_trades is not None else getattr(app │
-│ > 582 │   return _run_backtests(app_config, rules_config, symbols, freeze_d │
-│   583                                                                       │
-│   584                                                                       │
-│   585 def _process_and_save_results(                                        │
+│   596 │   console.print("[3/4] Analyzing strategies for each ticker...")    │
+│   597 │   symbols = data.load_universe(app_config.universe_path)            │
+│   598 │   threshold = min_trades if min_trades is not None else getattr(app │
+│ > 599 │   return _run_backtests(app_config, rules_config, symbols, freeze_d │
+│   600                                                                       │
+│   601                                                                       │
+│   602 def _process_and_save_results(                                        │
 │                                                                             │
-│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:131 in _run_backtests       │
+│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:134 in _run_backtests       │
 │                                                                             │
-│   128 │   # Use provided min_trades_threshold, or fall back to config, or d │
-│   129 │   threshold = min_trades_threshold if min_trades_threshold is not N │
-│   130 │                                                                     │
-│ > 131 │   bt = backtester.Backtester(                                       │
-│   132 │   │   hold_period=getattr(app_config, "hold_period", 20),           │
-│   133 │   │   min_trades_threshold=threshold,                               │
-│   134 │   )                                                                 │
+│   131 │   # Use provided min_trades_threshold, or fall back to config, or d │
+│   132 │   threshold = min_trades_threshold if min_trades_threshold is not N │
+│   133 │                                                                     │
+│ > 134 │   bt = backtester.Backtester(                                       │
+│   135 │   │   hold_period=getattr(app_config, "hold_period", 20),           │
+│   136 │   │   min_trades_threshold=threshold,                               │
+│   137 │   )                                                                 │
 │                                                                             │
 │ C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py: │
 │ 1139 in __call__                                                            │
@@ -296,9 +296,9 @@ An unexpected error occurred during run pipeline: Report error
 │   1201 │   │   │   │   if _is_exception(result):                            │
 └─────────────────────────────────────────────────────────────────────────────┘
 Exception: Report error
-[2025-08-02 22:29:57] INFO     Log file saved to run_log.txt                   
+[2025-08-02 23:09:20] INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:20] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -321,14 +321,14 @@ No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 0 open positions.                       
 * Report generated: <MagicMock name='generate_daily_report()' 
-id='2272606275680'>
+id='2628450244544'>
 
 Performance Summary:
 Total Duration: 1.23s
 Slowest Function: test_function
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:20] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -350,22 +350,22 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.01s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:21] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-02 22:29:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:21] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: [Errno 2] No such file or directory: 'config.yaml'
-[2025-08-02 22:29:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:21] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: Rules file not found: 
-C:\Users\user\AppData\Local\Temp\tmp5thqym9g\config\missing_rules.yaml
-[2025-08-02 22:29:57] INFO     === KISS Signal CLI Run Started ===             
+C:\Users\user\AppData\Local\Temp\tmp92vu4hi9\config\missing_rules.yaml
+[2025-08-02 23:09:21] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: Config file not found
-[2025-08-02 22:29:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:21] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: Invalid config format
-[2025-08-02 22:29:58] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:21] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -385,7 +385,7 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.01s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:29:58] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:21] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -397,10 +397,11 @@ No valid strategies found. Check data quality and rule configurations.
 [2/4] Refreshing market data...
                       INFO     Loaded 5 symbols from universe                  
                       INFO     Refreshing 5 symbols                            
-[2025-08-02 22:30:02] INFO     Successfully refreshed 5/5 symbols              
+[2025-08-02 23:09:26] INFO     Successfully refreshed 5/5 symbols              
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 5 symbols from universe                  
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                       Top Strategies by Edge Score                       
 ┌──────────┬─────────────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol   │ Rule Stack          │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -423,10 +424,10 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Added 1 new positions                           
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 4.43s                
+                      INFO     full_backtest completed in 4.51s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:03] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:26] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -436,7 +437,7 @@ No valid strategies found. Check data quality and rule configurations.
                                data\kiss_signal.db                             
 An unexpected error occurred during run pipeline: Database error
                       INFO     Log file saved to run_log.txt                   
-[2025-08-02 22:30:03] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:26] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -446,7 +447,7 @@ An unexpected error occurred during run pipeline: Database error
                                data\kiss_signal.db                             
 An unexpected error occurred during run pipeline: Unexpected database failure
                       INFO     Log file saved to run_log.txt                   
-[2025-08-02 22:30:03] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:26] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -458,10 +459,11 @@ An unexpected error occurred during run pipeline: Unexpected database failure
 [2/4] Refreshing market data...
                       INFO     Loaded 5 symbols from universe                  
                       INFO     Refreshing 5 symbols                            
-[2025-08-02 22:30:05] INFO     Successfully refreshed 5/5 symbols              
+[2025-08-02 23:09:29] INFO     Successfully refreshed 5/5 symbols              
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 5 symbols from universe                  
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                  Top Strategies by Edge Score                 
 ┌────────┬────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol │ Rule Stack │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -475,7 +477,7 @@ An unexpected error occurred during run pipeline: Unexpected database failure
                                Traceback (most recent call last):              
                                  File                                          
                                "D:\Code\stock_rule_based\src\kiss_signal\cli.py
-                               ", line 212, in _save_results                   
+                               ", line 228, in _save_results                   
                                    success = persistence.save_strategies_batch(
                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                                  File                                          
@@ -506,10 +508,10 @@ An unexpected error occurred during run pipeline: Unexpected database failure
                                positions)                                      
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 2.30s                
+                      INFO     full_backtest completed in 2.69s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:05] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:29] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -525,6 +527,7 @@ An unexpected error occurred during run pipeline: Unexpected database failure
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 5 symbols from universe                  
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                  Top Strategies by Edge Score                 
 ┌────────┬────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol │ Rule Stack │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -542,54 +545,54 @@ An unexpected error occurred during run pipeline: Unexpected database failure
                                positions)                                      
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 0.03s                
+                      INFO     full_backtest completed in 0.04s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:05] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 ✅ Strategy performance analysis saved to: strategy_performance_report.csv
                       INFO     Log file saved to analyze_strategies_log.txt    
-[2025-08-02 22:30:05] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 ✅ Strategy performance analysis saved to: strategy_performance_report.csv
                       INFO     Log file saved to analyze_strategies_log.txt    
-[2025-08-02 22:30:05] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 No historical strategies found to analyze.
                       INFO     Log file saved to analyze_strategies_log.txt    
-[2025-08-02 22:30:05] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 ✅ Strategy performance analysis saved to: 
-C:\Users\user\AppData\Local\Temp\tmpawqqa37a\custom_output.csv
+C:\Users\user\AppData\Local\Temp\tmpvys9hbum\custom_output.csv
                       INFO     Log file saved to analyze_strategies_log.txt    
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:30] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 No historical strategies found to analyze.
                       INFO     Log file saved to analyze_strategies_log.txt    
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:31] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 An unexpected error occurred during analysis: Analysis failed
                       INFO     Log file saved to analyze_strategies_log.txt    
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:31] INFO     === KISS Signal CLI Run Started ===             
 ✅ Cleared: 5 strategies
 ✅ Preserved: 10 historical strategies
 Recalculating strategies...
 ✅ New strategies found: 1
                       INFO     Log file saved to clear_and_recalculate_log.txt 
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:31] INFO     === KISS Signal CLI Run Started ===             
 An unexpected error occurred: Database connection failed
                       INFO     Log file saved to clear_and_recalculate_log.txt 
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:31] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: Invalid YAML in config file: 
-C:\Users\user\AppData\Local\Temp\tmpqy_yag8c\invalid_config.yaml
-[2025-08-02 22:30:06] INFO     === KISS Signal CLI Run Started ===             
+C:\Users\user\AppData\Local\Temp\tmpql5fq4li\invalid_config.yaml
+[2025-08-02 23:09:31] INFO     === KISS Signal CLI Run Started ===             
                       INFO     Starting migration of strategies table at       
                                data\kiss_signal.db                             
                       INFO     Current database version: 0                     
@@ -598,29 +601,30 @@ C:\Users\user\AppData\Local\Temp\tmpqy_yag8c\invalid_config.yaml
                                data\kiss_signal.db: no such table: strategies  
 An unexpected error occurred: no such table: strategies
                       INFO     Log file saved to clear_and_recalculate_log.txt 
-[2025-08-02 22:30:07] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:32] INFO     === KISS Signal CLI Run Started ===             
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:07] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:32] INFO     === KISS Signal CLI Run Started ===             
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:07] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:32] INFO     === KISS Signal CLI Run Started ===             
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:07] INFO     === KISS Signal CLI Run Started ===             
-[2025-08-02 22:30:07] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:32] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:32] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at data\kiss_signal.db        
-                      INFO     Successfully created database at                
+[2025-08-02 23:09:33] INFO     Successfully created database at                
                                data\kiss_signal.db                             
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
                       INFO     Loaded 5 symbols from universe                  
                       INFO     Refreshing 5 symbols                            
-[2025-08-02 22:30:09] INFO     Successfully refreshed 5/5 symbols              
+[2025-08-02 23:09:35] INFO     Successfully refreshed 5/5 symbols              
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 5 symbols from universe                  
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                   Top Strategies by Edge Score                  
 ┌──────────┬────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol   │ Rule Stack │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -645,10 +649,10 @@ Error: Database file not found at data\kiss_signal.db
                       INFO     Added 2 new positions                           
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 2.31s                
+                      INFO     full_backtest completed in 2.45s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:35] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: Invalid configuration in config.yaml: 9 validation
 errors for Config
 universe_path
@@ -678,7 +682,7 @@ reports_output_dir
 edge_score_threshold
   Field required 
     For further information visit https://errors.pydantic.dev/2.11/v/missing
-[2025-08-02 22:30:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:35] INFO     === KISS Signal CLI Run Started ===             
 Error loading configuration: Invalid configuration in config.yaml: 9 validation
 errors for Config
 universe_path
@@ -708,7 +712,7 @@ reports_output_dir
 edge_score_threshold
   Field required 
     For further information visit https://errors.pydantic.dev/2.11/v/missing
-[2025-08-02 22:30:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:35] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -759,7 +763,7 @@ edge_score_threshold
                       DEBUG           Exiting _get_crumb_basic()               
                       DEBUG          Exiting _get_cookie_and_crumb_basic()     
                       DEBUG         Exiting _get_cookie_and_crumb()            
-                      DEBUG    response code=200                               
+[2025-08-02 23:09:36] DEBUG    response code=200                               
                       DEBUG        Exiting _make_request()                     
                       DEBUG       Exiting get()                                
                       DEBUG    RELIANCE.NS: yfinance received OHLC data:       
@@ -776,18 +780,18 @@ edge_score_threshold
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to cache\RELIANCE.NS.csv            
                       INFO     Successfully refreshed 1/1 symbols              
-                      INFO     full_backtest completed in 0.24s                
+                      INFO     full_backtest completed in 0.39s                
 An unexpected error occurred during run pipeline: Generic backtest error
 ┌───────────────────── Traceback (most recent call last) ─────────────────────┐
-│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:689 in run                  │
+│ D:\Code\stock_rule_based\src\kiss_signal\cli.py:712 in run                  │
 │                                                                             │
-│   686 │   │   │   │   │   freeze_date=app_config.freeze_date,               │
-│   687 │   │   │   │   )                                                     │
-│   688 │   │   │                                                             │
-│ > 689 │   │   │   all_results = _execute_backtesting_workflow(app_config, r │
-│   690 │   │   │   console.print("[4/4] Analysis complete. Results summary:" │
-│   691 │   │   │   _process_and_save_results(db_connection, all_results, app │
-│   692                                                                       │
+│   709 │   │   │   │   │   freeze_date=app_config.freeze_date,               │
+│   710 │   │   │   │   )                                                     │
+│   711 │   │   │                                                             │
+│ > 712 │   │   │   all_results = _execute_backtesting_workflow(app_config, r │
+│   713 │   │   │   console.print("[4/4] Analysis complete. Results summary:" │
+│   714 │   │   │   _process_and_save_results(db_connection, all_results, app │
+│   715                                                                       │
 │                                                                             │
 │ C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\unittest\mock.py: │
 │ 1139 in __call__                                                            │
@@ -825,14 +829,14 @@ An unexpected error occurred during run pipeline: Generic backtest error
 Exception: Generic backtest error
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:36] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at data\kiss_signal.db        
                       DEBUG    Enabled WAL mode for concurrent access          
-[2025-08-02 22:30:11] DEBUG    Created strategies table                        
+                      DEBUG    Created strategies table                        
                       DEBUG    Created positions table                         
                       DEBUG    Created index on strategies table               
                       DEBUG    Created index on positions table                
@@ -871,7 +875,7 @@ Exception: Generic backtest error
                       DEBUG     Exiting history()                              
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to data\cache\RELIANCE.NS.csv       
-                      DEBUG    Fetching TCS (2/5)                              
+[2025-08-02 23:09:37] DEBUG    Fetching TCS (2/5)                              
                       DEBUG    Entering download()                             
                       DEBUG    Disabling multithreading because DEBUG logging  
                                enabled                                         
@@ -897,7 +901,7 @@ Exception: Generic backtest error
                       DEBUG     Exiting history()                              
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to data\cache\TCS.NS.csv            
-[2025-08-02 22:30:12] DEBUG    Fetching INFY (3/5)                             
+[2025-08-02 23:09:38] DEBUG    Fetching INFY (3/5)                             
                       DEBUG    Entering download()                             
                       DEBUG    Disabling multithreading because DEBUG logging  
                                enabled                                         
@@ -950,7 +954,7 @@ Exception: Generic backtest error
                       DEBUG     Exiting history()                              
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to data\cache\HDFCBANK.NS.csv       
-[2025-08-02 22:30:13] DEBUG    Fetching ICICIBANK (5/5)                        
+[2025-08-02 23:09:39] DEBUG    Fetching ICICIBANK (5/5)                        
                       DEBUG    Entering download()                             
                       DEBUG    Disabling multithreading because DEBUG logging  
                                enabled                                         
@@ -982,6 +986,7 @@ Exception: Generic backtest error
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 5 symbols from universe                  
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                  Top Strategies by Edge Score                 
 ┌────────┬────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol │ Rule Stack │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -1038,7 +1043,7 @@ Exception: Generic backtest error
                                Traceback (most recent call last):              
                                  File                                          
                                "D:\Code\stock_rule_based\src\kiss_signal\cli.py
-                               ", line 608, in _process_and_save_results       
+                               ", line 625, in _process_and_save_results       
                                    report_path =                               
                                reporter.generate_daily_report(                 
                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1063,14 +1068,14 @@ Exception: Generic backtest error
                                _execute_mock_call                              
                                    raise effect                                
                                Exception: Report generation failed             
-                      INFO     full_backtest completed in 2.40s                
+                      INFO     full_backtest completed in 2.48s                
 
 Performance Summary:
-Total Duration: 2.40s
+Total Duration: 2.48s
 Slowest Function: full_backtest
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:13] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:39] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -1082,17 +1087,21 @@ Slowest Function: full_backtest
 [2/4] Refreshing market data...
                       INFO     Loaded 5 symbols from universe                  
                       INFO     Refreshing 5 symbols                            
-[2025-08-02 22:30:15] INFO     Successfully refreshed 5/5 symbols              
+[2025-08-02 23:09:41] INFO     Successfully refreshed 5/5 symbols              
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 5 symbols from universe                  
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=10                                   
+                      WARNING  Walk-forward analysis disabled for RELIANCE,    
+                               using in-sample optimization                    
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for RELIANCE. Forcing 
                                daily frequency ('D').                          
                       INFO     Testing 2 individual rules for RELIANCE         
                       INFO     Rule 'sma_crossover' generated 54 signals on    
                                1095 data points                                
-                      INFO     Rule 'rsi_oversold' generated 836 signals on    
+[2025-08-02 23:09:42] INFO     Rule 'rsi_oversold' generated 836 signals on    
                                1095 data points                                
                       INFO     Testing combinations with best individual rule: 
                                test_momentum                                   
@@ -1100,7 +1109,11 @@ Slowest Function: full_backtest
                                1095 data points                                
                       INFO     Rule 'sma_crossover' generated 54 signals on    
                                1095 data points                                
-[2025-08-02 22:30:16] INFO     find_optimal_strategies completed in 0.11s      
+                      INFO     find_optimal_strategies completed in 0.20s      
+                      WARNING  Walk-forward analysis disabled for TCS, using   
+                               in-sample optimization                          
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for TCS. Forcing daily
                                frequency ('D').                                
                       INFO     Testing 2 individual rules for TCS              
@@ -1114,7 +1127,11 @@ Slowest Function: full_backtest
                                1095 data points                                
                       INFO     Rule 'rsi_oversold' generated 801 signals on    
                                1095 data points                                
-                      INFO     find_optimal_strategies completed in 0.11s      
+                      INFO     find_optimal_strategies completed in 0.17s      
+                      WARNING  Walk-forward analysis disabled for INFY, using  
+                               in-sample optimization                          
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for INFY. Forcing     
                                daily frequency ('D').                          
                       INFO     Testing 2 individual rules for INFY             
@@ -1128,7 +1145,11 @@ Slowest Function: full_backtest
                                1095 data points                                
                       INFO     Rule 'sma_crossover' generated 53 signals on    
                                1095 data points                                
-                      INFO     find_optimal_strategies completed in 0.11s      
+                      INFO     find_optimal_strategies completed in 0.17s      
+                      WARNING  Walk-forward analysis disabled for HDFCBANK,    
+                               using in-sample optimization                    
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for HDFCBANK. Forcing 
                                daily frequency ('D').                          
                       INFO     Testing 2 individual rules for HDFCBANK         
@@ -1142,7 +1163,11 @@ Slowest Function: full_backtest
                                1095 data points                                
                       INFO     Rule 'sma_crossover' generated 55 signals on    
                                1095 data points                                
-                      INFO     find_optimal_strategies completed in 0.12s      
+                      INFO     find_optimal_strategies completed in 0.17s      
+                      WARNING  Walk-forward analysis disabled for ICICIBANK,   
+                               using in-sample optimization                    
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for ICICIBANK. Forcing
                                daily frequency ('D').                          
                       INFO     Testing 2 individual rules for ICICIBANK        
@@ -1156,8 +1181,9 @@ Slowest Function: full_backtest
                                1095 data points                                
                       INFO     Rule 'sma_crossover' generated 63 signals on    
                                1095 data points                                
-                      INFO     find_optimal_strategies completed in 0.12s      
+                      INFO     find_optimal_strategies completed in 0.25s      
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                          Top Strategies by Edge Score                          
 ┌───────────┬──────────────────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol    │ Rule Stack               │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -1174,7 +1200,7 @@ Slowest Function: full_backtest
 [5/5] Saving results...
                       INFO     Saving 5 strategies to the database.            
                       INFO     Successfully saved 5 strategies                 
-                      INFO     Saved 5 strategies to the database.             
+[2025-08-02 23:09:43] INFO     Saved 5 strategies to the database.             
 [5/5] Generating report...
                       INFO     Downloading fresh data for ^NSEI                
                       INFO     Fetched 0 open positions.                       
@@ -1189,10 +1215,10 @@ Slowest Function: full_backtest
                       INFO     Added 5 new positions                           
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 2.93s                
+                      INFO     full_backtest completed in 3.49s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:16] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:43] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -1238,7 +1264,7 @@ Slowest Function: full_backtest
                       DEBUG     Exiting history()                              
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to data\cache\RELIANCE.NS.csv       
-[2025-08-02 22:30:17] DEBUG    Fetching TCS (2/5)                              
+[2025-08-02 23:09:44] DEBUG    Fetching TCS (2/5)                              
                       DEBUG    Entering download()                             
                       DEBUG    Disabling multithreading because DEBUG logging  
                                enabled                                         
@@ -1264,7 +1290,7 @@ Slowest Function: full_backtest
                       DEBUG     Exiting history()                              
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to data\cache\TCS.NS.csv            
-[2025-08-02 22:30:18] DEBUG    Fetching INFY (3/5)                             
+                      DEBUG    Fetching INFY (3/5)                             
                       DEBUG    Entering download()                             
                       DEBUG    Disabling multithreading because DEBUG logging  
                                enabled                                         
@@ -1290,7 +1316,7 @@ Slowest Function: full_backtest
                       DEBUG     Exiting history()                              
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to data\cache\INFY.NS.csv           
-                      DEBUG    Fetching HDFCBANK (4/5)                         
+[2025-08-02 23:09:45] DEBUG    Fetching HDFCBANK (4/5)                         
                       DEBUG    Entering download()                             
                       DEBUG    Disabling multithreading because DEBUG logging  
                                enabled                                         
@@ -1317,7 +1343,7 @@ Slowest Function: full_backtest
                       DEBUG     Exiting history()                              
                       DEBUG    Exiting download()                              
                       DEBUG    Saved cache to data\cache\HDFCBANK.NS.csv       
-[2025-08-02 22:30:19] DEBUG    Fetching ICICIBANK (5/5)                        
+[2025-08-02 23:09:46] DEBUG    Fetching ICICIBANK (5/5)                        
                       DEBUG    Entering download()                             
                       DEBUG    Disabling multithreading because DEBUG logging  
                                enabled                                         
@@ -1350,6 +1376,10 @@ Slowest Function: full_backtest
                       INFO     Loaded 5 symbols from universe                  
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=10                                   
+                      WARNING  Walk-forward analysis disabled for RELIANCE,    
+                               using in-sample optimization                    
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for RELIANCE. Forcing 
                                daily frequency ('D').                          
                       DEBUG    Forward-filled NaN values after frequency       
@@ -1407,7 +1437,11 @@ Slowest Function: full_backtest
                                Timestamp('2025-06-20 00:00:00')]               
                       DEBUG    Portfolio trades count for RELIANCE: 36         
                       DEBUG    Trade count type: <class 'numpy.int64'>         
-                      INFO     find_optimal_strategies completed in 0.15s      
+                      INFO     find_optimal_strategies completed in 0.41s      
+                      WARNING  Walk-forward analysis disabled for TCS, using   
+                               in-sample optimization                          
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for TCS. Forcing daily
                                frequency ('D').                                
                       DEBUG    Forward-filled NaN values after frequency       
@@ -1465,7 +1499,11 @@ Slowest Function: full_backtest
                                Timestamp('2025-06-28 00:00:00')]               
                       DEBUG    Portfolio trades count for TCS: 31              
                       DEBUG    Trade count type: <class 'numpy.int64'>         
-                      INFO     find_optimal_strategies completed in 0.15s      
+[2025-08-02 23:09:47] INFO     find_optimal_strategies completed in 0.30s      
+                      WARNING  Walk-forward analysis disabled for INFY, using  
+                               in-sample optimization                          
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for INFY. Forcing     
                                daily frequency ('D').                          
                       DEBUG    Forward-filled NaN values after frequency       
@@ -1523,7 +1561,11 @@ Slowest Function: full_backtest
                                Timestamp('2025-07-20 00:00:00')]               
                       DEBUG    Portfolio trades count for INFY: 31             
                       DEBUG    Trade count type: <class 'numpy.int64'>         
-                      INFO     find_optimal_strategies completed in 0.15s      
+                      INFO     find_optimal_strategies completed in 0.24s      
+                      WARNING  Walk-forward analysis disabled for HDFCBANK,    
+                               using in-sample optimization                    
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for HDFCBANK. Forcing 
                                daily frequency ('D').                          
                       DEBUG    Forward-filled NaN values after frequency       
@@ -1581,7 +1623,11 @@ Slowest Function: full_backtest
                                Timestamp('2025-07-23 00:00:00')]               
                       DEBUG    Portfolio trades count for HDFCBANK: 37         
                       DEBUG    Trade count type: <class 'numpy.int64'>         
-                      INFO     find_optimal_strategies completed in 0.16s      
+                      INFO     find_optimal_strategies completed in 0.20s      
+                      WARNING  Walk-forward analysis disabled for ICICIBANK,   
+                               using in-sample optimization                    
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       WARNING  Could not infer frequency for ICICIBANK. Forcing
                                daily frequency ('D').                          
                       DEBUG    Forward-filled NaN values after frequency       
@@ -1639,8 +1685,9 @@ Slowest Function: full_backtest
                                Timestamp('2025-07-18 00:00:00')]               
                       DEBUG    Portfolio trades count for ICICIBANK: 44        
                       DEBUG    Trade count type: <class 'numpy.int64'>         
-[2025-08-02 22:30:20] INFO     find_optimal_strategies completed in 0.16s      
+                      INFO     find_optimal_strategies completed in 0.19s      
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                          Top Strategies by Edge Score                          
 ┌───────────┬──────────────────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol    │ Rule Stack               │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -1718,14 +1765,14 @@ Slowest Function: full_backtest
                       INFO     Added 5 new positions                           
                       INFO     Report generated: reports\signals_2025-08-02.md 
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 3.25s                
+                      INFO     full_backtest completed in 4.36s                
 
 Performance Summary:
-Total Duration: 3.41s
+Total Duration: 4.55s
 Slowest Function: full_backtest
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:20] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -1757,24 +1804,24 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-01-01.md 
 * Report generated: reports\signals_2025-01-01.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     full_backtest completed in 0.03s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:20] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-02 22:30:20] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:48] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:21] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:48] INFO     === KISS Signal CLI Run Started ===             
 Analyzing per-stock strategy performance...
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:21] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:49] INFO     === KISS Signal CLI Run Started ===             
 Error: Database file not found at data\kiss_signal.db
-[2025-08-02 22:30:21] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:09:49] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -1811,7 +1858,7 @@ No valid strategies found. Check data quality and rule configurations.
                       WARNING  Limited data for TESTSTOCK: only 5 rows         
                       WARNING  Limited data for TESTSTOCK: only 4 rows         
                       WARNING  Limited data for TESTSTOCK: only 3 rows         
-[2025-08-02 22:30:22] INFO     Downloading fresh data for BPCL                 
+                      INFO     Downloading fresh data for BPCL                 
                       WARNING  Limited data for BPCL: only 2 rows              
                       INFO     Downloading fresh data for ^NSEI                
                       INFO     Downloading fresh data for RELIANCE             
@@ -1824,9 +1871,9 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Refreshing 1 symbols                            
                       ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType'
                                object has no attribute 'empty'                 
-[2025-08-02 22:30:23] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType'
+[2025-08-02 23:09:50] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType'
                                object has no attribute 'empty'                 
-[2025-08-02 22:30:24] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType'
+[2025-08-02 23:09:52] ERROR    Failed to fetch data for RELIANCE.NS: 'NoneType'
                                object has no attribute 'empty'                 
                       WARNING  Failed to fetch data for RELIANCE after 3       
                                attempts                                        
@@ -1835,10 +1882,10 @@ No valid strategies found. Check data quality and rule configurations.
                       ERROR    Missing required columns for RELIANCE.NS:       
                                Index(['index', 'open', 'high', 'low', 'close', 
                                'volume'], dtype='object')                      
-[2025-08-02 22:30:25] ERROR    Missing required columns for RELIANCE.NS:       
+[2025-08-02 23:09:53] ERROR    Missing required columns for RELIANCE.NS:       
                                Index(['index', 'open', 'high', 'low', 'close', 
                                'volume'], dtype='object')                      
-[2025-08-02 22:30:27] ERROR    Missing required columns for RELIANCE.NS:       
+[2025-08-02 23:09:55] ERROR    Missing required columns for RELIANCE.NS:       
                                Index(['index', 'open', 'high', 'low', 'close', 
                                'volume'], dtype='object')                      
                       WARNING  Failed to fetch data for RELIANCE after 3       
@@ -1846,29 +1893,29 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Successfully refreshed 0/1 symbols              
                       INFO     Refreshing 1 symbols                            
                       ERROR    Failed to fetch data for RELIANCE.NS: API Error 
-[2025-08-02 22:30:28] ERROR    Failed to fetch data for RELIANCE.NS: API Error 
-[2025-08-02 22:30:29] ERROR    Failed to fetch data for RELIANCE.NS: API Error 
+[2025-08-02 23:09:56] ERROR    Failed to fetch data for RELIANCE.NS: API Error 
+[2025-08-02 23:09:57] ERROR    Failed to fetch data for RELIANCE.NS: API Error 
                       WARNING  Failed to fetch data for RELIANCE after 3       
                                attempts                                        
                       INFO     Successfully refreshed 0/1 symbols              
                       INFO     Refreshing 1 symbols                            
                       DEBUG    Empty data for RELIANCE.NS, retrying in 2s      
                                (attempt 1/3)                                   
-[2025-08-02 22:30:31] DEBUG    Empty data for RELIANCE.NS, retrying in 4s      
+[2025-08-02 23:09:59] DEBUG    Empty data for RELIANCE.NS, retrying in 4s      
                                (attempt 2/3)                                   
-[2025-08-02 22:30:35] WARNING  No data returned for RELIANCE.NS after 3        
+[2025-08-02 23:10:03] WARNING  No data returned for RELIANCE.NS after 3        
                                attempts                                        
-[2025-08-02 22:30:36] DEBUG    Empty data for RELIANCE.NS, retrying in 2s      
+[2025-08-02 23:10:04] DEBUG    Empty data for RELIANCE.NS, retrying in 2s      
                                (attempt 1/3)                                   
-[2025-08-02 22:30:38] DEBUG    Empty data for RELIANCE.NS, retrying in 4s      
+[2025-08-02 23:10:06] DEBUG    Empty data for RELIANCE.NS, retrying in 4s      
                                (attempt 2/3)                                   
-[2025-08-02 22:30:42] WARNING  No data returned for RELIANCE.NS after 3        
+[2025-08-02 23:10:10] WARNING  No data returned for RELIANCE.NS after 3        
                                attempts                                        
-[2025-08-02 22:30:44] DEBUG    Empty data for RELIANCE.NS, retrying in 2s      
+[2025-08-02 23:10:12] DEBUG    Empty data for RELIANCE.NS, retrying in 2s      
                                (attempt 1/3)                                   
-[2025-08-02 22:30:46] DEBUG    Empty data for RELIANCE.NS, retrying in 4s      
+[2025-08-02 23:10:14] DEBUG    Empty data for RELIANCE.NS, retrying in 4s      
                                (attempt 2/3)                                   
-[2025-08-02 22:30:50] WARNING  No data returned for RELIANCE.NS after 3        
+[2025-08-02 23:10:18] WARNING  No data returned for RELIANCE.NS after 3        
                                attempts                                        
                       WARNING  Failed to fetch data for RELIANCE after 3       
                                attempts                                        
@@ -1955,6 +2002,10 @@ No valid strategies found. Check data quality and rule configurations.
                                (41.1%)                                         
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=5                                    
+                      WARNING  Walk-forward analysis disabled for TEST, using  
+                               in-sample optimization                          
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       INFO     Using data up to freeze date: 2023-03-31        
                       INFO     Testing 2 individual rules for TEST             
                       INFO     Rule 'sma_crossover' generated 0 signals on 90  
@@ -1963,22 +2014,22 @@ No valid strategies found. Check data quality and rule configurations.
                                ['sma_10_20_crossover']                         
                       INFO     Rule 'rsi_oversold' generated 89 signals on 90  
                                data points                                     
-[2025-08-02 22:30:51] WARNING  Strategy 'rsi_oversold_30' on 'TEST' generated  
+                      WARNING  Strategy 'rsi_oversold_30' on 'TEST' generated  
                                only 1 trades, below threshold of 5.            
                       INFO     find_optimal_strategies completed in 0.06s      
-                      INFO     Loaded 2 symbols from universe                  
-[2025-08-02 22:30:51] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:10:19] INFO     Loaded 2 symbols from universe                  
+[2025-08-02 23:10:19] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at                            
                                C:\Users\user\AppData\Local\Temp\pytest-of-user\
-                               pytest-977\test_end_to_end_cli_workflow0\integra
+                               pytest-979\test_end_to_end_cli_workflow0\integra
                                tion.db                                         
                       INFO     Successfully created database at                
                                C:\Users\user\AppData\Local\Temp\pytest-of-user\
-                               pytest-977\test_end_to_end_cli_workflow0\integra
+                               pytest-979\test_end_to_end_cli_workflow0\integra
                                tion.db                                         
 [1/4] Configuration loaded.
 [2/4] Skipping data refresh (freeze mode).
@@ -1986,6 +2037,10 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Loaded 2 symbols from universe                  
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=10                                   
+                      WARNING  Walk-forward analysis disabled for RELIANCE,    
+                               using in-sample optimization                    
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       INFO     Using data up to freeze date: 2024-06-01        
                       INFO     Testing 2 individual rules for RELIANCE         
                       INFO     Rule 'sma_crossover' generated 14 signals on 518
@@ -1998,7 +2053,11 @@ No valid strategies found. Check data quality and rule configurations.
                                data points                                     
                       INFO     Rule 'rsi_oversold' generated 381 signals on 518
                                data points                                     
-                      INFO     find_optimal_strategies completed in 0.11s      
+                      INFO     find_optimal_strategies completed in 0.12s      
+                      WARNING  Walk-forward analysis disabled for INFY, using  
+                               in-sample optimization                          
+                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT  
+                               reliable for live trading!                      
                       INFO     Using data up to freeze date: 2024-06-01        
                       INFO     Testing 2 individual rules for INFY             
                       INFO     Rule 'sma_crossover' generated 14 signals on 518
@@ -2011,8 +2070,9 @@ No valid strategies found. Check data quality and rule configurations.
                                data points                                     
                       INFO     Rule 'rsi_oversold' generated 378 signals on 518
                                data points                                     
-                      INFO     find_optimal_strategies completed in 0.11s      
+                      INFO     find_optimal_strategies completed in 0.14s      
 [4/4] Analysis complete. Results summary:
+In-Sample Results (NOT reliable for live trading)
                       Top Strategies by Edge Score                       
 ┌──────────┬─────────────────────┬────────────┬───────┬────────┬────────┐
 │ Symbol   │ Rule Stack          │ Edge Score │ Win % │ Sharpe │ Trades │
@@ -2038,15 +2098,15 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Added 2 new positions                           
                       INFO     Report generated:                               
                                C:\Users\user\AppData\Local\Temp\pytest-of-user\
-                               pytest-977\test_end_to_end_cli_workflow0\reports
+                               pytest-979\test_end_to_end_cli_workflow0\reports
                                \signals_2024-06-01.md                          
 * Report generated: 
-C:\Users\user\AppData\Local\Temp\pytest-of-user\pytest-977\test_end_to_end_cli_
+C:\Users\user\AppData\Local\Temp\pytest-of-user\pytest-979\test_end_to_end_cli_
 workflow0\reports\signals_2024-06-01.md
-                      INFO     full_backtest completed in 0.28s                
+                      INFO     full_backtest completed in 0.32s                
                       INFO     Log file saved to run_log.txt                   
                       INFO     Database connection closed.                     
-[2025-08-02 22:30:51] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-02 23:10:19] INFO     === KISS Signal CLI Run Started ===             
 Analyzing aggregated strategy performance...
                       INFO     Analyzed 1 unique strategy+config combinations  
                                from 2 individual records                       

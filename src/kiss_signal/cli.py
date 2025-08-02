@@ -81,7 +81,8 @@ def _analyze_symbol(
     rules_config: Any, 
     freeze_date: Optional[date], 
     bt: backtester.Backtester,
-    market_data: Optional[pd.DataFrame] = None
+    market_data: Optional[pd.DataFrame] = None,
+    in_sample: bool = False
 ) -> List[Dict[str, Any]]:
     """Helper to run backtest analysis for a single symbol."""
     try:
@@ -103,7 +104,8 @@ def _analyze_symbol(
             symbol=symbol,
             freeze_date=freeze_date,
             edge_score_weights=app_config.edge_score_weights,
-            config=app_config  # Add config parameter
+            config=app_config,  # Add config parameter
+            in_sample=in_sample  # Add in_sample parameter
         )
         
         result = []
@@ -123,6 +125,7 @@ def _run_backtests(
     symbols: List[str],
     freeze_date: Optional[date],
     min_trades_threshold: Optional[int] = None,
+    in_sample: bool = False,
 ) -> List[Dict[str, Any]]:
     """Run backtester for all symbols and return combined results."""
     # Use provided min_trades_threshold, or fall back to config, or default to 0
@@ -156,7 +159,7 @@ def _run_backtests(
     with console.status("[bold green]Running backtests...") as status:
         for i, symbol in enumerate(symbols):
             status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
-            all_results.extend(_analyze_symbol(symbol, app_config, rules_config, freeze_date, bt, market_data))
+            all_results.extend(_analyze_symbol(symbol, app_config, rules_config, freeze_date, bt, market_data, in_sample))
     return all_results
 
 
@@ -166,30 +169,43 @@ def _display_results(results: List[Dict[str, Any]]) -> None:
         console.print("[red]No valid strategies found. Check data quality and rule configurations.[/red]")
         return
 
-    table = Table(title="Top Strategies by Edge Score")
-    table.add_column("Symbol", style="cyan")
-    table.add_column("Rule Stack", style="green")
-    table.add_column("Edge Score", justify="right", style="yellow")
-    table.add_column("Win %", justify="right", style="blue")
-    table.add_column("Sharpe", justify="right", style="magenta")
-    table.add_column("Trades", justify="right", style="white")
- 
-    top_strategies = sorted(results, key=lambda x: x["edge_score"], reverse=True)[:10]
- 
-    for strategy in top_strategies:
-        # The rule_stack now contains RuleDef Pydantic models.
-        # We extract the name for display purposes.
-        rule_stack_str = " + ".join([getattr(r, 'name', r.type) for r in strategy["rule_stack"]])
-        table.add_row(
-            strategy["symbol"],
-            rule_stack_str,
-            f"{strategy['edge_score']:.3f}",
-            f"{strategy['win_pct']:.1%}",
-            f"{strategy['sharpe']:.2f}",
-            str(strategy["total_trades"]),
-        )
- 
-    console.print(table)
+    # Check if we have walk-forward results
+    oos_results = [r for r in results if r.get("is_oos", False)]
+    
+    if oos_results:
+        # Display walk-forward specific summary
+        console.print("[bold blue]Walk-Forward Analysis Results (Out-of-Sample Only)[/bold blue]")
+        walk_forward_summary = reporter.format_walk_forward_results(oos_results)
+        console.print(walk_forward_summary)
+    else:
+        # Display traditional table for in-sample results
+        console.print("[bold yellow]In-Sample Results (NOT reliable for live trading)[/bold yellow]")
+        
+        table = Table(title="Top Strategies by Edge Score")
+        table.add_column("Symbol", style="cyan")
+        table.add_column("Rule Stack", style="green")
+        table.add_column("Edge Score", justify="right", style="yellow")
+        table.add_column("Win %", justify="right", style="blue")
+        table.add_column("Sharpe", justify="right", style="magenta")
+        table.add_column("Trades", justify="right", style="white")
+     
+        top_strategies = sorted(results, key=lambda x: x["edge_score"], reverse=True)[:10]
+     
+        for strategy in top_strategies:
+            # The rule_stack now contains RuleDef Pydantic models.
+            # We extract the name for display purposes.
+            rule_stack_str = " + ".join([getattr(r, 'name', r.type) for r in strategy["rule_stack"]])
+            table.add_row(
+                strategy["symbol"],
+                rule_stack_str,
+                f"{strategy['edge_score']:.3f}",
+                f"{strategy['win_pct']:.1%}",
+                f"{strategy['sharpe']:.2f}",
+                str(strategy["total_trades"]),
+            )
+     
+        console.print(table)
+    
     console.print(
         f"\n[green]* Analysis complete. Found {len(results)} valid strategies "
         f"across {len(set(s['symbol'] for s in results))} symbols.[/green]"
@@ -327,7 +343,13 @@ def _get_position_pricing(symbol: str, app_config: Config) -> Optional[Dict[str,
 def _calculate_position_returns(position: Dict[str, Any], current_price: float, nifty_data: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
     """Calculate returns for a position."""
     entry_price = float(position['entry_price'])
-    return_pct = (current_price - entry_price) / entry_price * 100
+    
+    # Safety check for division by zero
+    if entry_price <= 0:
+        logger.error(f"Invalid entry_price ({entry_price}) for position {position.get('symbol', 'UNKNOWN')}")
+        return_pct = 0.0
+    else:
+        return_pct = (current_price - entry_price) / entry_price * 100
     
     # Calculate NIFTY return for comparison if data available
     nifty_return_pct = None
@@ -573,13 +595,14 @@ def _execute_backtesting_workflow(
     app_config: Config, 
     rules_config: Any, 
     freeze_date: Optional[date], 
-    min_trades: Optional[int] = None
+    min_trades: Optional[int] = None,
+    in_sample: bool = False
 ) -> List[Dict[str, Any]]:
     """Execute the complete backtesting workflow."""
     console.print("[3/4] Analyzing strategies for each ticker...")
     symbols = data.load_universe(app_config.universe_path)
     threshold = min_trades if min_trades is not None else getattr(app_config, "min_trades_threshold", 0)
-    return _run_backtests(app_config, rules_config, symbols, freeze_date, threshold)
+    return _run_backtests(app_config, rules_config, symbols, freeze_date, threshold, in_sample)
 
 
 def _process_and_save_results(
@@ -653,10 +676,16 @@ def main(
 def run(
     ctx: typer.Context,
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)"),
-    min_trades: Optional[int] = typer.Option(None, "--min-trades", help="Minimum trades required during backtesting (None = use config default)")
+    min_trades: Optional[int] = typer.Option(None, "--min-trades", help="Minimum trades required during backtesting (None = use config default)"),
+    in_sample: bool = typer.Option(False, "--in-sample", help="DANGEROUS: Use in-sample optimization (debugging only)")
 ) -> None:
-    """Run the KISS Signal analysis pipeline."""
+    """Run the KISS Signal analysis pipeline with professional walk-forward validation."""
     _show_banner()
+    
+    # Warn about dangerous in-sample usage
+    if in_sample:
+        console.print("[bold red]WARNING: Using IN-SAMPLE optimization![/bold red]")
+        console.print("[yellow]Results are NOT reliable for live trading decisions![/yellow]")
 
     app_config = ctx.obj["config"]
     rules_config = ctx.obj["rules"]
@@ -686,7 +715,7 @@ def run(
                     freeze_date=app_config.freeze_date,
                 )
 
-            all_results = _execute_backtesting_workflow(app_config, rules_config, freeze_date_obj, min_trades)
+            all_results = _execute_backtesting_workflow(app_config, rules_config, freeze_date_obj, min_trades, in_sample)
             console.print("[4/4] Analysis complete. Results summary:")
             _process_and_save_results(db_connection, all_results, app_config, rules_config)
 

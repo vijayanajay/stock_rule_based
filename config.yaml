@@ -31,3 +31,11 @@ edge_score_threshold: 0.50
 # Strategy seeker configuration (for adaptive rule combination testing)
 seeker_min_edge_score: 0.60
 seeker_min_trades: 20
+
+# Walk-forward analysis configuration (professional out-of-sample validation)
+walk_forward:
+  enabled: true               # DEFAULT: Professional out-of-sample validation  
+  training_period: "365d"     # 1 year of training data (reduced from 2 years)
+  testing_period: "90d"       # 3 months of out-of-sample testing (reduced from 6 months)
+  step_size: "90d"           # Roll forward every 3 months
+  min_trades_per_period: 5    # Skip periods with insufficient signals (reduced from 10)

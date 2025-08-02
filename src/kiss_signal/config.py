@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field, field_validator, ValidationInfo, Validati
 
 __all__ = [
     "Config",
-    "EdgeScoreWeights",
+    "EdgeScoreWeights", 
+    "WalkForwardConfig",
     "RulesConfig",
     "RuleDef",
     "load_config",
@@ -33,6 +34,14 @@ class EdgeScoreWeights(BaseModel):
                 raise ValueError(f"Weights must sum to 1.0, got {total}")
         return v
 
+class WalkForwardConfig(BaseModel):
+    """Configuration for walk-forward analysis."""
+    enabled: bool = Field(default=False)
+    training_period: str = Field(default="730d", description="Training period (e.g., '730d' for 2 years)")
+    testing_period: str = Field(default="180d", description="Testing period (e.g., '180d' for 6 months)")
+    step_size: str = Field(default="90d", description="Step size for rolling windows (e.g., '90d' for 3 months)")
+    min_trades_per_period: int = Field(default=10, ge=1, description="Minimum trades required per period")
+
 class Config(BaseModel):
     """Defines the structure of the main config.yaml file."""
     universe_path: str
@@ -50,6 +59,9 @@ class Config(BaseModel):
     # Strategy seeker configuration
     seeker_min_edge_score: float = Field(default=0.60, ge=0.0, le=1.0)
     seeker_min_trades: int = Field(default=20, ge=5)
+    
+    # Walk-forward analysis configuration
+    walk_forward: WalkForwardConfig = Field(default_factory=WalkForwardConfig)
 
     # The following are not in config.yaml but can be part of the object
     # for runtime convenience, hence they are optional.

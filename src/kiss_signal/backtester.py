@@ -4,8 +4,8 @@ This module handles backtesting of rule combinations and edge score calculation.
 """
 
 import logging
-from datetime import date
-from typing import Any, Dict, List, Optional
+from datetime import date, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ import vectorbt as vbt
 pd.set_option('future.no_silent_downcasting', True)
 
 from . import rules
-from .config import RulesConfig, EdgeScoreWeights, RuleDef, Config
+from .config import RulesConfig, EdgeScoreWeights, RuleDef, Config, WalkForwardConfig
 from .performance import performance_monitor
 
 __all__ = ["Backtester"]
@@ -165,30 +165,64 @@ class Backtester:
             "avg_return": avg_return,
         }
 
-    @performance_monitor.profile_performance
-    def find_optimal_strategies(
+    def _parse_period(self, period_str: str) -> int:
+        """Parse period string like '730d' into number of days."""
+        if period_str.endswith('d'):
+            return int(period_str[:-1])
+        elif period_str.endswith('m'):
+            return int(period_str[:-1]) * 30  # Approximate months
+        elif period_str.endswith('y'):
+            return int(period_str[:-1]) * 365  # Approximate years
+        else:
+            raise ValueError(f"Invalid period format: {period_str}. Use 'd', 'm', or 'y' suffix.")
+    
+    def _get_rolling_periods(
+        self, 
+        data: pd.DataFrame, 
+        training_days: int, 
+        testing_days: int, 
+        step_days: int
+    ) -> List[pd.Timestamp]:
+        """Generate rolling period start dates for walk-forward analysis."""
+        periods: List[pd.Timestamp] = []
+        min_required_data = training_days + testing_days
+        
+        if len(data) < min_required_data:
+            logger.warning(f"Insufficient data: {len(data)} days < {min_required_data} required")
+            return periods
+        
+        # Start from the first possible training period
+        current_start = data.index[0]
+        data_end = data.index[-1]
+        
+        while True:
+            # Calculate the end of testing period for this window
+            training_end = current_start + pd.Timedelta(days=training_days)
+            testing_end = training_end + pd.Timedelta(days=testing_days)
+            
+            # Check if we have enough data for this complete window
+            if testing_end > data_end:
+                break
+                
+            periods.append(current_start)
+            current_start += pd.Timedelta(days=step_days)
+            
+        logger.info(f"Generated {len(periods)} rolling periods for walk-forward analysis")
+        return periods
+    
+    def _legacy_in_sample_optimization(
         self,
         price_data: pd.DataFrame,
-        rules_config: RulesConfig,
-        symbol: str = "",  # Keep symbol before market_data for backward compatibility
-        market_data: Optional[pd.DataFrame] = None,
+        rules_config: RulesConfig, 
+        symbol: str,
         freeze_date: Optional[date] = None,
         edge_score_weights: Optional[EdgeScoreWeights] = None,
-        config: Optional[Config] = None  # Add config parameter
-    ) -> Any:
-        """Find optimal strategy through simple combination testing.
+        config: Optional[Config] = None
+    ) -> List[Dict[str, Any]]:
+        """Legacy in-sample optimization - DANGEROUS for live trading decisions."""
+        logger.warning("USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!")
         
-        Args:
-            rules_config: RulesConfig Pydantic model with entry_signals and exit_conditions.
-            price_data: OHLCV price data for backtesting
-            symbol: The stock symbol being tested, for logging purposes.
-            freeze_date: Optional cutoff date for data (for deterministic testing)
-            edge_score_weights: Optional EdgeScoreWeights model for edge score calculation
-            config: Optional Config object for seeker thresholds
-            
-        Returns:
-            List of strategies with edge scores and performance metrics, ranked by edge score
-        """
+        # This is the current implementation moved here for debugging purposes
         entry_signals = rules_config.entry_signals
 
         if not entry_signals:
@@ -226,7 +260,7 @@ class Backtester:
         # Phase 1: Test individual rules
         logger.info(f"Testing {len(entry_signals)} individual rules for {symbol}")
         for rule in entry_signals:
-            result = self._test_single_rule([rule], price_data, rules_config, edge_score_weights, symbol, market_data)
+            result = self._test_single_rule([rule], price_data, rules_config, edge_score_weights, symbol)
             if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
                 logger.info(f"Good enough individual rule found: {rule.name} (EdgeScore: {result['edge_score']:.3f})")
                 # Augment with full context before returning
@@ -250,7 +284,7 @@ class Backtester:
                 for confirmation in entry_signals:
                     if confirmation.name != best_rule.name:
                         combo = [best_rule, confirmation]
-                        result = self._test_single_rule(combo, price_data, rules_config, edge_score_weights, symbol, market_data)
+                        result = self._test_single_rule(combo, price_data, rules_config, edge_score_weights, symbol)
                         if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
                             logger.info(f"Good enough combination found: {best_rule.name} + {confirmation.name}")
                             # Augment with full context before returning
@@ -269,6 +303,252 @@ class Backtester:
             strategy["rule_stack"].extend(full_context_and_exit_rules)
         
         return final_strategies
+    
+    def walk_forward_backtest(
+        self,
+        data: pd.DataFrame,
+        walk_forward_config: WalkForwardConfig,
+        rules_config: RulesConfig,
+        symbol: str,
+        edge_score_weights: Optional[EdgeScoreWeights] = None,
+        config: Optional[Config] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Industry-standard walk-forward analysis - DEFAULT behavior.
+        
+        Returns ONLY out-of-sample performance - the only metrics that matter.
+        """
+        training_days = self._parse_period(walk_forward_config.training_period)
+        testing_days = self._parse_period(walk_forward_config.testing_period)
+        step_days = self._parse_period(walk_forward_config.step_size)
+        
+        logger.info(f"Walk-forward analysis for {symbol}: {training_days}d training, {testing_days}d testing, {step_days}d steps")
+        
+        oos_results = []  # Out-of-sample results only
+        periods = self._get_rolling_periods(data, training_days, testing_days, step_days)
+        
+        if not periods:
+            logger.warning(f"No valid periods for walk-forward analysis on {symbol}")
+            return []
+        
+        # Roll through time periods
+        for i, period_start in enumerate(periods):
+            logger.info(f"Period {i+1}/{len(periods)}: Training from {period_start.date()}")
+            
+            # 1. Training phase - find best strategy on training data only
+            training_start = period_start
+            training_end = period_start + pd.Timedelta(days=training_days)
+            train_data = data[training_start:training_end]
+            
+            if train_data.empty:
+                logger.warning(f"Empty training data for period {i+1}, skipping")
+                continue
+                
+            # Find best strategy using in-sample optimization on training data only
+            best_strategies = self._legacy_in_sample_optimization(
+                train_data, rules_config, symbol, None, edge_score_weights, config
+            )
+            
+            if not best_strategies:
+                logger.warning(f"No viable strategy found in training period {i+1}")
+                continue
+                
+            best_strategy = best_strategies[0]  # Take the best one
+            
+            # 2. Testing phase - apply strategy to unseen out-of-sample data
+            test_start = training_end
+            test_end = test_start + pd.Timedelta(days=testing_days)
+            test_data = data[test_start:test_end]
+            
+            if test_data.empty:
+                logger.warning(f"Empty testing data for period {i+1}, skipping")
+                continue
+            
+            # 3. Record ONLY out-of-sample performance
+            oos_performance = self._backtest_single_strategy_oos(
+                test_data, best_strategy["rule_stack"], rules_config, 
+                edge_score_weights, symbol, period_start, test_start, test_end
+            )
+            
+            if oos_performance and oos_performance["total_trades"] >= walk_forward_config.min_trades_per_period:
+                oos_results.append(oos_performance)
+                logger.info(f"Period {i+1} OOS result: {oos_performance['total_trades']} trades, "
+                           f"EdgeScore: {oos_performance['edge_score']:.3f}")
+            else:
+                logger.info(f"Period {i+1} insufficient trades or invalid performance, skipping")
+        
+        # Final metrics come from concatenated out-of-sample periods only
+        if not oos_results:
+            logger.warning(f"No valid out-of-sample periods for {symbol}")
+            return []
+            
+        consolidated_result = self._consolidate_oos_results(oos_results, symbol)
+        return [consolidated_result] if consolidated_result else []
+    
+    def _backtest_single_strategy_oos(
+        self,
+        test_data: pd.DataFrame,
+        rule_stack: List[Any],
+        rules_config: RulesConfig,
+        edge_score_weights: Optional[EdgeScoreWeights],
+        symbol: str,
+        period_start: pd.Timestamp,
+        test_start: pd.Timestamp, 
+        test_end: pd.Timestamp
+    ) -> Optional[Dict[str, Any]]:
+        """Backtest a single strategy on out-of-sample test data."""
+        try:
+            # Apply the same logic as _backtest_combination but for testing only
+            if edge_score_weights is None:
+                edge_score_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+                
+            # Apply context filters if any are defined
+            if rules_config.context_filters:
+                context_signals = self._apply_context_filters(
+                    test_data, rules_config.context_filters, symbol, None
+                )
+                
+                # If no favorable context periods, skip
+                if not context_signals.any():
+                    logger.debug(f"No favorable context for {symbol} in OOS period")
+                    return None
+            else:
+                # No context filters - allow all periods
+                context_signals = pd.Series(True, index=test_data.index)
+            
+            # Generate combined signal for the rule combination
+            entry_signals = self.generate_signals_for_stack(rule_stack, test_data)
+            
+            # Apply context filter to entry signals
+            entry_signals = entry_signals & context_signals
+            
+            if not entry_signals.any():
+                logger.debug(f"No entry signals generated for {symbol} in OOS period")
+                return None
+            
+            # Generate exit signals
+            exit_signals, sl_stop, tp_stop = self._generate_exit_signals(
+                entry_signals, test_data, rules_config.exit_conditions
+            )
+            
+            # Create vectorbt portfolio
+            portfolio = vbt.Portfolio.from_signals(
+                test_data["Close"],
+                entries=entry_signals,
+                exits=exit_signals,
+                init_cash=self.initial_capital,
+                sl_stop=sl_stop,
+                tp_stop=tp_stop,
+            )
+            
+            total_trades = len(portfolio.trades.records_readable)
+            if total_trades < self.min_trades_threshold:
+                return None
+
+            win_pct = portfolio.trades.win_rate()
+            sharpe = portfolio.sharpe_ratio()
+            avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
+
+            edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
+            
+            return {
+                "symbol": symbol,
+                "rule_stack": rule_stack,
+                "edge_score": edge_score,
+                "win_pct": win_pct,
+                "sharpe": sharpe,
+                "total_trades": total_trades,
+                "avg_return": avg_return,
+                "oos_period_start": period_start,
+                "oos_test_start": test_start,
+                "oos_test_end": test_end,
+                "is_oos": True  # Mark as out-of-sample
+            }
+            
+        except Exception as e:
+            logger.error(f"OOS backtest failed for {symbol}: {e}")
+            return None
+    
+    def _consolidate_oos_results(
+        self, 
+        oos_results: List[Dict[str, Any]], 
+        symbol: str
+    ) -> Optional[Dict[str, Any]]:
+        """Consolidate multiple out-of-sample results into final metrics."""
+        if not oos_results:
+            return None
+            
+        # Simple approach: average the key metrics across periods
+        total_trades = sum(r["total_trades"] for r in oos_results)
+        avg_edge_score = sum(r["edge_score"] for r in oos_results) / len(oos_results)
+        avg_win_pct = sum(r["win_pct"] for r in oos_results) / len(oos_results)
+        avg_sharpe = sum(r["sharpe"] for r in oos_results) / len(oos_results)
+        avg_return = sum(r["avg_return"] for r in oos_results) / len(oos_results)
+        
+        # Use the rule stack from the first period (they should all be similar)
+        representative_rule_stack = oos_results[0]["rule_stack"]
+        
+        logger.info(f"Consolidated OOS results for {symbol}: {len(oos_results)} periods, "
+                   f"{total_trades} total trades, EdgeScore: {avg_edge_score:.3f}")
+        
+        return {
+            "symbol": symbol,
+            "rule_stack": representative_rule_stack,
+            "edge_score": avg_edge_score,
+            "win_pct": avg_win_pct,
+            "sharpe": avg_sharpe,
+            "total_trades": total_trades,
+            "avg_return": avg_return,
+            "oos_periods": len(oos_results),
+            "is_oos": True
+        }
+
+    @performance_monitor.profile_performance
+    def find_optimal_strategies(
+        self,
+        price_data: pd.DataFrame,
+        rules_config: RulesConfig,
+        symbol: str = "",  # Keep symbol before market_data for backward compatibility
+        market_data: Optional[pd.DataFrame] = None,
+        freeze_date: Optional[date] = None,
+        edge_score_weights: Optional[EdgeScoreWeights] = None,
+        config: Optional[Config] = None,  # Add config parameter
+        in_sample: bool = False  # NEW: For debugging only
+    ) -> Any:
+        """
+        Discover optimal strategies using professional walk-forward analysis by default.
+        
+        Args:
+            rules_config: RulesConfig Pydantic model with entry_signals and exit_conditions.
+            price_data: OHLCV price data for backtesting
+            symbol: The stock symbol being tested, for logging purposes.
+            market_data: Optional market data for context filters
+            freeze_date: Optional cutoff date for data (for deterministic testing)
+            edge_score_weights: Optional EdgeScoreWeights model for edge score calculation
+            config: Optional Config object for walk-forward and seeker thresholds
+            in_sample: If True, uses dangerous in-sample optimization (debugging only)
+            
+        Returns:
+            List of strategies with edge scores and performance metrics, ranked by edge score
+        """
+        if in_sample:
+            logger.warning("USING IN-SAMPLE optimization. Results are NOT reliable for live trading!")
+            return self._legacy_in_sample_optimization(
+                price_data, rules_config, symbol, freeze_date, edge_score_weights, config
+            )
+        
+        # DEFAULT: Professional walk-forward analysis
+        if config and config.walk_forward.enabled:
+            logger.info(f"Using walk-forward analysis for {symbol}")
+            return self.walk_forward_backtest(
+                price_data, config.walk_forward, rules_config, symbol, edge_score_weights, config
+            )
+        else:
+            # For MVP: Fall back to in-sample if walk-forward not enabled
+            logger.warning(f"Walk-forward analysis disabled for {symbol}, using in-sample optimization")
+            return self._legacy_in_sample_optimization(
+                price_data, rules_config, symbol, freeze_date, edge_score_weights, config
+            )
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
         """Generate exit signals based on holding period after entry signals."""
