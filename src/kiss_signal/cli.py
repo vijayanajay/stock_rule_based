@@ -18,6 +18,7 @@ from rich.table import Table
 from .config import Config, load_config, load_rules
 from . import data, backtester, persistence, reporter
 from .performance import performance_monitor
+from .exceptions import DataMismatchError
 
 __all__ = ["app"]
 
@@ -97,6 +98,8 @@ def _analyze_symbol(
             logger.warning(f"Insufficient data for {symbol}, skipping")
             return []
 
+        latest_close = price_data['close'].iloc[-1]
+
         strategies = bt.find_optimal_strategies(
             price_data=price_data,
             rules_config=rules_config,
@@ -111,9 +114,19 @@ def _analyze_symbol(
         result = []
         for strategy in strategies:
             strategy["symbol"] = symbol
+            strategy["latest_close"] = latest_close  # Attach the latest close price
             result.append(strategy)
         return result
 
+    except DataMismatchError as e:
+        logger.error(f"CRITICAL: Market data for ^NSEI does not cover the full history for {symbol}. Run data refresh.")
+        return []
+    except FileNotFoundError as e:
+        logger.error(f"Data file not found for {symbol}: {e}")
+        return []
+    except ValueError as e:
+        logger.error(f"Configuration error for {symbol}: {e}")
+        return []
     except Exception as e:
         logger.error(f"Error analyzing {symbol}: {e}")
         return []
@@ -147,7 +160,7 @@ def _run_backtests(
                     market_data = data.get_price_data(
                         symbol=index_symbol,
                         cache_dir=Path(app_config.cache_dir),
-                        years=2,  # Buffer for lookback calculations
+                        years=app_config.historical_data_years,  # Use configured historical period
                         freeze_date=freeze_date,
                     )
                     logger.info(f"Loaded market data for {index_symbol}")
@@ -252,6 +265,11 @@ def _check_exit_conditions(
     hold_period: int
 ) -> Optional[str]:
     """Check if position should be closed based on exit conditions."""
+    # FIX: Add guard clause for invalid entry prices
+    if not position.get('entry_price') or float(position['entry_price']) <= 0:
+        logger.warning(f"Skipping exit check for {position['symbol']} due to invalid entry price: {position.get('entry_price')}")
+        return None
+    
     entry_price = float(position['entry_price'])
     
     # Check stop loss conditions
@@ -472,7 +490,7 @@ def _identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path) -> L
         signal = {
             'ticker': symbol,
             'date': current_date.isoformat(),
-            'entry_price': 0.0,  # Will be filled with actual price when position is opened
+            'entry_price': result.get('latest_close', 0.0),  # Use the actual latest close price
             'rule_stack': rule_stack_names,
             'rule_stack_used': json.dumps([{'name': getattr(r, 'name', r.type), 'type': r.type} for r in result['rule_stack']]),
             'edge_score': result['edge_score'],

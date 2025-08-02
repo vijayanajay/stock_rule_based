@@ -227,6 +227,116 @@ class TestWalkForwardAnalysis:
         expected_edge = (0.6 + 0.8) / 2  # Simple average
         assert abs(result["edge_score"] - expected_edge) < 0.001
 
+    def test_walk_forward_data_validation_success(self, backtester_instance, sample_price_data, sample_rules_config, walk_forward_config):
+        """Test that walk-forward validation passes with properly aligned data."""
+        bt = backtester_instance
+        
+        # Create market data that covers the same period as stock data
+        market_data = sample_price_data.copy()
+        market_data.columns = [col.lower() for col in market_data.columns]  # Normalize column names
+        
+        # Mock the internal methods to avoid complex setup
+        with patch.object(bt, '_get_rolling_periods', return_value=[]):
+            # This should NOT raise an error since data ranges are aligned
+            result = bt.walk_forward_backtest(
+                data=sample_price_data,
+                walk_forward_config=walk_forward_config,
+                rules_config=sample_rules_config,
+                symbol="TEST",
+                market_data=market_data
+            )
+            
+            # Should complete without error (empty result due to mocked periods)
+            assert result == []
+
+    def test_walk_forward_data_validation_failure_market_data_too_short(self, backtester_instance, sample_price_data, sample_rules_config, walk_forward_config):
+        """Test that walk-forward validation fails when market data range is shorter than stock data."""
+        bt = backtester_instance
+        
+        # Create market data that starts later than stock data
+        short_market_data = sample_price_data.iloc[100:].copy()  # Start 100 days later
+        short_market_data.columns = [col.lower() for col in short_market_data.columns]
+        
+        # This should raise a ValueError due to data mismatch
+        with pytest.raises(ValueError) as exc_info:
+            bt.walk_forward_backtest(
+                data=sample_price_data,
+                walk_forward_config=walk_forward_config,
+                rules_config=sample_rules_config,
+                symbol="TEST",
+                market_data=short_market_data
+            )
+        
+        # Check that the error message contains expected details
+        error_msg = str(exc_info.value)
+        assert "CRITICAL DATA MISMATCH for TEST" in error_msg
+        assert "Market data range" in error_msg
+        assert "does not fully cover stock data range" in error_msg
+        assert "Ensure market data history is as long as stock data history" in error_msg
+
+    def test_walk_forward_data_validation_failure_market_data_ends_early(self, backtester_instance, sample_price_data, sample_rules_config, walk_forward_config):
+        """Test that walk-forward validation fails when market data ends before stock data."""
+        bt = backtester_instance
+        
+        # Create market data that ends earlier than stock data
+        short_market_data = sample_price_data.iloc[:-100].copy()  # End 100 days earlier
+        short_market_data.columns = [col.lower() for col in short_market_data.columns]
+        
+        # This should raise a ValueError due to data mismatch
+        with pytest.raises(ValueError) as exc_info:
+            bt.walk_forward_backtest(
+                data=sample_price_data,
+                walk_forward_config=walk_forward_config,
+                rules_config=sample_rules_config,
+                symbol="TEST",
+                market_data=short_market_data
+            )
+        
+        # Check that the error message contains expected details
+        error_msg = str(exc_info.value)
+        assert "CRITICAL DATA MISMATCH for TEST" in error_msg
+        assert "Market data range" in error_msg
+        assert "does not fully cover stock data range" in error_msg
+
+    def test_walk_forward_data_validation_no_market_data(self, backtester_instance, sample_price_data, sample_rules_config, walk_forward_config):
+        """Test that walk-forward validation passes when no market data is provided."""
+        bt = backtester_instance
+        
+        # Mock the internal methods to avoid complex setup
+        with patch.object(bt, '_get_rolling_periods', return_value=[]):
+            # This should NOT raise an error since no market data means no validation needed
+            result = bt.walk_forward_backtest(
+                data=sample_price_data,
+                walk_forward_config=walk_forward_config,
+                rules_config=sample_rules_config,
+                symbol="TEST",
+                market_data=None
+            )
+            
+            # Should complete without error
+            assert result == []
+
+    def test_walk_forward_data_validation_empty_market_data(self, backtester_instance, sample_price_data, sample_rules_config, walk_forward_config):
+        """Test that walk-forward validation passes when market data is empty."""
+        bt = backtester_instance
+        
+        # Create empty market data
+        empty_market_data = pd.DataFrame()
+        
+        # Mock the internal methods to avoid complex setup
+        with patch.object(bt, '_get_rolling_periods', return_value=[]):
+            # This should NOT raise an error since empty market data means no validation needed
+            result = bt.walk_forward_backtest(
+                data=sample_price_data,
+                walk_forward_config=walk_forward_config,
+                rules_config=sample_rules_config,
+                symbol="TEST",
+                market_data=empty_market_data
+            )
+            
+            # Should complete without error
+            assert result == []
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

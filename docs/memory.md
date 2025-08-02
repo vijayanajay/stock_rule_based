@@ -1,5 +1,13 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Test Harness Integrity: Flawed Invocation and API Drift (2025-08-02)
+- **Issue**: Multiple test failures were traced to a structural desynchronization between the test suite and the application's API contract.
+    1.  **API Drift (`test_backtester_coverage.py`):** Tests failed with `AttributeError` due to incorrect positional argument order when calling `walk_forward_backtest`, passing a string where a config object was expected.
+    2.  **Flawed Invocation (historical `test_cli_*.py`):** Older tests failed with `UsageError` (exit code 2) because they violated `Typer`'s argument parsing rules (e.g., global options placed after commands). Other tests were not self-contained, failing on config loading before testing help text.
+- **Structural Root Cause**: The test suite was not being maintained in lockstep with the application's API and its framework's specific invocation rules. The use of positional arguments and non-resilient test setups made the test harness brittle and unreliable.
+- **Fix**: All failing calls to `walk_forward_backtest` were updated to use named arguments, making the API contract explicit. Historically, the CLI tests were fixed by correcting argument order to match user-valid patterns and making tests self-contained.
+- **Lesson**: The test suite is a first-class consumer of the application's API. Tests must precisely mirror valid user invocation patterns and should use named arguments for functions with multiple parameters to make API contract violations obvious. A desynchronized test harness is a structural failure that erodes the reliability of the entire project.
+
 ## Test Suite Desynchronization: Parameter Validation and Data Contract Changes (2025-07-31)
 - **Issue**: Three test failures were traced to test expectations that were out of sync with the current application behavior after parameter validation refactoring. Tests expected ValueError for missing parameters when rules have defaults, DataFrame column duplication caused Series/- **Prevention**: Use framework-provided fixtures (like `tmp_path`) for resource management over manual implementations to avoid platform-specific issues like file locking.
 

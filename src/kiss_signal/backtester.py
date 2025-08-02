@@ -15,8 +15,9 @@ import vectorbt as vbt
 pd.set_option('future.no_silent_downcasting', True)
 
 from . import rules
-from .config import RulesConfig, EdgeScoreWeights, RuleDef, Config, WalkForwardConfig
+from .config import RulesConfig, EdgeScoreWeights, Config, WalkForwardConfig, RuleDef
 from .performance import performance_monitor
+from .exceptions import DataMismatchError
 
 __all__ = ["Backtester"]
 
@@ -207,7 +208,6 @@ class Backtester:
             periods.append(current_start)
             current_start += pd.Timedelta(days=step_days)
             
-        logger.info(f"Generated {len(periods)} rolling periods for walk-forward analysis")
         return periods
     
     def _legacy_in_sample_optimization(
@@ -217,7 +217,8 @@ class Backtester:
         symbol: str,
         freeze_date: Optional[date] = None,
         edge_score_weights: Optional[EdgeScoreWeights] = None,
-        config: Optional[Config] = None
+        config: Optional[Config] = None,
+        market_data: Optional[pd.DataFrame] = None
     ) -> List[Dict[str, Any]]:
         """Legacy in-sample optimization - DANGEROUS for live trading decisions."""
         logger.warning("USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!")
@@ -258,9 +259,8 @@ class Backtester:
         best_result = None
         
         # Phase 1: Test individual rules
-        logger.info(f"Testing {len(entry_signals)} individual rules for {symbol}")
         for rule in entry_signals:
-            result = self._test_single_rule([rule], price_data, rules_config, edge_score_weights, symbol)
+            result = self._test_single_rule([rule], price_data, rules_config, edge_score_weights, symbol, market_data)
             if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
                 logger.info(f"Good enough individual rule found: {rule.name} (EdgeScore: {result['edge_score']:.3f})")
                 # Augment with full context before returning
@@ -284,7 +284,7 @@ class Backtester:
                 for confirmation in entry_signals:
                     if confirmation.name != best_rule.name:
                         combo = [best_rule, confirmation]
-                        result = self._test_single_rule(combo, price_data, rules_config, edge_score_weights, symbol)
+                        result = self._test_single_rule(combo, price_data, rules_config, edge_score_weights, symbol, market_data)
                         if result and result["edge_score"] >= min_edge_score and result["total_trades"] >= min_trades:
                             logger.info(f"Good enough combination found: {best_rule.name} + {confirmation.name}")
                             # Augment with full context before returning
@@ -311,18 +311,32 @@ class Backtester:
         rules_config: RulesConfig,
         symbol: str,
         edge_score_weights: Optional[EdgeScoreWeights] = None,
-        config: Optional[Config] = None
+        config: Optional[Config] = None,
+        market_data: Optional[pd.DataFrame] = None
     ) -> List[Dict[str, Any]]:
         """
         Industry-standard walk-forward analysis - DEFAULT behavior.
         
         Returns ONLY out-of-sample performance - the only metrics that matter.
         """
+        # --- NEW VALIDATION BLOCK ---
+        if market_data is not None and not market_data.empty:
+            if data.index.min() < market_data.index.min() or data.index.max() > market_data.index.max():
+                error_msg = (
+                    f"CRITICAL DATA MISMATCH for {symbol}: Market data range "
+                    f"({market_data.index.min().date()} to {market_data.index.max().date()}) "
+                    f"does not fully cover stock data range "
+                    f"({data.index.min().date()} to {data.index.max().date()}). "
+                    "Ensure market data history is as long as stock data history."
+                )
+                logger.error(error_msg)
+                # Fail loudly instead of silently producing no results.
+                raise DataMismatchError(error_msg)
+        # --- END NEW BLOCK ---
+
         training_days = self._parse_period(walk_forward_config.training_period)
         testing_days = self._parse_period(walk_forward_config.testing_period)
         step_days = self._parse_period(walk_forward_config.step_size)
-        
-        logger.info(f"Walk-forward analysis for {symbol}: {training_days}d training, {testing_days}d testing, {step_days}d steps")
         
         oos_results = []  # Out-of-sample results only
         periods = self._get_rolling_periods(data, training_days, testing_days, step_days)
@@ -333,20 +347,28 @@ class Backtester:
         
         # Roll through time periods
         for i, period_start in enumerate(periods):
-            logger.info(f"Period {i+1}/{len(periods)}: Training from {period_start.date()}")
-            
-            # 1. Training phase - find best strategy on training data only
+            # Calculate all period boundaries upfront
             training_start = period_start
             training_end = period_start + pd.Timedelta(days=training_days)
+            test_start = training_end
+            test_end = test_start + pd.Timedelta(days=testing_days)
+            
+            # 1. Training phase - find best strategy on training data only
             train_data = data[training_start:training_end]
             
             if train_data.empty:
                 logger.warning(f"Empty training data for period {i+1}, skipping")
                 continue
                 
+            # Slice market data to match training period for proper alignment
+            sliced_market_data = None
+            if market_data is not None:
+                sliced_market_data = market_data[training_start:training_end]
+                logger.debug(f"Sliced market data from {len(market_data)} to {len(sliced_market_data)} rows for training period")
+            
             # Find best strategy using in-sample optimization on training data only
             best_strategies = self._legacy_in_sample_optimization(
-                train_data, rules_config, symbol, None, edge_score_weights, config
+                train_data, rules_config, symbol, None, edge_score_weights, config, sliced_market_data
             )
             
             if not best_strategies:
@@ -364,18 +386,22 @@ class Backtester:
                 logger.warning(f"Empty testing data for period {i+1}, skipping")
                 continue
             
+            # Slice market data to match testing period for proper alignment
+            sliced_test_market_data = None
+            if market_data is not None:
+                sliced_test_market_data = market_data[test_start:test_end]
+                logger.debug(f"Sliced market data for testing period from {len(market_data)} to {len(sliced_test_market_data)} rows")
+            
             # 3. Record ONLY out-of-sample performance
             oos_performance = self._backtest_single_strategy_oos(
                 test_data, best_strategy["rule_stack"], rules_config, 
-                edge_score_weights, symbol, period_start, test_start, test_end
+                edge_score_weights, symbol, period_start, test_start, test_end, sliced_test_market_data
             )
             
             if oos_performance and oos_performance["total_trades"] >= walk_forward_config.min_trades_per_period:
                 oos_results.append(oos_performance)
-                logger.info(f"Period {i+1} OOS result: {oos_performance['total_trades']} trades, "
-                           f"EdgeScore: {oos_performance['edge_score']:.3f}")
             else:
-                logger.info(f"Period {i+1} insufficient trades or invalid performance, skipping")
+                logger.debug(f"Period {i+1} insufficient trades, skipping")
         
         # Final metrics come from concatenated out-of-sample periods only
         if not oos_results:
@@ -394,7 +420,8 @@ class Backtester:
         symbol: str,
         period_start: pd.Timestamp,
         test_start: pd.Timestamp, 
-        test_end: pd.Timestamp
+        test_end: pd.Timestamp,
+        market_data: Optional[pd.DataFrame] = None
     ) -> Optional[Dict[str, Any]]:
         """Backtest a single strategy on out-of-sample test data."""
         try:
@@ -405,7 +432,7 @@ class Backtester:
             # Apply context filters if any are defined
             if rules_config.context_filters:
                 context_signals = self._apply_context_filters(
-                    test_data, rules_config.context_filters, symbol, None
+                    test_data, rules_config.context_filters, symbol, market_data
                 )
                 
                 # If no favorable context periods, skip
@@ -488,9 +515,6 @@ class Backtester:
         # Use the rule stack from the first period (they should all be similar)
         representative_rule_stack = oos_results[0]["rule_stack"]
         
-        logger.info(f"Consolidated OOS results for {symbol}: {len(oos_results)} periods, "
-                   f"{total_trades} total trades, EdgeScore: {avg_edge_score:.3f}")
-        
         return {
             "symbol": symbol,
             "rule_stack": representative_rule_stack,
@@ -534,20 +558,20 @@ class Backtester:
         if in_sample:
             logger.warning("USING IN-SAMPLE optimization. Results are NOT reliable for live trading!")
             return self._legacy_in_sample_optimization(
-                price_data, rules_config, symbol, freeze_date, edge_score_weights, config
+                price_data, rules_config, symbol, freeze_date, edge_score_weights, config, market_data
             )
         
         # DEFAULT: Professional walk-forward analysis
         if config and config.walk_forward.enabled:
             logger.info(f"Using walk-forward analysis for {symbol}")
             return self.walk_forward_backtest(
-                price_data, config.walk_forward, rules_config, symbol, edge_score_weights, config
+                price_data, config.walk_forward, rules_config, symbol, edge_score_weights, config, market_data
             )
         else:
             # For MVP: Fall back to in-sample if walk-forward not enabled
             logger.warning(f"Walk-forward analysis disabled for {symbol}, using in-sample optimization")
             return self._legacy_in_sample_optimization(
-                price_data, rules_config, symbol, freeze_date, edge_score_weights, config
+                price_data, rules_config, symbol, freeze_date, edge_score_weights, config, market_data
             )
 
     def _generate_time_based_exits(self, entry_signals: pd.Series, hold_period: int) -> pd.Series:
@@ -618,9 +642,12 @@ class Backtester:
             logger.error(f"Error executing rule '{rule_type}' with params {rule_params}: {e}")
             raise ValueError(f"Rule '{rule_type}' failed execution") from e
 
-        # Always log signal count for debugging
+        # Log only if signal count is unusually low (potential issue)
         signal_count = entry_signals.sum()
-        logger.info(f"Rule '{rule_type}' generated {signal_count} signals on {len(price_data)} data points")
+        if signal_count == 0:
+            logger.debug(f"Rule '{rule_type}' generated no signals on {len(price_data)} data points")
+        elif signal_count < 5:
+            logger.debug(f"Rule '{rule_type}' generated only {signal_count} signals on {len(price_data)} data points")
 
         return entry_signals
 
@@ -884,9 +911,10 @@ class Backtester:
                 return pd.Series(False, index=stock_data.index)
         
         combined_count = int(combined_signals.sum())
-        logger.info(f"Combined context filters for {symbol}: "
-                   f"{combined_count}/{len(combined_signals)} days pass "
-                   f"({combined_count/len(combined_signals)*100:.1f}%)")
+        # Only log if filter pass rate is unusually low
+        pass_rate = combined_count/len(combined_signals)*100
+        if pass_rate < 20:
+            logger.debug(f"Low filter pass rate for {symbol}: {pass_rate:.1f}% ({combined_count}/{len(combined_signals)} days)")
         
         return combined_signals
 

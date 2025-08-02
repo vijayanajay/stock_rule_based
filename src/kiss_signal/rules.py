@@ -752,37 +752,19 @@ def market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series:
         >>> bullish_periods = market_above_sma(nifty_data, period=50)
         >>> print(f"Market bullish {bullish_periods.sum()} out of {len(bullish_periods)} days")
     """
-    # DEBUG: Add comprehensive logging to trace the issue
-    logger.info(f"DEBUG market_above_sma called with period={period}")
-    logger.info(f"DEBUG market_data shape: {market_data.shape}")
-    logger.info(f"DEBUG market_data columns: {list(market_data.columns)}")
-    logger.info(f"DEBUG market_data index type: {type(market_data.index)}")
-    if not market_data.empty:
-        logger.info(f"DEBUG market_data date range: {market_data.index.min()} to {market_data.index.max()}")
-    
     # Fix: Ensure date column is set as index if it exists as a column
     if 'date' in market_data.columns and not isinstance(market_data.index, pd.DatetimeIndex):
-        logger.info("DEBUG Converting date column to index for proper alignment")
         market_data = market_data.copy()
         market_data['date'] = pd.to_datetime(market_data['date'], format='mixed')
         market_data = market_data.set_index('date')
-        logger.info(f"DEBUG After conversion - index type: {type(market_data.index)}")
-        logger.info(f"DEBUG After conversion - date range: {market_data.index.min()} to {market_data.index.max()}")
     elif 'index' in market_data.columns and not isinstance(market_data.index, pd.DatetimeIndex):
         # Handle case where reset_index created 'index' column
-        logger.info("DEBUG Converting index column to datetime index for proper alignment")
         market_data = market_data.copy()
         market_data['date'] = pd.to_datetime(market_data['index'], format='mixed')
         market_data = market_data.drop(columns=['index']).set_index('date')
-        logger.info(f"DEBUG After conversion - index type: {type(market_data.index)}")
-        logger.info(f"DEBUG After conversion - date range: {market_data.index.min()} to {market_data.index.max()}")
     
-    # Validate required columns BEFORE accessing them
+    # Validate required columns
     _validate_ohlcv_columns(market_data, ['close'])
-    
-    # Now safe to access close column for debugging
-    if not market_data.empty:
-        logger.info(f"DEBUG market_data sample close prices: {market_data['close'].head().tolist()}")
     
     if period <= 0:
         raise ValueError(f"SMA period must be positive, got {period}")
@@ -797,11 +779,6 @@ def market_above_sma(market_data: pd.DataFrame, period: int = 50) -> pd.Series:
     
     # Market is bullish when price > SMA
     bullish_signals = market_data['close'] > sma
-    
-    signal_count = bullish_signals.sum()
-    total_periods = len(bullish_signals)
-    logger.info(f"DEBUG Market above {period}-day SMA: {signal_count}/{total_periods} days "
-                f"({signal_count/total_periods*100:.1f}%)")
     
     return bullish_signals.fillna(False)
 

@@ -33,10 +33,14 @@ def _format_new_buys_table(new_signals: List[Dict[str, Any]]) -> str:
 
     header = "| Ticker | Recommended Buy Date | Entry Price | Rule Stack | Edge Score |\n"
     separator = "|:-------|:---------------------|:------------|:-----------|:-----------|\n"
-    rows = [
-        f"| {s['ticker']} | {s['date']} | {s['entry_price']:.2f} | {s['rule_stack']} | {s['edge_score']:.2f} |"
-        for s in new_signals
-    ]
+    rows = []
+    for s in new_signals:
+        entry_price_str = f"{s['entry_price']:.2f}" if s.get('entry_price') is not None else "N/A"
+        edge_score_str = f"{s['edge_score']:.2f}" if s.get('edge_score') is not None else "N/A"
+        rule_stack_str = s.get('rule_stack', 'N/A') or 'N/A'
+        rows.append(
+            f"| {s['ticker']} | {s['date']} | {entry_price_str} | {rule_stack_str} | {edge_score_str} |"
+        )
     return header + separator + "\n".join(rows)
 
 
@@ -51,11 +55,12 @@ def _format_open_positions_table(
     separator = "|:-------|:-----------|:------------|:--------------|:---------|:----------------------|:-------------|\n"
     rows = []
     for pos in open_positions:
+        entry_price_str = f"{pos['entry_price']:.2f}" if pos.get('entry_price') is not None else "N/A"
         current_price_str = f"{pos['current_price']:.2f}" if pos.get('current_price') is not None else "N/A"
         return_pct_str = f"{pos['return_pct']:+.2f}%" if pos.get('return_pct') is not None else "N/A"
         nifty_return_pct_str = f"{pos['nifty_return_pct']:+.2f}%" if pos.get('nifty_return_pct') is not None else "N/A"
         rows.append(
-            f"| {pos['symbol']} | {pos['entry_date']} | {pos['entry_price']:.2f} | "
+            f"| {pos['symbol']} | {pos['entry_date']} | {entry_price_str} | "
             f"{current_price_str} | {return_pct_str} | "
             f"{nifty_return_pct_str} | {pos['days_held']} / {hold_period} |"
         )
