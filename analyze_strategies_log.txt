@@ -1,4 +1,4 @@
-[2025-08-02 01:36:35] INFO     === KISS Signal CLI Run Started ===                                                      
+[2025-08-02 09:05:57] INFO     === KISS Signal CLI Run Started ===                                                      
 Analyzing aggregated strategy performance...
                       INFO     Analyzed 3 unique strategy+config combinations from 9 individual records                 
 ✅ Strategy performance analysis saved to: strategy_performance_report.csv

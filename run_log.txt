@@ -1,4 +1,4 @@
-[2025-08-02 01:36:09] INFO     === KISS Signal CLI Run Started ===                                                      
+[2025-08-02 09:05:43] INFO     === KISS Signal CLI Run Started ===                                                      
 ╭───────────────────────────────────────────────────── QuickEdge ──────────────────────────────────────────────────────╮
 │ KISS Signal CLI                                                                                                      │
 │ Keep-It-Simple Data Foundation                                                                                       │
@@ -8,57 +8,56 @@
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
                       INFO     Loaded 13 symbols from universe                                                          
-                      INFO     Refreshing 13 symbols                                                                    
-[2025-08-02 01:36:19] INFO     Successfully refreshed 13/13 symbols                                                     
+                      INFO     All symbols are fresh, no refresh needed                                                 
+                      INFO     Successfully refreshed 0/0 symbols                                                       
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 13 symbols from universe                                                          
                       INFO     Backtester initialized: hold_period=20, min_trades=10                                    
-                      INFO     Downloading fresh data for ^NSEI                                                         
                       INFO     Loaded market data for ^NSEI                                                             
-                      WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
+⠋ Analyzing RELIANCE (1/13)...[2025-08-02 09:05:44] WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
 ⠋ Analyzing RELIANCE (1/13)...                      INFO     Testing 3 individual rules for RELIANCE                                                  
-⠋ Analyzing RELIANCE (1/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
-⠋ Analyzing RELIANCE (1/13)...[2025-08-02 01:36:20] WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
-⠋ Analyzing INFY (2/13)...                      INFO     Testing 3 individual rules for INFY                                                      
-⠋ Analyzing INFY (2/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠋ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
-⠋ Analyzing TCS (3/13)...                      INFO     Testing 3 individual rules for TCS                                                       
-⠋ Analyzing TCS (3/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠋ Analyzing TCS (3/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
-⠋ Analyzing HDFCBANK (4/13)...                      INFO     Testing 3 individual rules for HDFCBANK                                                  
-⠋ Analyzing HDFCBANK (4/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠋ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
-⠋ Analyzing ICICIBANK (5/13)...                      INFO     Testing 3 individual rules for ICICIBANK                                                 
-⠋ Analyzing ICICIBANK (5/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠙ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
-⠙ Analyzing SBIN (6/13)...⠙ Analyzing SBIN (6/13)...                      INFO     Testing 3 individual rules for SBIN                                                      
-⠙ Analyzing SBIN (6/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠙ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
-⠙ Analyzing WIPRO (7/13)...                      INFO     Testing 3 individual rules for WIPRO                                                     
-⠙ Analyzing WIPRO (7/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠙ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
-⠙ Analyzing HCLTECH (8/13)...                      INFO     Testing 3 individual rules for HCLTECH                                                   
-⠙ Analyzing HCLTECH (8/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠙ Analyzing HCLTECH (8/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
-⠙ Analyzing TECHM (9/13)...                      INFO     Testing 3 individual rules for TECHM                                                     
-⠙ Analyzing TECHM (9/13)...                      INFO     find_optimal_strategies completed in 0.00s                                               
-⠙ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
-⠙ Analyzing LTIM (10/13)...                      INFO     Testing 3 individual rules for LTIM                                                      
-⠙ Analyzing LTIM (10/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠙ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
-⠙ Analyzing BHARTIARTL (11/13)...                      INFO     Testing 3 individual rules for BHARTIARTL                                                
-⠙ Analyzing BHARTIARTL (11/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠙ Analyzing BHARTIARTL (11/13)...                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
-⠙ Analyzing KOTAKBANK (12/13)...                      INFO     Testing 3 individual rules for KOTAKBANK                                                 
-⠹ Analyzing KOTAKBANK (12/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠹ Analyzing KOTAKBANK (12/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
-⠹ Analyzing AXISBANK (13/13)...                      INFO     Testing 3 individual rules for AXISBANK                                                  
-⠹ Analyzing AXISBANK (13/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
-⠹ Analyzing AXISBANK (13/13)...⠹ Analyzing AXISBANK (13/13)...⠹ Analyzing AXISBANK (13/13)...
+⠋ Analyzing RELIANCE (1/13)...                      INFO     find_optimal_strategies completed in 0.13s                                               
+⠙ Analyzing RELIANCE (1/13)...⠙ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
+⠙ Analyzing INFY (2/13)...                      INFO     Testing 3 individual rules for INFY                                                      
+⠙ Analyzing INFY (2/13)...                      INFO     find_optimal_strategies completed in 0.00s                                               
+⠙ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
+⠹ Analyzing TCS (3/13)...                      INFO     Testing 3 individual rules for TCS                                                       
+⠹ Analyzing TCS (3/13)...                      INFO     find_optimal_strategies completed in 0.00s                                               
+⠹ Analyzing TCS (3/13)...⠹ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
+⠹ Analyzing HDFCBANK (4/13)...                      INFO     Testing 3 individual rules for HDFCBANK                                                  
+⠹ Analyzing HDFCBANK (4/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
+⠹ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
+⠸ Analyzing ICICIBANK (5/13)...                      INFO     Testing 3 individual rules for ICICIBANK                                                 
+⠸ Analyzing ICICIBANK (5/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
+⠸ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
+⠸ Analyzing SBIN (6/13)...⠸ Analyzing SBIN (6/13)...                      INFO     Testing 3 individual rules for SBIN                                                      
+⠸ Analyzing SBIN (6/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
+⠸ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
+⠼ Analyzing WIPRO (7/13)...                      INFO     Testing 3 individual rules for WIPRO                                                     
+⠼ Analyzing WIPRO (7/13)...                      INFO     find_optimal_strategies completed in 0.00s                                               
+⠼ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
+⠼ Analyzing HCLTECH (8/13)...                      INFO     Testing 3 individual rules for HCLTECH                                                   
+⠼ Analyzing HCLTECH (8/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
+⠼ Analyzing HCLTECH (8/13)...⠼ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
+⠴ Analyzing TECHM (9/13)...                      INFO     Testing 3 individual rules for TECHM                                                     
+⠴ Analyzing TECHM (9/13)...                      INFO     find_optimal_strategies completed in 0.00s                                               
+⠴ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
+⠴ Analyzing LTIM (10/13)...                      INFO     Testing 3 individual rules for LTIM                                                      
+⠴ Analyzing LTIM (10/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
+⠴ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
+⠦ Analyzing BHARTIARTL (11/13)...                      INFO     Testing 3 individual rules for BHARTIARTL                                                
+⠦ Analyzing BHARTIARTL (11/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
+⠦ Analyzing BHARTIARTL (11/13)...⠦ Analyzing KOTAKBANK (12/13)...                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
+⠧ Analyzing KOTAKBANK (12/13)...                      INFO     Testing 3 individual rules for KOTAKBANK                                                 
+⠧ Analyzing KOTAKBANK (12/13)...                      INFO     find_optimal_strategies completed in 0.01s                                               
+⠧ Analyzing KOTAKBANK (12/13)...⠧ Analyzing AXISBANK (13/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
+⠧ Analyzing AXISBANK (13/13)...                      INFO     Testing 3 individual rules for AXISBANK                                                  
+⠧ Analyzing AXISBANK (13/13)...                      INFO     find_optimal_strategies completed in 0.00s                                               
+⠧ Analyzing AXISBANK (13/13)...⠧ Analyzing AXISBANK (13/13)...
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 0 open positions.                                                                
                       INFO     Report generated: reports\signals_2025-08-02.md                                          
 * Report generated: reports\signals_2025-08-02.md
-                      INFO     full_backtest completed in 10.85s                                                        
+                      INFO     full_backtest completed in 1.25s                                                         
