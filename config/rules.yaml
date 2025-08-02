@@ -14,16 +14,16 @@
 preconditions:
   - name: "stock_in_long_term_uptrend"
     type: "price_above_long_sma"
-    description: "Precondition 1: Stock must be above its 200-day SMA (simple long-term uptrend)."
+    description: "Precondition 1: Stock must be above its 100-day SMA - RELAXED FOR TRAILING STOP TESTING"
     params:
-      period: 200
+      period: 100  # RELAXED from 200 to get more candidates for testing
 
   - name: "stock_is_sufficiently_volatile"
     type: "is_volatile"
-    description: "Precondition 2: Stock must have daily volatility ≥2% (ATR/Price) for meaningful risk/reward."
+    description: "Precondition 2: Stock must have daily volatility ≥1% (ATR/Price) - RELAXED FOR TRAILING STOP TESTING"
     params:
       period: 14
-      atr_threshold_pct: 0.02
+      atr_threshold_pct: 0.01  # RELAXED from 0.02 to test trailing stop hypothesis
 
 # -----------------------------------------------------------------------------
 # CONTEXT FILTERS: No change. This is sound. Don't trade against the market.
@@ -82,9 +82,8 @@ exit_conditions:
       slow_period: 20
 
   # --- Profit Target ---
-  - name: "atr_take_profit_3x"
-    type: "take_profit_atr"
-    description: "PROFIT TARGET: Exit if price rises 3x ATR. This still ensures a 2:1 Reward/Risk ratio with our tighter stop."
+  - name: "simple_trailing_stop_5pct"
+    type: "simple_trailing_stop"
+    description: "PROOF OF CONCEPT: Simple 5% trailing stop to test hypothesis"
     params:
-      period: 14
-      multiplier: 3.0 # REDUCED from 4.0. The data shows 4x is too ambitious. Let's bank profits sooner.
+      trail_percent: 0.05

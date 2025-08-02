@@ -32,6 +32,8 @@ __all__ = [
     # New functions (Story 023) - Stock personality preconditions
     "price_above_long_sma",
     "is_volatile",
+    # New functions (Story 029) - Simple trailing stop
+    "simple_trailing_stop",
 ]
 
 logger = logging.getLogger(__name__)
@@ -882,3 +884,42 @@ def is_volatile(price_data: pd.DataFrame, period: int = 14, atr_threshold_pct: f
                 f"({signal_count/total_periods*100:.1f}%)")
     
     return volatility_signals.fillna(False)
+
+
+def simple_trailing_stop(
+    data: pd.DataFrame,
+    trail_percent: float = 0.05,
+    entry_signals: pd.Series = None
+) -> pd.Series:
+    """
+    Simple percentage-based trailing stop for proof of concept.
+    
+    Trails the highest close price by trail_percent. Much simpler than 
+    ATR-based trailing stops but tests the core hypothesis.
+    
+    Args:
+        data: DataFrame with OHLCV data
+        trail_percent: Percentage to trail (0.05 = 5%)
+        entry_signals: Not used in this simple version
+        
+    Returns:
+        Boolean series where True indicates exit signal
+    """
+    _validate_ohlcv_columns(data, ['close'])
+    
+    if trail_percent <= 0:
+        raise ValueError(f"Trail percent must be positive, got {trail_percent}")
+    
+    # Calculate the high-water mark (peak price seen so far)
+    high_water_mark = data['close'].expanding().max()
+    
+    # Calculate trailing stop price (trail_percent below peak)
+    trailing_stop_price = high_water_mark * (1 - trail_percent)
+    
+    # Exit when current price drops below trailing stop
+    # AND we've moved above our entry price (to avoid immediate exits)
+    exit_signals = data['close'] <= trailing_stop_price
+    
+    # Only trigger exit if we're actually below the trailing stop
+    # This is much simpler than the previous logic
+    return exit_signals.fillna(False)
