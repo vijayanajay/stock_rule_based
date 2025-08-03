@@ -389,6 +389,11 @@ def _fetch_best_strategies(db_path: Path, run_timestamp: str, edge_threshold: fl
     try:
         import sqlite3
         
+        # Guard against None db_path to prevent creating a file named "None"
+        if db_path is None:
+            logger.error("Database path cannot be None")
+            return []
+        
         with sqlite3.connect(str(db_path)) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()

@@ -571,10 +571,19 @@ def _validate_database_path(db_path: Path) -> None:
         raise typer.Exit(1)
 
 
-def _save_command_log(log_filename: str) -> None:
+def _save_command_log(log_filename: Optional[str]) -> None:
     """Save command log to file with error handling."""
+    # --- FIX STARTS HERE ---
+    # Add a guard clause to prevent writing a file if the filename is None or empty.
+    if not log_filename:
+        logger.debug("No log filename provided, skipping log file save.")
+        return
+    # --- FIX ENDS HERE ---
+
     try:
         log_path = Path(log_filename)
+        # Ensure the parent directory exists, in case the path includes a directory
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.write_text(console.export_text(clear=False), encoding="utf-8")
         logger.info(f"Log file saved to {log_path}")
     except OSError as log_e:
