@@ -1,4 +1,23 @@
 # KISS Signal CLI - Memory & Learning Log
+## Test Suite Desynchronization: Flawed Invocations and API Drift (2025-08-05)
+- **Issue**: A cascade of test failures originated from multiple structural desynchronizations between the test suite and the application.
+    1.  **Flawed Invocation (`test_cli.py`):** CLI tests were violating Typer's argument parsing rules (global options after commands) and were not self-contained (help tests failing on config loading).
+    2.  **API Drift (`reporter.py`):** The `analyze_strategy_performance` function was not correctly deduplicating strategy results as per its implicit contract. The uniqueness key (`symbol`, `rule_stack`, `config_hash`) was too specific and did not match the user's need to see the single latest result for a given strategy on a stock.
+- **Structural Root Cause**: The test suite was not being maintained in lockstep with the application's API, its framework's specific invocation rules, and its internal data contracts. This represents a failure to treat the test suite as a first-class consumer of the application's code and a misunderstanding of the reporting requirements.
+- **Fix**:
+    1.  Corrected all CLI test invocations to match valid user patterns (global options first). Made help tests self-contained.
+    2.  Modified the deduplication logic in `analyze_strategy_performance` to group by `symbol` and `rule_stack` only, fulfilling the API contract to return only the latest unique strategies regardless of the configuration that found them.
+- **Lesson**: The test suite is a critical part of the application's structure. It must precisely mirror valid user invocation patterns. API contracts (both explicit function signatures and implicit behavioral expectations) and data contracts must be rigorously synchronized between the application and its tests. Reporting queries must accurately reflect the business need for data aggregation and uniqueness.
+
+## Test Suite Desynchronization: Flawed Invocations and API Drift (2025-08-04)
+- **Issue**: A cascade of test failures originated from multiple structural desynchronizations between the test suite and the application.
+    1.  **Flawed Invocation (`test_cli.py`):** Historically, CLI tests failed with `UsageError` (exit code 2) because they violated `Typer`'s argument parsing rules (e.g., global options like `--verbose` placed after commands). Help-text tests were not self-contained and failed on config loading.
+    2.  **API Drift (`test_persistence.py`):** Strategy analysis tests failed because the `reporter.analyze_strategy_performance` function was missing the required deduplication logic, violating its implicit API contract to return only the latest, unique strategies.
+- **Structural Root Cause**: The test suite was not being maintained in lockstep with the application's API, its framework's specific invocation rules, and its internal data contracts. This represents a failure to treat the test suite as a first-class consumer of the application's code.
+- **Fix**:
+    1.  Corrected all CLI test invocations to match valid user patterns (global options first). Made help tests self-contained.
+    2.  Implemented the correct deduplication logic in `analyze_strategy_performance` using a `GROUP BY` and `MAX(id)` subquery to fulfill the API contract.
+- **Lesson**: The test suite is a critical part of the application's structure. It must precisely mirror valid user invocation patterns. API contracts (both explicit function signatures and implicit behavioral expectations) and data contracts (dictionary keys, data types) must be rigorously synchronized between the application and its tests to prevent architectural drift and ensure the test suite remains a reliable safety net.
 
 ## Test Harness Integrity: Flawed Invocation and API Drift (2025-08-02)
 - **Issue**: Multiple test failures were traced to a structural desynchronization between the test suite and the application's API contract.

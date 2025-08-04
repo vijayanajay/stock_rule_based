@@ -98,9 +98,9 @@ class TestReporterCoverageFill:
         
         # Test with None values that should be handled safely
         strategies_with_none = [
-            {'ticker': 'TEST1', 'edge_score': None, 'date': '2023-01-01', 'entry_price': 100.0, 'rule_stack': 'test'},
-            {'ticker': 'TEST2', 'edge_score': 0.8, 'date': '2023-01-02', 'entry_price': None, 'rule_stack': 'test'},
-            {'ticker': 'TEST3', 'edge_score': 0.7, 'date': '2023-01-03', 'entry_price': 110.0, 'rule_stack': None},
+            {'symbol': 'TEST1', 'edge_score': None, 'date': '2023-01-01', 'entry_price': 100.0, 'rule_stack': 'test'},
+            {'symbol': 'TEST2', 'edge_score': 0.8, 'date': '2023-01-02', 'entry_price': None, 'rule_stack': 'test'},
+            {'symbol': 'TEST3', 'edge_score': 0.7, 'date': '2023-01-03', 'entry_price': 110.0, 'rule_stack': None},
         ]
         
         # Should handle None values gracefully with N/A
