@@ -6,6 +6,7 @@ This module handles backtesting of rule combinations and edge score calculation.
 import logging
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -408,7 +409,7 @@ class Backtester:
             logger.warning(f"No valid out-of-sample periods for {symbol}")
             return []
             
-        consolidated_result = self._consolidate_oos_results(oos_results, symbol)
+        consolidated_result = self._consolidate_oos_results(oos_results, symbol, edge_score_weights)
         return [consolidated_result] if consolidated_result else []
     
     def _backtest_single_strategy_oos(
@@ -499,33 +500,216 @@ class Backtester:
     def _consolidate_oos_results(
         self, 
         oos_results: List[Dict[str, Any]], 
-        symbol: str
+        symbol: str,
+        edge_score_weights: Optional[EdgeScoreWeights] = None
     ) -> Optional[Dict[str, Any]]:
-        """Consolidate multiple out-of-sample results into final metrics."""
+        """Consolidate multiple out-of-sample results into final metrics.
+        
+        Uses mathematically correct aggregation:
+        - Win percentage: weighted by trade count (total_wins / total_trades)
+        - Sharpe ratio: trade-weighted average (approximation)
+        - Average return: weighted by trade count
+        - Edge score: recalculated from consolidated metrics
+        """
         if not oos_results:
             return None
             
-        # Simple approach: average the key metrics across periods
+        if edge_score_weights is None:
+            edge_score_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+            
+        # Calculate trade-weighted consolidation
         total_trades = sum(r["total_trades"] for r in oos_results)
-        avg_edge_score = sum(r["edge_score"] for r in oos_results) / len(oos_results)
-        avg_win_pct = sum(r["win_pct"] for r in oos_results) / len(oos_results)
-        avg_sharpe = sum(r["sharpe"] for r in oos_results) / len(oos_results)
-        avg_return = sum(r["avg_return"] for r in oos_results) / len(oos_results)
         
-        # Use the rule stack from the first period (they should all be similar)
-        representative_rule_stack = oos_results[0]["rule_stack"]
+        # Win percentage: total wins / total trades (not simple average)
+        total_wins = sum(r["win_pct"] * r["total_trades"] for r in oos_results)
+        consolidated_win_pct = total_wins / total_trades if total_trades > 0 else 0.0
+        
+        # Sharpe ratio: trade-weighted average (best approximation without individual returns)
+        weighted_sharpe_sum = sum(r["sharpe"] * r["total_trades"] for r in oos_results)
+        consolidated_sharpe = weighted_sharpe_sum / total_trades if total_trades > 0 else 0.0
+        
+        # Average return: trade-weighted average
+        weighted_return_sum = sum(r["avg_return"] * r["total_trades"] for r in oos_results)
+        consolidated_avg_return = weighted_return_sum / total_trades if total_trades > 0 else 0.0
+        
+        # Edge score: recalculate from consolidated metrics
+        consolidated_edge_score = (
+            consolidated_win_pct * edge_score_weights.win_pct + 
+            consolidated_sharpe * edge_score_weights.sharpe
+        )
+        
+        # CRITICAL: Analyze strategy stability across periods
+        # This is one of the most important insights from walk-forward analysis
+        strategy_stability = self._analyze_strategy_stability(oos_results)
         
         return {
             "symbol": symbol,
-            "rule_stack": representative_rule_stack,
-            "edge_score": avg_edge_score,
-            "win_pct": avg_win_pct,
-            "sharpe": avg_sharpe,
+            "rule_stack": strategy_stability["representative_rule_stack"],
+            "rule_stacks_by_period": strategy_stability["rule_stacks_by_period"],  # Preserve all rule stacks
+            "strategy_stability_score": strategy_stability["stability_score"],
+            "strategy_instability_warning": strategy_stability["instability_warning"],
+            "edge_score": consolidated_edge_score,
+            "win_pct": consolidated_win_pct,
+            "sharpe": consolidated_sharpe,
             "total_trades": total_trades,
-            "avg_return": avg_return,
+            "avg_return": consolidated_avg_return,
             "oos_periods": len(oos_results),
             "is_oos": True
         }
+
+    def _analyze_strategy_stability(self, oos_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze strategy stability across walk-forward periods.
+        
+        This is a critical analysis that reveals if optimal strategies change over time,
+        which indicates market regime changes and strategy instability.
+        
+        Args:
+            oos_results: List of out-of-sample results with rule_stacks
+            
+        Returns:
+            Dict containing stability analysis with warning flags
+        """
+        import json
+        
+        if not oos_results:
+            return {
+                "representative_rule_stack": [],
+                "rule_stacks_by_period": [],
+                "stability_score": 0.0,
+                "instability_warning": "No OOS results to analyze"
+            }
+        
+        # Extract rule stacks from each period
+        rule_stacks_by_period = []
+        rule_stack_signatures = []
+        
+        for i, result in enumerate(oos_results):
+            rule_stack = result.get("rule_stack", [])
+            period_start = result.get("oos_period_start", f"Period_{i+1}")
+            trades = result.get("total_trades", 0)
+            
+            # Create a signature for comparison (rule types and key params)
+            signature = self._create_rule_stack_signature(rule_stack)
+            rule_stack_signatures.append(signature)
+            
+            rule_stacks_by_period.append({
+                "period_start": str(period_start),
+                "rule_stack": rule_stack,
+                "signature": signature,
+                "total_trades": trades,
+                "edge_score": result.get("edge_score", 0.0)
+            })
+        
+        # Analyze stability
+        signature_counts = Counter(rule_stack_signatures)
+        total_periods = len(oos_results)
+        most_common_signature = signature_counts.most_common(1)[0]
+        stability_score = most_common_signature[1] / total_periods
+        
+        # Determine representative rule stack (most frequent, trade-weighted if tie)
+        representative_rule_stack = self._select_representative_rule_stack(
+            oos_results, rule_stacks_by_period, signature_counts
+        )
+        
+        # Generate instability warning
+        instability_warning = None
+        if stability_score < 0.7:  # Less than 70% consistency
+            unique_strategies = len(signature_counts)
+            instability_warning = (
+                f"STRATEGY INSTABILITY DETECTED: Optimal strategy changed {unique_strategies} "
+                f"times across {total_periods} periods (stability: {stability_score:.1%}). "
+                f"This indicates market regime changes or overfitting."
+            )
+            
+            # Log critical warning
+            logger.warning(f"Strategy instability for {oos_results[0].get('symbol', 'UNKNOWN')}: "
+                         f"{unique_strategies} different optimal strategies across {total_periods} periods")
+        
+        return {
+            "representative_rule_stack": representative_rule_stack,
+            "rule_stacks_by_period": rule_stacks_by_period,
+            "stability_score": stability_score,
+            "instability_warning": instability_warning
+        }
+    
+    def _create_rule_stack_signature(self, rule_stack: List[Any]) -> str:
+        """Create a signature for rule stack comparison.
+        
+        Args:
+            rule_stack: List of rule definitions
+            
+        Returns:
+            String signature for comparison
+        """
+        if not rule_stack:
+            return "empty"
+            
+        # Extract rule types and key parameters for comparison
+        signature_parts = []
+        for rule in rule_stack:
+            if hasattr(rule, 'type'):
+                rule_type = rule.type
+                # Include key parameters that affect strategy identity
+                if hasattr(rule, 'params') and rule.params:
+                    key_params = {k: v for k, v in rule.params.items() 
+                                if k in ['short', 'long', 'period', 'threshold']}
+                    if key_params:
+                        signature_parts.append(f"{rule_type}({key_params})")
+                    else:
+                        signature_parts.append(rule_type)
+                else:
+                    signature_parts.append(rule_type)
+            elif isinstance(rule, dict):
+                rule_type = rule.get('type', 'unknown')
+                params = rule.get('params', {})
+                key_params = {k: v for k, v in params.items() 
+                            if k in ['short', 'long', 'period', 'threshold']}
+                if key_params:
+                    signature_parts.append(f"{rule_type}({key_params})")
+                else:
+                    signature_parts.append(rule_type)
+            else:
+                signature_parts.append(str(rule))
+                
+        return "|".join(sorted(signature_parts))
+    
+    def _select_representative_rule_stack(
+        self, 
+        oos_results: List[Dict[str, Any]], 
+        rule_stacks_by_period: List[Dict[str, Any]], 
+        signature_counts: Counter
+    ) -> List[Any]:
+        """Select the most representative rule stack.
+        
+        Args:
+            oos_results: Original OOS results
+            rule_stacks_by_period: Processed rule stacks by period  
+            signature_counts: Count of each signature
+            
+        Returns:
+            Most representative rule stack
+        """
+        if not oos_results:
+            return []
+            
+        # Find the most common signature
+        most_common_signature = signature_counts.most_common(1)[0][0]
+        
+        # If there are ties, use trade-weighted selection from the most common signature
+        candidates = [
+            (period_data, result) 
+            for period_data, result in zip(rule_stacks_by_period, oos_results)
+            if period_data["signature"] == most_common_signature
+        ]
+        
+        if not candidates:
+            # Fallback to highest edge score
+            best_result = max(oos_results, key=lambda x: x.get("edge_score", 0))
+            return best_result.get("rule_stack", [])
+        
+        # Select candidate with highest trade count (more reliable)
+        best_candidate = max(candidates, key=lambda x: x[1].get("total_trades", 0))
+        return best_candidate[1].get("rule_stack", [])
 
     @performance_monitor.profile_performance
     def find_optimal_strategies(

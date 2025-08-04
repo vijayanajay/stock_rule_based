@@ -223,8 +223,17 @@ class TestWalkForwardAnalysis:
         assert result["oos_periods"] == 2
         assert result["is_oos"] is True
         
-        # Check simple averages (not weighted)
-        expected_edge = (0.6 + 0.8) / 2  # Simple average
+        # Check trade-weighted consolidation (mathematically correct)
+        # Win pct: (0.7*10 + 0.8*15) / (10+15) = (7+12)/25 = 0.76
+        expected_win_pct = (0.7 * 10 + 0.8 * 15) / 25
+        assert abs(result["win_pct"] - expected_win_pct) < 0.001
+        
+        # Sharpe: trade-weighted average (1.2*10 + 1.5*15) / 25 = (12+22.5)/25 = 1.38
+        expected_sharpe = (1.2 * 10 + 1.5 * 15) / 25
+        assert abs(result["sharpe"] - expected_sharpe) < 0.001
+        
+        # Edge score: recalculated from consolidated metrics (default weights: 0.6 win, 0.4 sharpe)
+        expected_edge = expected_win_pct * 0.6 + expected_sharpe * 0.4
         assert abs(result["edge_score"] - expected_edge) < 0.001
 
     def test_walk_forward_data_validation_success(self, backtester_instance, sample_price_data, sample_rules_config, walk_forward_config):

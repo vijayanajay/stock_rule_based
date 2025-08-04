@@ -1,4 +1,14 @@
 # KISS Signal CLI - Memory & Learning Log
+## Test Harness Integrity: API Contract Drift and Flawed Test Structure (2025-08-06)
+- **Issue**: A cascade of test failures originated from a structural desynchronization between the test suite and the application's API contract and testing conventions.
+    1.  **API Drift (`test_backtester_coverage.py`):** A test for `_consolidate_oos_results` failed because it expected a simple pass-through of the `edge_score` for a single-item list, but the function's contract is to *always* recalculate the score from underlying metrics.
+    2.  **Flawed Test Structure (`test_strategy_instability.py`):** A test was written as a script using `return` and a `__main__` block for assertions, which is incompatible with pytest's `assert`-based discovery and execution, rendering the test non-functional within the test runner.
+- **Structural Root Cause**: The test suite was not being maintained in lockstep with the application's API contracts and the testing framework's conventions. This represents a failure to treat the test suite as a first-class consumer of the application's code and a reliable validation tool.
+- **Fix**:
+    1.  Corrected the assertion in `test_consolidate_oos_results_single_period` to validate the *recalculated* edge score, aligning the test with the function's actual API contract.
+    2.  Refactored `test_strategy_instability.py` into proper pytest functions using `assert` statements, making the test discoverable and functional.
+- **Lesson**: The test suite is a critical part of the application's structure. API contracts (both explicit function signatures and implicit behavioral expectations) must be rigorously synchronized between the application and its tests. Tests themselves must adhere to the structure and conventions of the chosen testing framework to be effective.
+
 ## Test Suite Desynchronization: Flawed Invocations and API Drift (2025-08-05)
 - **Issue**: A cascade of test failures originated from multiple structural desynchronizations between the test suite and the application.
     1.  **Flawed Invocation (`test_cli.py`):** CLI tests were violating Typer's argument parsing rules (global options after commands) and were not self-contained (help tests failing on config loading).

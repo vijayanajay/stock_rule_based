@@ -268,8 +268,11 @@ class TestBacktesterCoverageFill:
         
         assert result is not None
         assert result['symbol'] == 'TEST'
-        assert result['edge_score'] == 0.8
         assert result['total_trades'] == 10
+        # The function recalculates the edge score from win_pct and sharpe.
+        # With default weights (0.6, 0.4): (0.6 * 0.6) + (0.9 * 0.4) = 0.36 + 0.36 = 0.72
+        expected_edge_score = (0.6 * 0.6) + (0.9 * 0.4)
+        assert abs(result['edge_score'] - expected_edge_score) < 0.001
     
     def test_consolidate_oos_results_multiple_periods(self, backtester):
         """Test _consolidate_oos_results with multiple OOS periods."""
@@ -299,9 +302,19 @@ class TestBacktesterCoverageFill:
         assert result is not None
         assert result['symbol'] == 'TEST'
         assert result['total_trades'] == 18  # Sum of trades
-        # Verify weighted averages are calculated
-        assert 0.7 < result['edge_score'] < 0.8
-        assert 0.55 < result['win_pct'] < 0.6
+        
+        # Verify trade-weighted consolidation (mathematically correct)
+        # Win pct: (0.6*10 + 0.55*8) / (10+8) = (6+4.4)/18 = 0.5778
+        expected_win_pct = (0.6 * 10 + 0.55 * 8) / 18
+        assert abs(result['win_pct'] - expected_win_pct) < 0.001
+        
+        # Sharpe: (0.9*10 + 0.8*8) / 18 = (9+6.4)/18 = 0.8556
+        expected_sharpe = (0.9 * 10 + 0.8 * 8) / 18
+        assert abs(result['sharpe'] - expected_sharpe) < 0.001
+        
+        # Edge score: recalculated from consolidated metrics (default weights: 0.6 win, 0.4 sharpe)
+        expected_edge = expected_win_pct * 0.6 + expected_sharpe * 0.4
+        assert abs(result['edge_score'] - expected_edge) < 0.001
     
     def test_walk_forward_backtest_insufficient_trades_per_period(self, backtester, sample_data, rules_config, walk_forward_config):
         """Test walk_forward_backtest filtering out periods with insufficient trades."""
