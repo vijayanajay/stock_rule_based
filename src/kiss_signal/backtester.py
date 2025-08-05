@@ -426,6 +426,11 @@ class Backtester:
     ) -> Optional[Dict[str, Any]]:
         """Backtest a single strategy on out-of-sample test data."""
         try:
+            # Normalize column names to lowercase for consistent data contract
+            test_data = test_data.copy()
+            if len(test_data.columns) > 0:
+                test_data.columns = test_data.columns.str.lower()
+                
             # Apply the same logic as _backtest_combination but for testing only
             if edge_score_weights is None:
                 edge_score_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
@@ -461,7 +466,7 @@ class Backtester:
             
             # Create vectorbt portfolio
             portfolio = vbt.Portfolio.from_signals(
-                test_data["Close"],
+                test_data["close"],
                 entries=entry_signals,
                 exits=exit_signals,
                 init_cash=self.initial_capital,

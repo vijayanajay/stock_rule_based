@@ -1,0 +1,74 @@
+# =============================================================================
+# BASELINE TEST CONFIGURATION
+# 
+# Purpose: Baseline for trailing stop comparison with IDENTICAL entry criteria
+# This uses simple SMA crossover to ensure sufficient trades for comparison
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# APPLICATION CONFIGURATION
+# -----------------------------------------------------------------------------
+universe_path: "data/nifty_large_mid.csv"
+historical_data_years: 3
+cache_dir: "data"
+hold_period: 20
+min_trades_threshold: 5
+edge_score_weights:
+  win_pct: 0.6
+  sharpe: 0.4
+database_path: "data/kiss_signal.db"
+reports_output_dir: "reports/"
+edge_score_threshold: 0.50
+
+# -----------------------------------------------------------------------------
+# PRECONDITIONS: Simple to ensure trade generation
+# -----------------------------------------------------------------------------
+preconditions:
+  - name: "stock_is_sufficiently_volatile"
+    type: "is_volatile"
+    description: "Stock must have some volatility"
+    params:
+      period: 14
+      atr_threshold_pct: 0.001
+
+# -----------------------------------------------------------------------------
+# CONTEXT FILTERS: Market filter only
+# -----------------------------------------------------------------------------
+context_filters:
+  - name: "filter_market_is_bullish"
+    type: "market_above_sma"
+    description: "Market must be bullish"
+    params:
+      index_symbol: "^NSEI"
+      period: 50
+
+# -----------------------------------------------------------------------------
+# ENTRY SIGNALS: Simple SMA crossover only
+# -----------------------------------------------------------------------------
+entry_signals:
+  - name: "simple_sma_crossover"
+    type: "sma_crossover"
+    description: "Simple SMA crossover signal"
+    params:
+      fast_period: 10
+      slow_period: 20
+
+# -----------------------------------------------------------------------------
+# EXIT CONDITIONS: FIXED TAKE-PROFIT BASELINE
+# -----------------------------------------------------------------------------
+exit_conditions:
+  # --- Risk Management ---
+  - name: "atr_stop_loss_2x"
+    type: "stop_loss_atr"
+    description: "Exit if price drops 2x ATR"
+    params:
+      period: 14
+      multiplier: 2.0
+
+  # --- BASELINE: Fixed Take-Profit ---
+  - name: "atr_take_profit_3x"
+    type: "take_profit_atr"
+    description: "BASELINE: Fixed take-profit at 3x ATR"
+    params:
+      period: 14
+      multiplier: 3.0

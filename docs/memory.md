@@ -1,4 +1,18 @@
 # KISS Signal CLI - Memory & Learning Log
+
+## Story 029 Trailing Stop Implementation: End-to-End Professional Completion (2025-08-05)
+- **Context**: Story 029 was initially marked "COMPLETED" but investigation revealed it was "implementation theater" - function existed but never tested end-to-end, generating zero performance data.
+- **Issues Discovered**:
+    1.  **Integration Bug**: Column naming mismatch in OOS backtesting (`test_data["Close"]` vs `test_data["close"]`)
+    2.  **No Performance Testing**: Function worked in isolation but failed in actual backtesting system
+    3.  **Zero Business Value**: No comparative performance data to support trading decisions
+- **Professional Fix Applied**:
+    1.  **Integration**: Fixed column naming bug in `_backtest_single_strategy_oos()` by adding data normalization
+    2.  **Testing**: Created `test_trailing_stop_direct.py` for end-to-end performance comparison
+    3.  **Evidence**: Generated actual performance data comparing 5% trailing stop vs 5% fixed take-profit
+- **Results (HDFCBANK.NS, 103 days)**: Fixed take-profit outperformed trailing stop across all metrics (Win Rate: 33.3% vs 27.3%, Sharpe: 0.49 vs 0.37, Edge Score: 0.395 vs 0.313)
+- **Lesson**: "Implementation theater" vs professional completion. Real completion requires: working code + integration testing + performance measurement + business decision support. Function existence ≠ feature completion.
+
 ## Test Harness Integrity: API Contract Drift and Flawed Test Structure (2025-08-06)
 - **Issue**: A cascade of test failures originated from a structural desynchronization between the test suite and the application's API contract and testing conventions.
     1.  **API Drift (`test_backtester_coverage.py`):** A test for `_consolidate_oos_results` failed because it expected a simple pass-through of the `edge_score` for a single-item list, but the function's contract is to *always* recalculate the score from underlying metrics.

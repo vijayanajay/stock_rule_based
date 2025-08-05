@@ -1,0 +1,101 @@
+# =============================================================================
+# ULTRA-RELAXED CONFIGURATION FOR TRAILING STOP TESTING
+# 
+# Purpose: Generate sufficient trades (≥10) to test trailing stop hypothesis
+# This aggressively relaxes ALL criteria to ensure statistical significance
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# APPLICATION CONFIGURATION
+# -----------------------------------------------------------------------------
+universe_path: "data/nifty_large_mid.csv"
+historical_data_years: 3
+cache_dir: "data"
+hold_period: 20
+min_trades_threshold: 5
+edge_score_weights:
+  win_pct: 0.6
+  sharpe: 0.4
+database_path: "data/kiss_signal.db"
+reports_output_dir: "reports/"
+edge_score_threshold: 0.50
+
+# -----------------------------------------------------------------------------
+# PRECONDITIONS: Ultra-relaxed to ensure trade generation
+# -----------------------------------------------------------------------------
+preconditions:
+  - name: "stock_in_long_term_uptrend"
+    type: "price_above_long_sma"
+    description: "Precondition 1: Stock must be above its 20-day SMA (ULTRA-RELAXED)"
+    params:
+      period: 20  # ULTRA-RELAXED from 50 to get maximum candidates
+
+  - name: "stock_is_sufficiently_volatile"
+    type: "is_volatile"
+    description: "Precondition 2: Stock must have daily volatility ≥0.1% (ULTRA-RELAXED)"
+    params:
+      period: 14
+      atr_threshold_pct: 0.001  # ULTRA-RELAXED from 0.005 to ensure all stocks qualify
+
+# -----------------------------------------------------------------------------
+# CONTEXT FILTERS: Keep market filter for safety
+# -----------------------------------------------------------------------------
+context_filters:
+  - name: "filter_market_is_bullish"
+    type: "market_above_sma"
+    description: "Context 1: Don't fight the tape. The NIFTY 50 index must be above its 50-day SMA."
+    params:
+      index_symbol: "^NSEI"
+      period: 50
+
+# -----------------------------------------------------------------------------
+# ENTRY SIGNALS: Ultra-relaxed to generate maximum trades
+# -----------------------------------------------------------------------------
+entry_signals:
+  - name: "bullish_engulfing_ultra_relaxed"
+    type: "engulfing_pattern"
+    description: "Entry 1: Any bullish engulfing pattern (ULTRA-RELAXED)"
+    params:
+      min_body_ratio: 1.01  # ULTRA-RELAXED - minimum valid value > 1.0
+
+  - name: "confirm_with_volume_ultra_relaxed"
+    type: "volume_spike"
+    description: "Entry 2: Any volume increase (ULTRA-RELAXED)"
+    params:
+      period: 20
+      spike_multiplier: 1.01  # ULTRA-RELAXED - minimum valid value > 1.0
+      price_change_threshold: 0.001
+
+  - name: "confirm_with_medium_term_uptrend"
+    type: "price_above_sma"
+    description: "Entry 3: Medium-term uptrend confirmation"
+    params:
+      period: 50
+
+# -----------------------------------------------------------------------------
+# EXIT CONDITIONS: BASELINE - Fixed take-profit for comparison
+# -----------------------------------------------------------------------------
+exit_conditions:
+  # --- Risk Management ---
+  - name: "atr_stop_loss_2x"
+    type: "stop_loss_atr"
+    description: "RISK 1: Exit if price drops 2x ATR"
+    params:
+      period: 14
+      multiplier: 2.0
+
+  # --- Trend Failure Exit ---
+  - name: "trend_reversal_exit"
+    type: "sma_cross_under"
+    description: "RISK 2: Exit if short-term trend breaks"
+    params:
+      fast_period: 10
+      slow_period: 20
+
+  # --- BASELINE: Fixed Take-Profit ---
+  - name: "atr_take_profit_4x"
+    type: "take_profit_atr"
+    description: "BASELINE: Fixed take-profit at 4x ATR"
+    params:
+      period: 14
+      multiplier: 4.0

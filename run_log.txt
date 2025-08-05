@@ -1,4 +1,4 @@
-[2025-08-05 15:26:24] INFO     === KISS Signal CLI Run Started ===                                                      
+[2025-08-05 18:22:18] INFO     === KISS Signal CLI Run Started ===                                                      
 ╭───────────────────────────────────────────────────── QuickEdge ──────────────────────────────────────────────────────╮
 │ KISS Signal CLI                                                                                                      │
 │ Keep-It-Simple Data Foundation                                                                                       │
@@ -9,617 +9,116 @@
 [2/4] Skipping data refresh (freeze mode).
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 13 symbols from universe                                                          
-                      INFO     Backtester initialized: hold_period=20, min_trades=10                                    
-                      INFO     Loaded market data for ^NSEI                                                             
-                      INFO     Using walk-forward analysis for RELIANCE                                                 
+                      INFO     Backtester initialized: hold_period=20, min_trades=5                                     
+                      WARNING  Walk-forward analysis disabled for RELIANCE, using in-sample optimization                
 ⠋ Analyzing RELIANCE (1/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠋ Analyzing RELIANCE (1/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
 ⠋ Analyzing RELIANCE (1/13)...                      WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
-⠋ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...[2025-08-05 15:26:35] WARNING  Strategy 'strong_bullish_engulfing' on 'RELIANCE' generated only 1 trades, below         
-                               threshold of 10.                                                                         
-⠴ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠴ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'RELIANCE' generated only 1 trades, below      
-                               threshold of 10.                                                                         
-⠴ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'RELIANCE' generated only 1 trades, below 
-                               threshold of 10.                                                                         
-⠦ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
-⠦ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'RELIANCE' generated only 2 trades, below         
-                               threshold of 10.                                                                         
-⠦ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'RELIANCE' generated only 0 trades, below      
-                               threshold of 10.                                                                         
-⠦ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠦ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'RELIANCE' generated only 1 trades, below 
-                               threshold of 10.                                                                         
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠧ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  Could not infer frequency for RELIANCE. Forcing daily frequency ('D').                   
-⠧ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'RELIANCE' generated only 4 trades, below         
-                               threshold of 10.                                                                         
-⠧ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'RELIANCE' generated only 0 trades, below      
-                               threshold of 10.                                                                         
-⠧ Analyzing RELIANCE (1/13)...                      INFO     Stock RELIANCE passed all 2 precondition checks                                          
-⠧ Analyzing RELIANCE (1/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'RELIANCE' generated only 5 trades, below 
-                               threshold of 10.                                                                         
-⠇ Analyzing RELIANCE (1/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠇ Analyzing RELIANCE (1/13)...                      WARNING  No valid out-of-sample periods for RELIANCE                                              
-⠇ Analyzing RELIANCE (1/13)...                      INFO     find_optimal_strategies completed in 11.05s                                              
-⠇ Analyzing RELIANCE (1/13)...                      INFO     Using walk-forward analysis for INFY                                                     
-⠇ Analyzing INFY (2/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠇ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
-⠇ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠇ Analyzing INFY (2/13)...⠇ Analyzing INFY (2/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'INFY' generated only 0 trades, below threshold of
-                               10.                                                                                      
-⠇ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠇ Analyzing INFY (2/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'INFY' generated only 0 trades, below threshold
-                               of 10.                                                                                   
-⠇ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠇ Analyzing INFY (2/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'INFY' generated only 1 trades, below     
-                               threshold of 10.                                                                         
-⠇ Analyzing INFY (2/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠇ Analyzing INFY (2/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
-⠏ Analyzing INFY (2/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠏ Analyzing INFY (2/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
-⠏ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠏ Analyzing INFY (2/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'INFY' generated only 0 trades, below threshold of
-                               10.                                                                                      
-⠏ Analyzing INFY (2/13)...⠏ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠏ Analyzing INFY (2/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'INFY' generated only 1 trades, below threshold
-                               of 10.                                                                                   
-⠏ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠏ Analyzing INFY (2/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'INFY' generated only 1 trades, below     
-                               threshold of 10.                                                                         
-⠏ Analyzing INFY (2/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠏ Analyzing INFY (2/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
-⠏ Analyzing INFY (2/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠋ Analyzing INFY (2/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠋ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
-⠋ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠋ Analyzing INFY (2/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'INFY' generated only 3 trades, below threshold of
-                               10.                                                                                      
-⠋ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠋ Analyzing INFY (2/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'INFY' generated only 1 trades, below threshold
-                               of 10.                                                                                   
-⠋ Analyzing INFY (2/13)...                      INFO     Stock INFY passed all 2 precondition checks                                              
-⠋ Analyzing INFY (2/13)...⠋ Analyzing INFY (2/13)...[2025-08-05 15:26:36] WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'INFY' generated only 2 trades, below     
-                               threshold of 10.                                                                         
-⠋ Analyzing INFY (2/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠋ Analyzing INFY (2/13)...                      WARNING  No valid out-of-sample periods for INFY                                                  
-⠋ Analyzing INFY (2/13)...                      INFO     find_optimal_strategies completed in 0.21s                                               
-⠋ Analyzing INFY (2/13)...                      INFO     Using walk-forward analysis for TCS                                                      
-⠋ Analyzing TCS (3/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠋ Analyzing TCS (3/13)...                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
-⠙ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠙ Analyzing TCS (3/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'TCS' generated only 0 trades, below threshold of 
-                               10.                                                                                      
-⠙ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠙ Analyzing TCS (3/13)...                      WARNING  Could not generate entry signals for combo: ['confirm_with_extreme_volume']              
-⠙ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠙ Analyzing TCS (3/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'TCS' generated only 2 trades, below      
-                               threshold of 10.                                                                         
-⠙ Analyzing TCS (3/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠙ Analyzing TCS (3/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠙ Analyzing TCS (3/13)...                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
-⠙ Analyzing TCS (3/13)...⠙ Analyzing TCS (3/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠙ Analyzing TCS (3/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠙ Analyzing TCS (3/13)...                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
-⠙ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠙ Analyzing TCS (3/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'TCS' generated only 3 trades, below threshold of 
-                               10.                                                                                      
-⠹ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠹ Analyzing TCS (3/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'TCS' generated only 2 trades, below threshold 
-                               of 10.                                                                                   
-⠹ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠹ Analyzing TCS (3/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'TCS' generated only 3 trades, below      
-                               threshold of 10.                                                                         
-⠹ Analyzing TCS (3/13)...                      WARNING  No viable strategy found in training period 3                                            
+⠋ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠏ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠙ Analyzing RELIANCE (1/13)...⠹ Analyzing RELIANCE (1/13)...⠸ Analyzing RELIANCE (1/13)...⠼ Analyzing RELIANCE (1/13)...⠴ Analyzing RELIANCE (1/13)...⠦ Analyzing RELIANCE (1/13)...⠧ Analyzing RELIANCE (1/13)...⠇ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...⠋ Analyzing RELIANCE (1/13)...[2025-08-05 18:22:30] INFO     find_optimal_strategies completed in 12.12s                                              
+⠙ Analyzing RELIANCE (1/13)...                      WARNING  Walk-forward analysis disabled for INFY, using in-sample optimization                    
+⠙ Analyzing INFY (2/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠙ Analyzing INFY (2/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠙ Analyzing INFY (2/13)...                      WARNING  Could not infer frequency for INFY. Forcing daily frequency ('D').                       
+⠙ Analyzing INFY (2/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
+⠙ Analyzing INFY (2/13)...                      WARNING  Walk-forward analysis disabled for TCS, using in-sample optimization                     
 ⠹ Analyzing TCS (3/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠹ Analyzing TCS (3/13)...⠹ Analyzing TCS (3/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
 ⠹ Analyzing TCS (3/13)...                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
-⠹ Analyzing TCS (3/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠹ Analyzing TCS (3/13)...⠹ Analyzing TCS (3/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing TCS (3/13)...                      WARNING  Could not infer frequency for TCS. Forcing daily frequency ('D').                        
-⠹ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠹ Analyzing TCS (3/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'TCS' generated only 4 trades, below threshold of 
-                               10.                                                                                      
-⠹ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠸ Analyzing TCS (3/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'TCS' generated only 3 trades, below threshold 
-                               of 10.                                                                                   
-⠸ Analyzing TCS (3/13)...                      INFO     Stock TCS passed all 2 precondition checks                                               
-⠸ Analyzing TCS (3/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'TCS' generated only 2 trades, below      
-                               threshold of 10.                                                                         
-⠸ Analyzing TCS (3/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠸ Analyzing TCS (3/13)...                      WARNING  No valid out-of-sample periods for TCS                                                   
-⠸ Analyzing TCS (3/13)...                      INFO     find_optimal_strategies completed in 0.23s                                               
-⠸ Analyzing TCS (3/13)...⠸ Analyzing HDFCBANK (4/13)...                      INFO     Using walk-forward analysis for HDFCBANK                                                 
-⠸ Analyzing HDFCBANK (4/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠸ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
-⠸ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠸ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'HDFCBANK' generated only 3 trades, below         
-                               threshold of 10.                                                                         
-⠼ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'HDFCBANK' generated only 1 trades, below      
-                               threshold of 10.                                                                         
-⠼ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'HDFCBANK' generated only 5 trades, below 
-                               threshold of 10.                                                                         
-⠼ Analyzing HDFCBANK (4/13)...⠼ Analyzing HDFCBANK (4/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠼ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
-⠴ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠴ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'HDFCBANK' generated only 2 trades, below         
-                               threshold of 10.                                                                         
-⠴ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠴ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'HDFCBANK' generated only 1 trades, below      
-                               threshold of 10.                                                                         
-⠴ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠴ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'HDFCBANK' generated only 3 trades, below 
-                               threshold of 10.                                                                         
-⠴ Analyzing HDFCBANK (4/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠴ Analyzing HDFCBANK (4/13)...⠴ Analyzing HDFCBANK (4/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠴ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
-⠴ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠴ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'HDFCBANK' generated only 1 trades, below         
-                               threshold of 10.                                                                         
-⠦ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠦ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'HDFCBANK' generated only 0 trades, below      
-                               threshold of 10.                                                                         
-⠦ Analyzing HDFCBANK (4/13)...                      INFO     Stock HDFCBANK passed all 2 precondition checks                                          
-⠦ Analyzing HDFCBANK (4/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'HDFCBANK' generated only 2 trades, below 
-                               threshold of 10.                                                                         
-⠦ Analyzing HDFCBANK (4/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠦ Analyzing HDFCBANK (4/13)...                      WARNING  No valid out-of-sample periods for HDFCBANK                                              
-⠦ Analyzing HDFCBANK (4/13)...                      INFO     find_optimal_strategies completed in 0.22s                                               
-⠦ Analyzing HDFCBANK (4/13)...                      INFO     Using walk-forward analysis for ICICIBANK                                                
-⠦ Analyzing ICICIBANK (5/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠦ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
-⠦ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠦ Analyzing ICICIBANK (5/13)...⠦ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'ICICIBANK' generated only 3 trades, below        
-                               threshold of 10.                                                                         
-⠧ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  Could not generate entry signals for combo: ['confirm_with_extreme_volume']              
-⠧ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'ICICIBANK' generated only 2 trades, below
-                               threshold of 10.                                                                         
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
-⠧ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'ICICIBANK' generated only 4 trades, below        
-                               threshold of 10.                                                                         
-⠧ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠧ Analyzing ICICIBANK (5/13)...                      WARNING  Could not generate entry signals for combo: ['confirm_with_extreme_volume']              
-⠇ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'ICICIBANK' generated only 6 trades, below
-                               threshold of 10.                                                                         
-⠇ Analyzing ICICIBANK (5/13)...⠇ Analyzing ICICIBANK (5/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
-⠇ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'ICICIBANK' generated only 2 trades, below        
-                               threshold of 10.                                                                         
-⠇ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  Could not generate entry signals for combo: ['confirm_with_extreme_volume']              
-⠇ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'ICICIBANK' generated only 7 trades, below
-                               threshold of 10.                                                                         
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠇ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
-⠏ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠏ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'ICICIBANK' generated only 2 trades, below        
-                               threshold of 10.                                                                         
-⠏ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠏ Analyzing ICICIBANK (5/13)...                      WARNING  Could not generate entry signals for combo: ['confirm_with_extreme_volume']              
-⠏ Analyzing ICICIBANK (5/13)...                      INFO     Stock ICICIBANK passed all 2 precondition checks                                         
-⠏ Analyzing ICICIBANK (5/13)...⠏ Analyzing ICICIBANK (5/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'ICICIBANK' generated only 7 trades, below
-                               threshold of 10.                                                                         
-⠏ Analyzing ICICIBANK (5/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠏ Analyzing ICICIBANK (5/13)...                      WARNING  No valid out-of-sample periods for ICICIBANK                                             
-⠏ Analyzing ICICIBANK (5/13)...                      INFO     find_optimal_strategies completed in 0.23s                                               
-⠏ Analyzing ICICIBANK (5/13)...                      INFO     Using walk-forward analysis for SBIN                                                     
-⠏ Analyzing SBIN (6/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
-⠏ Analyzing SBIN (6/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠏ Analyzing SBIN (6/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
-⠏ Analyzing SBIN (6/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠏ Analyzing SBIN (6/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠋ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
-⠋ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠋ Analyzing SBIN (6/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'SBIN' generated only 1 trades, below threshold of
-                               10.                                                                                      
-⠋ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠋ Analyzing SBIN (6/13)...                      WARNING  Could not generate entry signals for combo: ['confirm_with_extreme_volume']              
-⠋ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠋ Analyzing SBIN (6/13)...⠋ Analyzing SBIN (6/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'SBIN' generated only 4 trades, below     
-                               threshold of 10.                                                                         
-⠋ Analyzing SBIN (6/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠋ Analyzing SBIN (6/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠋ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
-⠋ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠋ Analyzing SBIN (6/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'SBIN' generated only 3 trades, below threshold of
-                               10.                                                                                      
-⠋ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠋ Analyzing SBIN (6/13)...                      WARNING  Could not generate entry signals for combo: ['confirm_with_extreme_volume']              
-⠋ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠋ Analyzing SBIN (6/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'SBIN' generated only 5 trades, below     
-                               threshold of 10.                                                                         
-⠙ Analyzing SBIN (6/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠙ Analyzing SBIN (6/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠙ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
-⠙ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠙ Analyzing SBIN (6/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'SBIN' generated only 4 trades, below threshold of
-                               10.                                                                                      
-⠙ Analyzing SBIN (6/13)...⠙ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠙ Analyzing SBIN (6/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'SBIN' generated only 1 trades, below threshold
-                               of 10.                                                                                   
-⠙ Analyzing SBIN (6/13)...                      INFO     Stock SBIN passed all 2 precondition checks                                              
-⠙ Analyzing SBIN (6/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'SBIN' generated only 7 trades, below     
-                               threshold of 10.                                                                         
-⠙ Analyzing SBIN (6/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠙ Analyzing SBIN (6/13)...                      WARNING  No valid out-of-sample periods for SBIN                                                  
-⠙ Analyzing SBIN (6/13)...                      INFO     find_optimal_strategies completed in 0.19s                                               
-⠹ Analyzing SBIN (6/13)...                      INFO     Using walk-forward analysis for WIPRO                                                    
-⠹ Analyzing WIPRO (7/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
-⠹ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠹ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'WIPRO' generated only 0 trades, below threshold  
-                               of 10.                                                                                   
-⠹ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠹ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'WIPRO' generated only 0 trades, below         
-                               threshold of 10.                                                                         
-⠹ Analyzing WIPRO (7/13)...⠹ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠹ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'WIPRO' generated only 0 trades, below    
-                               threshold of 10.                                                                         
-⠹ Analyzing WIPRO (7/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠹ Analyzing WIPRO (7/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
-⠹ Analyzing WIPRO (7/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠸ Analyzing WIPRO (7/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠸ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
-⠸ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠸ Analyzing WIPRO (7/13)...[2025-08-05 15:26:37] WARNING  Strategy 'strong_bullish_engulfing' on 'WIPRO' generated only 1 trades, below threshold  
-                               of 10.                                                                                   
-⠸ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠸ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'WIPRO' generated only 3 trades, below         
-                               threshold of 10.                                                                         
-⠸ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠸ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'WIPRO' generated only 2 trades, below    
-                               threshold of 10.                                                                         
-⠸ Analyzing WIPRO (7/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠸ Analyzing WIPRO (7/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠸ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
-⠸ Analyzing WIPRO (7/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠸ Analyzing WIPRO (7/13)...⠸ Analyzing WIPRO (7/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠸ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
-⠼ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠼ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'WIPRO' generated only 2 trades, below threshold  
-                               of 10.                                                                                   
-⠼ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠼ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'WIPRO' generated only 2 trades, below         
-                               threshold of 10.                                                                         
-⠼ Analyzing WIPRO (7/13)...                      INFO     Stock WIPRO passed all 2 precondition checks                                             
-⠼ Analyzing WIPRO (7/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'WIPRO' generated only 0 trades, below    
-                               threshold of 10.                                                                         
-⠼ Analyzing WIPRO (7/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠼ Analyzing WIPRO (7/13)...                      WARNING  No valid out-of-sample periods for WIPRO                                                 
-⠼ Analyzing WIPRO (7/13)...                      INFO     find_optimal_strategies completed in 0.21s                                               
-⠼ Analyzing WIPRO (7/13)...                      INFO     Using walk-forward analysis for HCLTECH                                                  
+⠹ Analyzing TCS (3/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
+⠹ Analyzing TCS (3/13)...                      WARNING  Walk-forward analysis disabled for HDFCBANK, using in-sample optimization                
+⠹ Analyzing HDFCBANK (4/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠹ Analyzing HDFCBANK (4/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠹ Analyzing HDFCBANK (4/13)...                      WARNING  Could not infer frequency for HDFCBANK. Forcing daily frequency ('D').                   
+⠹ Analyzing HDFCBANK (4/13)...                      INFO     Good enough individual rule found: simple_sma_crossover (EdgeScore: 0.639)               
+⠸ Analyzing HDFCBANK (4/13)...                      INFO     find_optimal_strategies completed in 0.04s                                               
+⠸ Analyzing HDFCBANK (4/13)...                      WARNING  Walk-forward analysis disabled for ICICIBANK, using in-sample optimization               
+⠸ Analyzing ICICIBANK (5/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠸ Analyzing ICICIBANK (5/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠸ Analyzing ICICIBANK (5/13)...                      WARNING  Could not infer frequency for ICICIBANK. Forcing daily frequency ('D').                  
+⠸ Analyzing ICICIBANK (5/13)...⠸ Analyzing ICICIBANK (5/13)...[2025-08-05 18:22:31] INFO     Good enough individual rule found: simple_sma_crossover (EdgeScore: 0.908)               
+⠸ Analyzing ICICIBANK (5/13)...                      INFO     find_optimal_strategies completed in 0.04s                                               
+⠸ Analyzing ICICIBANK (5/13)...                      WARNING  Walk-forward analysis disabled for SBIN, using in-sample optimization                    
+⠸ Analyzing SBIN (6/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠸ Analyzing SBIN (6/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠸ Analyzing SBIN (6/13)...                      WARNING  Could not infer frequency for SBIN. Forcing daily frequency ('D').                       
+⠸ Analyzing SBIN (6/13)...                      INFO     Good enough individual rule found: simple_sma_crossover (EdgeScore: 0.880)               
+⠼ Analyzing SBIN (6/13)...                      INFO     find_optimal_strategies completed in 0.04s                                               
+⠼ Analyzing SBIN (6/13)...                      WARNING  Walk-forward analysis disabled for WIPRO, using in-sample optimization                   
+⠼ Analyzing WIPRO (7/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠼ Analyzing WIPRO (7/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠼ Analyzing WIPRO (7/13)...                      WARNING  Could not infer frequency for WIPRO. Forcing daily frequency ('D').                      
+⠼ Analyzing WIPRO (7/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
+⠼ Analyzing WIPRO (7/13)...⠼ Analyzing HCLTECH (8/13)...                      WARNING  Walk-forward analysis disabled for HCLTECH, using in-sample optimization                 
 ⠼ Analyzing HCLTECH (8/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠼ Analyzing HCLTECH (8/13)...⠴ Analyzing HCLTECH (8/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
-⠴ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠴ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'HCLTECH' generated only 3 trades, below threshold
-                               of 10.                                                                                   
-⠴ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠴ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'HCLTECH' generated only 0 trades, below       
-                               threshold of 10.                                                                         
-⠴ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠴ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'HCLTECH' generated only 5 trades, below  
-                               threshold of 10.                                                                         
-⠴ Analyzing HCLTECH (8/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠴ Analyzing HCLTECH (8/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠴ Analyzing HCLTECH (8/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
-⠴ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠴ Analyzing HCLTECH (8/13)...⠦ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'HCLTECH' generated only 1 trades, below threshold
-                               of 10.                                                                                   
-⠦ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠦ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'HCLTECH' generated only 0 trades, below       
-                               threshold of 10.                                                                         
-⠦ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠦ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'HCLTECH' generated only 7 trades, below  
-                               threshold of 10.                                                                         
-⠦ Analyzing HCLTECH (8/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠦ Analyzing HCLTECH (8/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠦ Analyzing HCLTECH (8/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
-⠦ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠦ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'HCLTECH' generated only 2 trades, below threshold
-                               of 10.                                                                                   
-⠧ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠧ Analyzing HCLTECH (8/13)...⠧ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'HCLTECH' generated only 1 trades, below       
-                               threshold of 10.                                                                         
-⠧ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'HCLTECH' generated only 5 trades, below  
-                               threshold of 10.                                                                         
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
-⠧ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠧ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'HCLTECH' generated only 2 trades, below threshold
-                               of 10.                                                                                   
-⠇ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠇ Analyzing HCLTECH (8/13)...⠇ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'HCLTECH' generated only 1 trades, below       
-                               threshold of 10.                                                                         
-⠇ Analyzing HCLTECH (8/13)...                      INFO     Stock HCLTECH passed all 2 precondition checks                                           
-⠇ Analyzing HCLTECH (8/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'HCLTECH' generated only 2 trades, below  
-                               threshold of 10.                                                                         
-⠇ Analyzing HCLTECH (8/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠇ Analyzing HCLTECH (8/13)...                      WARNING  No valid out-of-sample periods for HCLTECH                                               
-⠇ Analyzing HCLTECH (8/13)...                      INFO     find_optimal_strategies completed in 0.29s                                               
-⠇ Analyzing HCLTECH (8/13)...                      INFO     Using walk-forward analysis for TECHM                                                    
-⠇ Analyzing TECHM (9/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠇ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
-⠇ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠇ Analyzing TECHM (9/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'TECHM' generated only 1 trades, below threshold  
-                               of 10.                                                                                   
-⠇ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠇ Analyzing TECHM (9/13)...⠏ Analyzing TECHM (9/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'TECHM' generated only 1 trades, below         
-                               threshold of 10.                                                                         
-⠏ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠏ Analyzing TECHM (9/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'TECHM' generated only 3 trades, below    
-                               threshold of 10.                                                                         
-⠏ Analyzing TECHM (9/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠏ Analyzing TECHM (9/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
-⠏ Analyzing TECHM (9/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠏ Analyzing TECHM (9/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
-⠏ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠏ Analyzing TECHM (9/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'TECHM' generated only 2 trades, below threshold  
-                               of 10.                                                                                   
-⠏ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠏ Analyzing TECHM (9/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'TECHM' generated only 1 trades, below         
-                               threshold of 10.                                                                         
-⠋ Analyzing TECHM (9/13)...⠋ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠋ Analyzing TECHM (9/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'TECHM' generated only 4 trades, below    
-                               threshold of 10.                                                                         
-⠋ Analyzing TECHM (9/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠋ Analyzing TECHM (9/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠋ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
-⠋ Analyzing TECHM (9/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠋ Analyzing TECHM (9/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠋ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
-⠋ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠋ Analyzing TECHM (9/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'TECHM' generated only 0 trades, below threshold  
-                               of 10.                                                                                   
-⠋ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠋ Analyzing TECHM (9/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'TECHM' generated only 0 trades, below         
-                               threshold of 10.                                                                         
-⠙ Analyzing TECHM (9/13)...                      INFO     Stock TECHM passed all 2 precondition checks                                             
-⠙ Analyzing TECHM (9/13)...⠙ Analyzing TECHM (9/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'TECHM' generated only 1 trades, below    
-                               threshold of 10.                                                                         
-⠙ Analyzing TECHM (9/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠙ Analyzing TECHM (9/13)...                      WARNING  No valid out-of-sample periods for TECHM                                                 
-⠙ Analyzing TECHM (9/13)...                      INFO     find_optimal_strategies completed in 0.22s                                               
-⠙ Analyzing TECHM (9/13)...                      INFO     Using walk-forward analysis for LTIM                                                     
-⠙ Analyzing LTIM (10/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠙ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
-⠙ Analyzing LTIM (10/13)...                      INFO     Stock LTIM passed all 2 precondition checks                                              
-⠙ Analyzing LTIM (10/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'LTIM' generated only 2 trades, below threshold of
-                               10.                                                                                      
-⠙ Analyzing LTIM (10/13)...                      INFO     Stock LTIM passed all 2 precondition checks                                              
-⠙ Analyzing LTIM (10/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'LTIM' generated only 1 trades, below threshold
-                               of 10.                                                                                   
-⠹ Analyzing LTIM (10/13)...                      INFO     Stock LTIM passed all 2 precondition checks                                              
-⠹ Analyzing LTIM (10/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'LTIM' generated only 3 trades, below     
-                               threshold of 10.                                                                         
-⠹ Analyzing LTIM (10/13)...⠹ Analyzing LTIM (10/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠹ Analyzing LTIM (10/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
-⠹ Analyzing LTIM (10/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠹ Analyzing LTIM (10/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
-⠹ Analyzing LTIM (10/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠹ Analyzing LTIM (10/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
-⠹ Analyzing LTIM (10/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠹ Analyzing LTIM (10/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
-⠹ Analyzing LTIM (10/13)...                      INFO     Stock LTIM passed all 2 precondition checks                                              
-⠹ Analyzing LTIM (10/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'LTIM' generated only 0 trades, below threshold of
-                               10.                                                                                      
-⠹ Analyzing LTIM (10/13)...                      INFO     Stock LTIM passed all 2 precondition checks                                              
-⠹ Analyzing LTIM (10/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'LTIM' generated only 2 trades, below threshold
-                               of 10.                                                                                   
-⠸ Analyzing LTIM (10/13)...                      INFO     Stock LTIM passed all 2 precondition checks                                              
-⠸ Analyzing LTIM (10/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'LTIM' generated only 2 trades, below     
-                               threshold of 10.                                                                         
-⠸ Analyzing LTIM (10/13)...⠸ Analyzing LTIM (10/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠸ Analyzing LTIM (10/13)...                      WARNING  No valid out-of-sample periods for LTIM                                                  
-⠸ Analyzing LTIM (10/13)...                      INFO     find_optimal_strategies completed in 0.15s                                               
-⠸ Analyzing LTIM (10/13)...                      INFO     Using walk-forward analysis for BHARTIARTL                                               
-⠸ Analyzing BHARTIARTL (11/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠸ Analyzing BHARTIARTL (11/13)...                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
-⠸ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠸ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'BHARTIARTL' generated only 5 trades, below       
-                               threshold of 10.                                                                         
-⠸ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠸ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'BHARTIARTL' generated only 1 trades, below    
-                               threshold of 10.                                                                         
-⠼ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠼ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'BHARTIARTL' generated only 1 trades,     
-                               below threshold of 10.                                                                   
-⠼ Analyzing BHARTIARTL (11/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠼ Analyzing BHARTIARTL (11/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠼ Analyzing BHARTIARTL (11/13)...                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
-⠼ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠼ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'BHARTIARTL' generated only 5 trades, below       
-                               threshold of 10.                                                                         
-⠼ Analyzing BHARTIARTL (11/13)...⠼ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠼ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'BHARTIARTL' generated only 1 trades, below    
-                               threshold of 10.                                                                         
-⠼ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠼ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'BHARTIARTL' generated only 2 trades,     
-                               below threshold of 10.                                                                   
-⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
-⠴ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'BHARTIARTL' generated only 7 trades, below       
-                               threshold of 10.                                                                         
-⠴ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'BHARTIARTL' generated only 1 trades, below    
-                               threshold of 10.                                                                         
-⠴ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠴ Analyzing BHARTIARTL (11/13)...[2025-08-05 15:26:38] WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'BHARTIARTL' generated only 5 trades,     
-                               below threshold of 10.                                                                   
-⠴ Analyzing BHARTIARTL (11/13)...⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠴ Analyzing BHARTIARTL (11/13)...                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
-⠦ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'BHARTIARTL' generated only 5 trades, below       
-                               threshold of 10.                                                                         
-⠦ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'BHARTIARTL' generated only 0 trades, below    
-                               threshold of 10.                                                                         
-⠦ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'BHARTIARTL' generated only 7 trades,     
-                               below threshold of 10.                                                                   
-⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  No viable strategy found in training period 4                                            
+⠼ Analyzing HCLTECH (8/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠼ Analyzing HCLTECH (8/13)...                      WARNING  Could not infer frequency for HCLTECH. Forcing daily frequency ('D').                    
+⠼ Analyzing HCLTECH (8/13)...                      INFO     find_optimal_strategies completed in 0.04s                                               
+⠴ Analyzing HCLTECH (8/13)...                      WARNING  Walk-forward analysis disabled for TECHM, using in-sample optimization                   
+⠴ Analyzing TECHM (9/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠴ Analyzing TECHM (9/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠴ Analyzing TECHM (9/13)...                      WARNING  Could not infer frequency for TECHM. Forcing daily frequency ('D').                      
+⠴ Analyzing TECHM (9/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
+⠴ Analyzing TECHM (9/13)...                      WARNING  Walk-forward analysis disabled for LTIM, using in-sample optimization                    
+⠴ Analyzing LTIM (10/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠴ Analyzing LTIM (10/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠦ Analyzing LTIM (10/13)...⠦ Analyzing LTIM (10/13)...                      WARNING  Could not infer frequency for LTIM. Forcing daily frequency ('D').                       
+⠦ Analyzing LTIM (10/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
+⠦ Analyzing LTIM (10/13)...                      WARNING  Walk-forward analysis disabled for BHARTIARTL, using in-sample optimization              
 ⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠦ Analyzing BHARTIARTL (11/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
 ⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  Could not infer frequency for BHARTIARTL. Forcing daily frequency ('D').                 
-⠦ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'BHARTIARTL' generated only 3 trades, below       
-                               threshold of 10.                                                                         
-⠧ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠧ Analyzing BHARTIARTL (11/13)...⠧ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'BHARTIARTL' generated only 1 trades, below    
-                               threshold of 10.                                                                         
-⠧ Analyzing BHARTIARTL (11/13)...                      INFO     Stock BHARTIARTL passed all 2 precondition checks                                        
-⠧ Analyzing BHARTIARTL (11/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'BHARTIARTL' generated only 8 trades,     
-                               below threshold of 10.                                                                   
-⠧ Analyzing BHARTIARTL (11/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠧ Analyzing BHARTIARTL (11/13)...                      WARNING  No valid out-of-sample periods for BHARTIARTL                                            
-⠧ Analyzing BHARTIARTL (11/13)...                      INFO     find_optimal_strategies completed in 0.33s                                               
-⠧ Analyzing BHARTIARTL (11/13)...                      INFO     Using walk-forward analysis for KOTAKBANK                                                
+⠦ Analyzing BHARTIARTL (11/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
+⠦ Analyzing BHARTIARTL (11/13)...                      WARNING  Walk-forward analysis disabled for KOTAKBANK, using in-sample optimization               
 ⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠧ Analyzing KOTAKBANK (12/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
 ⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
-⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
-⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
-⠧ Analyzing KOTAKBANK (12/13)...                      INFO     Stock KOTAKBANK passed all 2 precondition checks                                         
-⠧ Analyzing KOTAKBANK (12/13)...⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'KOTAKBANK' generated only 1 trades, below        
-                               threshold of 10.                                                                         
-⠇ Analyzing KOTAKBANK (12/13)...                      INFO     Stock KOTAKBANK passed all 2 precondition checks                                         
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'KOTAKBANK' generated only 1 trades, below     
-                               threshold of 10.                                                                         
-⠇ Analyzing KOTAKBANK (12/13)...                      INFO     Stock KOTAKBANK passed all 2 precondition checks                                         
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'KOTAKBANK' generated only 2 trades, below
-                               threshold of 10.                                                                         
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  Could not infer frequency for KOTAKBANK. Forcing daily frequency ('D').                  
-⠇ Analyzing KOTAKBANK (12/13)...                      INFO     Stock KOTAKBANK passed all 2 precondition checks                                         
-⠇ Analyzing KOTAKBANK (12/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'KOTAKBANK' generated only 0 trades, below        
-                               threshold of 10.                                                                         
-⠏ Analyzing KOTAKBANK (12/13)...                      INFO     Stock KOTAKBANK passed all 2 precondition checks                                         
-⠏ Analyzing KOTAKBANK (12/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'KOTAKBANK' generated only 0 trades, below     
-                               threshold of 10.                                                                         
-⠏ Analyzing KOTAKBANK (12/13)...⠏ Analyzing KOTAKBANK (12/13)...                      INFO     Stock KOTAKBANK passed all 2 precondition checks                                         
-⠏ Analyzing KOTAKBANK (12/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'KOTAKBANK' generated only 3 trades, below
-                               threshold of 10.                                                                         
-⠏ Analyzing KOTAKBANK (12/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠏ Analyzing KOTAKBANK (12/13)...                      WARNING  No valid out-of-sample periods for KOTAKBANK                                             
-⠏ Analyzing KOTAKBANK (12/13)...                      INFO     find_optimal_strategies completed in 0.16s                                               
-⠏ Analyzing KOTAKBANK (12/13)...                      INFO     Using walk-forward analysis for AXISBANK                                                 
-⠏ Analyzing AXISBANK (13/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠏ Analyzing AXISBANK (13/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
-⠏ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠏ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'AXISBANK' generated only 2 trades, below         
-                               threshold of 10.                                                                         
-⠋ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠋ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'AXISBANK' generated only 2 trades, below      
-                               threshold of 10.                                                                         
-⠋ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠋ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'AXISBANK' generated only 1 trades, below 
-                               threshold of 10.                                                                         
-⠋ Analyzing AXISBANK (13/13)...⠋ Analyzing AXISBANK (13/13)...                      WARNING  No viable strategy found in training period 1                                            
-⠋ Analyzing AXISBANK (13/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠋ Analyzing AXISBANK (13/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
-⠋ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠋ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'AXISBANK' generated only 4 trades, below         
-                               threshold of 10.                                                                         
-⠋ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠋ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'AXISBANK' generated only 1 trades, below      
-                               threshold of 10.                                                                         
-⠙ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'AXISBANK' generated only 1 trades, below 
-                               threshold of 10.                                                                         
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  No viable strategy found in training period 2                                            
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  No viable strategy found in training period 3                                            
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
-⠙ Analyzing AXISBANK (13/13)...⠙ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠙ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'strong_bullish_engulfing' on 'AXISBANK' generated only 5 trades, below         
-                               threshold of 10.                                                                         
-⠙ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠹ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'confirm_with_extreme_volume' on 'AXISBANK' generated only 2 trades, below      
-                               threshold of 10.                                                                         
-⠹ Analyzing AXISBANK (13/13)...                      INFO     Stock AXISBANK passed all 2 precondition checks                                          
-⠹ Analyzing AXISBANK (13/13)...                      WARNING  Strategy 'confirm_with_medium_term_uptrend' on 'AXISBANK' generated only 9 trades, below 
-                               threshold of 10.                                                                         
-⠹ Analyzing AXISBANK (13/13)...                      WARNING  No viable strategy found in training period 4                                            
-⠹ Analyzing AXISBANK (13/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
-⠹ Analyzing AXISBANK (13/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
-⠹ Analyzing AXISBANK (13/13)...                      WARNING  No viable strategy found in training period 5                                            
-⠹ Analyzing AXISBANK (13/13)...                      WARNING  No valid out-of-sample periods for AXISBANK                                              
-⠹ Analyzing AXISBANK (13/13)...                      INFO     find_optimal_strategies completed in 0.23s                                               
-⠹ Analyzing AXISBANK (13/13)...⠹ Analyzing AXISBANK (13/13)...
+⠧ Analyzing KOTAKBANK (12/13)...⠧ Analyzing KOTAKBANK (12/13)...                      INFO     find_optimal_strategies completed in 0.03s                                               
+⠧ Analyzing KOTAKBANK (12/13)...                      WARNING  Walk-forward analysis disabled for AXISBANK, using in-sample optimization                
+⠧ Analyzing AXISBANK (13/13)...                      WARNING  USING IN-SAMPLE OPTIMIZATION - Results are NOT reliable for live trading!                
+⠧ Analyzing AXISBANK (13/13)...                      INFO     Using data up to freeze date: 2025-01-01                                                 
+⠧ Analyzing AXISBANK (13/13)...                      WARNING  Could not infer frequency for AXISBANK. Forcing daily frequency ('D').                   
+⠧ Analyzing AXISBANK (13/13)...                      INFO     find_optimal_strategies completed in 0.04s                                               
+⠧ Analyzing AXISBANK (13/13)...⠧ Analyzing AXISBANK (13/13)...
 [4/4] Analysis complete. Results summary:
-No valid strategies found. Check data quality and rule configurations.
+In-Sample Results (NOT reliable for live trading)
+                                  Top Strategies by Edge Score                                   
+┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━┓
+┃ Symbol     ┃ Rule Stack                                ┃ Edge Score ┃ Win % ┃ Sharpe ┃ Trades ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━┩
+│ BHARTIARTL │ simple_sma_crossover + atr_take_profit_3x │      1.031 │ 73.7% │   1.47 │     19 │
+│ HCLTECH    │ simple_sma_crossover + atr_take_profit_3x │      0.917 │ 81.2% │   1.07 │     16 │
+│ ICICIBANK  │ simple_sma_crossover + atr_take_profit_3x │      0.908 │ 70.0% │   1.22 │     20 │
+│ SBIN       │ simple_sma_crossover + atr_take_profit_3x │      0.880 │ 61.9% │   1.27 │     21 │
+│ HDFCBANK   │ simple_sma_crossover + atr_take_profit_3x │      0.639 │ 61.9% │   0.67 │     21 │
+│ INFY       │ simple_sma_crossover + atr_take_profit_3x │      0.594 │ 75.0% │   0.36 │     16 │
+│ AXISBANK   │ simple_sma_crossover + atr_take_profit_3x │      0.530 │ 57.1% │   0.47 │     21 │
+│ WIPRO      │ simple_sma_crossover + atr_take_profit_3x │      0.418 │ 50.0% │   0.30 │     18 │
+│ TECHM      │ simple_sma_crossover + atr_take_profit_3x │      0.404 │ 47.4% │   0.30 │     19 │
+│ TCS        │ simple_sma_crossover + atr_take_profit_3x │      0.305 │ 50.0% │   0.01 │     20 │
+└────────────┴───────────────────────────────────────────┴────────────┴───────┴────────┴────────┘
+
+* Analysis complete. Found 13 valid strategies across 13 symbols.
+[5/5] Saving results...
+                      INFO     Saving 13 strategies to the database.                                                    
+                      INFO     Successfully saved 13 strategies                                                         
+                      INFO     Saved 13 strategies to the database.                                                     
 [5/5] Generating report...
-                      INFO     Fetched 3 open positions.                                                                
-                      INFO     Position BHARTIARTL marked for closure: ATR stop-loss triggered (period: 14, multiplier: 
-                               1.5)                                                                                     
-                      INFO     Position HDFCBANK marked for closure: ATR stop-loss triggered (period: 14, multiplier:   
-                               1.5)                                                                                     
-                      INFO     Position ICICIBANK marked for closure: ATR stop-loss triggered (period: 14, multiplier:  
-                               1.5)                                                                                     
-                      INFO     Closed 3 positions.                                                                      
-                      INFO     Closed 3 positions                                                                       
+                      INFO     Fetched 13 open positions.                                                               
+                      INFO     Fetched 13 open positions.                                                               
+                      INFO     Skipping new signal for RELIANCE - position already open                                 
+                      INFO     Skipping new signal for INFY - position already open                                     
+                      INFO     Skipping new signal for TCS - position already open                                      
+                      INFO     Skipping new signal for HDFCBANK - position already open                                 
+                      INFO     Skipping new signal for ICICIBANK - position already open                                
+                      INFO     Skipping new signal for SBIN - position already open                                     
+                      INFO     Skipping new signal for WIPRO - position already open                                    
+                      INFO     Skipping new signal for HCLTECH - position already open                                  
+                      INFO     Skipping new signal for TECHM - position already open                                    
+                      INFO     Skipping new signal for LTIM - position already open                                     
+                      INFO     Skipping new signal for BHARTIARTL - position already open                               
+                      INFO     Skipping new signal for KOTAKBANK - position already open                                
+                      INFO     Skipping new signal for AXISBANK - position already open                                 
+                      INFO     Identified 0 new signals (filtered 13 existing positions)                                
                       INFO     Report generated: reports\signals_2025-01-01.md                                          
 * Report generated: reports\signals_2025-01-01.md
-                      INFO     full_backtest completed in 13.98s                                                        
+                      INFO     full_backtest completed in 13.11s                                                        

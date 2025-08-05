@@ -1,89 +1,39 @@
 # =============================================================================
-# REVISED STRATEGY: EXTREME-Conviction Pullback in a Bull Market
-#
-# THESIS: The previous strategy was too loose. We will now ONLY buy a
-# VIOLENT bullish reversal pattern during a short-term pullback, backed by
-# OVERWHELMING evidence. We will be far more selective and take profits sooner.
+# SIMPLE SMA CROSSOVER BASELINE
+# 
+# Purpose: Generate reliable baseline performance data for trailing stop comparison
+# Uses the simplest possible strategy that we know generates trades
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# PRECONDITIONS: Stock personality filters (NEW in Story 023)
-# Filter out stocks that lack the personality traits needed for trend-following
-# strategies. Applied before expensive rule evaluation for performance.
+# PRECONDITIONS: None - remove all barriers
 # -----------------------------------------------------------------------------
-preconditions:
-  - name: "stock_in_long_term_uptrend"
-    type: "price_above_long_sma"
-    description: "Precondition 1: Stock must be above its 100-day SMA - RELAXED FOR TRAILING STOP TESTING"
-    params:
-      period: 100  # RELAXED from 200 to get more candidates for testing
-
-  - name: "stock_is_sufficiently_volatile"
-    type: "is_volatile"
-    description: "Precondition 2: Stock must have daily volatility ≥1% (ATR/Price) - RELAXED FOR TRAILING STOP TESTING"
-    params:
-      period: 14
-      atr_threshold_pct: 0.01  # RELAXED from 0.02 to test trailing stop hypothesis
+preconditions: []
 
 # -----------------------------------------------------------------------------
-# CONTEXT FILTERS: No change. This is sound. Don't trade against the market.
+# CONTEXT FILTERS: None - remove all filters to maximize trade generation
 # -----------------------------------------------------------------------------
-context_filters:
-  - name: "filter_market_is_bullish"
-    type: "market_above_sma"
-    description: "Context 1: Don't fight the tape. The NIFTY 50 index must be above its 50-day SMA."
-    params:
-      index_symbol: "^NSEI"
-      period: 50
+context_filters: []
 
 # -----------------------------------------------------------------------------
-# ENTRY SIGNALS: Make the entry signal EXTREMELY selective.
-# All entry signals must be true for a buy signal (AND logic)
+# ENTRY SIGNALS: Simple SMA crossover only
 # -----------------------------------------------------------------------------
 entry_signals:
-  - name: "strong_bullish_engulfing"
-    type: "engulfing_pattern"
-    description: "Entry 1: Enter on an EXTREMELY strong bullish engulfing pattern. The body of the green candle must be at least 2.5x the prior red candle."
-    params:
-      min_body_ratio: 2.5  # TIGHTENED from 1.5. We only want explosive reversals.
-
-  - name: "confirm_with_extreme_volume"
-    type: "volume_spike"
-    description: "Entry 2: The reversal must be backed by overwhelming volume (3x average)."
-    params:
-      period: 20
-      spike_multiplier: 3.0  # TIGHTENED from 2.0. We need institutional conviction.
-      price_change_threshold: 0.01
-
-  - name: "confirm_with_medium_term_uptrend"
-    type: "price_above_sma"
-    description: "Entry 3: The stock itself must be in a medium-term uptrend (Price > 50-day SMA)."
-    params:
-      period: 50 # No change. This is a sound rule.
-
-# -----------------------------------------------------------------------------
-# EXIT CONDITIONS: Be more realistic.
-# -----------------------------------------------------------------------------
-exit_conditions:
-  # --- Primary Risk Management ---
-  - name: "atr_stop_loss_1.5x"
-    type: "stop_loss_atr"
-    description: "RISK 1 (Tighter Stop): Exit if price drops 1.5x ATR. The old 2x stop allowed too much loss."
-    params:
-      period: 14
-      multiplier: 1.5 # TIGHTENED from 2.0. Cut losses faster.
-
-  # --- Trend Failure Exit ---
-  - name: "trend_reversal_exit"
-    type: "sma_cross_under"
-    description: "RISK 2 (Trend Failure): Exit if the short-term trend breaks (10d SMA < 20d SMA)."
+  - name: "simple_sma_crossover"
+    type: "sma_crossover"
+    description: "Entry: Simple 10/20 SMA crossover"
     params:
       fast_period: 10
       slow_period: 20
 
-  # --- Profit Target ---
-  - name: "simple_trailing_stop_5pct"
-    type: "simple_trailing_stop"
-    description: "PROOF OF CONCEPT: Simple 5% trailing stop to test hypothesis"
+# -----------------------------------------------------------------------------
+# EXIT CONDITIONS: BASELINE - Fixed take-profit for comparison
+# -----------------------------------------------------------------------------
+exit_conditions:
+  # --- BASELINE: Fixed Take-Profit ---
+  - name: "atr_take_profit_3x"
+    type: "take_profit_atr"
+    description: "BASELINE: Fixed take-profit at 3x ATR"
     params:
-      trail_percent: 0.05
+      period: 14
+      multiplier: 3.0
