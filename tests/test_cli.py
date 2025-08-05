@@ -172,7 +172,7 @@ def test_run_command_basic(mock_data, mock_backtester, test_environment) -> None
 
 @patch("kiss_signal.cli.backtester.Backtester")
 @patch("kiss_signal.cli.data")
-@patch("kiss_signal.cli.reporter.generate_daily_report")
+@patch("src.kiss_signal.reporter.generate_daily_report")
 def test_run_command_verbose(mock_data, mock_backtester, mock_get_summary, test_environment) -> None:
     """Test run command with verbose flag."""
     # Mock data module functions
@@ -430,8 +430,8 @@ def test_run_command_persistence_failure_handling(
 # Analyze Strategies Command Tests
 # =============================================================================
 
-@patch("kiss_signal.cli.reporter.format_strategy_analysis_as_csv")
-@patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
+@patch("src.kiss_signal.reporter.format_strategy_analysis_as_csv")
+@patch("src.kiss_signal.reporter.analyze_strategy_performance_aggregated")
 def test_analyze_strategies_command_success(mock_analyze, mock_format_csv, test_environment):
     """Test analyze-strategies command with successful execution."""
     # Mock the analyzer to return sample data
@@ -458,14 +458,24 @@ def test_analyze_strategies_command_success(mock_analyze, mock_format_csv, test_
     conn = sqlite3.connect(str(db_path))
     conn.execute("""
         CREATE TABLE strategies (
-            id INTEGER PRIMARY KEY,
-            strategy_key TEXT,
-            edge_score REAL
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            run_timestamp TEXT NOT NULL,
+            rule_stack TEXT NOT NULL,
+            edge_score REAL NOT NULL,
+            win_pct REAL NOT NULL,
+            sharpe REAL NOT NULL,
+            total_trades INTEGER NOT NULL,
+            avg_return REAL NOT NULL,
+            config_snapshot TEXT,
+            config_hash TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(symbol, rule_stack, run_timestamp)
         )
     """)
     conn.execute("""
-        INSERT INTO strategies (strategy_key, edge_score) 
-        VALUES ('strategy_1', 0.75)
+        INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return, config_snapshot, config_hash) 
+        VALUES ('RELIANCE.NS', '2024-01-01T10:00:00', '[{"name": "strategy_1", "type": "test"}]', 0.75, 0.65, 1.2, 150, 18000.0, '{"test": "config"}', 'hash123')
     """)
     conn.commit()
     conn.close()
@@ -497,27 +507,27 @@ def test_analyze_strategies_command_success(mock_analyze, mock_format_csv, test_
 
 
 @patch("kiss_signal.cli._validate_database_path")
-@patch("kiss_signal.cli.reporter.format_strategy_analysis_as_csv")
-@patch("kiss_signal.cli.persistence.get_connection")
-@patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_custom_output(mock_analyze, mock_get_connection, mock_format_csv, mock_validate_db, test_environment):
+@patch("kiss_signal.cli.format_strategy_analysis_as_csv")
+@patch("kiss_signal.cli.analyze_strategy_performance_aggregated")
+def test_analyze_strategies_command_custom_output(mock_analyze, mock_format_csv, mock_validate_db, test_environment):
     """Test analyze-strategies command with custom output path."""
     # Mock database validation to pass
     mock_validate_db.return_value = None
     
-    # Mock database connection
-    mock_conn = MagicMock()
-    mock_get_connection.return_value = mock_conn
-    
     # Mock the analyzer
     mock_analyze.return_value = [
         {
-            'strategy_key': 'strategy_1',
+            'strategy_rule_stack': 'strategy_1', 
+            'frequency': 1,
             'avg_edge_score': 0.75,
             'avg_win_pct': 0.65,
             'avg_sharpe': 1.2,
-            'total_trades': 150,
-            'symbol_count': 10
+            'avg_return': 0.18,
+            'avg_trades': 150.0,
+            'top_symbols': 'TEST.NS',
+            'config_hash': 'hash123',
+            'run_date': '2024-01-01',
+            'config_details': 'test config'
         }
     ]
     
@@ -541,6 +551,9 @@ def test_analyze_strategies_command_custom_output(mock_analyze, mock_get_connect
         assert result.exit_code == 0
         # Should create the output file
         assert output_path.exists()
+        # Verify CSV content was written
+        content = output_path.read_text(encoding="utf-8")
+        assert "CSV content" in content
     finally:
         os.chdir(original_cwd)
 
@@ -576,7 +589,7 @@ def test_analyze_strategies_command_no_database(test_environment):
         os.chdir(original_cwd)
 
 
-@patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
+@patch("src.kiss_signal.reporter.analyze_strategy_performance_aggregated")
 def test_analyze_strategies_command_no_data(mock_analyze, test_environment):
     """Test analyze-strategies command when no data is available."""
     # Mock analyzer to return empty data
@@ -609,9 +622,13 @@ def test_analyze_strategies_command_no_data(mock_analyze, test_environment):
         os.chdir(original_cwd)
 
 
-@patch("kiss_signal.cli.reporter.analyze_strategy_performance_aggregated")
-def test_analyze_strategies_command_error_handling(mock_analyze, test_environment):
+@patch("kiss_signal.cli._validate_database_path")
+@patch("kiss_signal.cli.analyze_strategy_performance_aggregated")
+def test_analyze_strategies_command_error_handling(mock_analyze, mock_validate_db, test_environment):
     """Test analyze-strategies command error handling."""
+    # Mock database validation to pass
+    mock_validate_db.return_value = None
+    
     # Mock analyzer to raise an exception
     mock_analyze.side_effect = Exception("Analysis failed")
 
@@ -620,10 +637,24 @@ def test_analyze_strategies_command_error_handling(mock_analyze, test_environmen
     conn = sqlite3.connect(str(db_path))
     conn.execute("""
         CREATE TABLE strategies (
-            id INTEGER PRIMARY KEY,
-            strategy_key TEXT,
-            edge_score REAL
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            run_timestamp TEXT NOT NULL,
+            rule_stack TEXT NOT NULL,
+            edge_score REAL NOT NULL,
+            win_pct REAL NOT NULL,
+            sharpe REAL NOT NULL,
+            total_trades INTEGER NOT NULL,
+            avg_return REAL NOT NULL,
+            config_snapshot TEXT,
+            config_hash TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(symbol, rule_stack, run_timestamp)
         )
+    """)
+    conn.execute("""
+        INSERT INTO strategies (symbol, run_timestamp, rule_stack, edge_score, win_pct, sharpe, total_trades, avg_return, config_snapshot, config_hash) 
+        VALUES ('TEST.NS', '2024-01-01T10:00:00', '[{"name": "test_strategy", "type": "test"}]', 0.75, 0.65, 1.2, 150, 18000.0, '{"test": "config"}', 'hash123')
     """)
     conn.commit()
     conn.close()
@@ -636,7 +667,8 @@ def test_analyze_strategies_command_error_handling(mock_analyze, test_environmen
         config_path = test_environment / "config.yaml"
         
         result = runner.invoke(app, ["--config", str(config_path), "analyze-strategies"])
-        assert "Error" in result.stdout or result.exit_code != 0
+        # The command should fail or show error message due to the exception
+        assert result.exit_code != 0 or "during analysis" in result.stdout
     finally:
         os.chdir(original_cwd)
 
@@ -889,7 +921,7 @@ def test_run_command_backtest_generic_exception_verbose(mock_execute_workflow):
         assert "Generic backtest error" in result.stdout
 
 
-@patch("kiss_signal.cli.reporter.generate_daily_report")
+@patch("src.kiss_signal.reporter.generate_daily_report")
 def test_run_command_report_generation_fails_warning(mock_generate_report, test_environment):
     """Test run command handles report generation failures with warning."""
     mock_generate_report.side_effect = Exception("Report generation failed")

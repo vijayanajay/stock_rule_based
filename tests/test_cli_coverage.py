@@ -10,7 +10,8 @@ from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 import sqlite3
 
-from src.kiss_signal.cli import _analyze_symbol, _check_exit_conditions, _save_command_log
+from src.kiss_signal.cli import _analyze_symbol, _save_command_log
+from src.kiss_signal.reporter import check_exit_conditions
 from src.kiss_signal.exceptions import DataMismatchError
 from src.kiss_signal import persistence
 
@@ -46,11 +47,11 @@ class TestCliCoverageFill:
         finally:
             os.unlink(log_file)
     
-    def test_check_exit_conditions_invalid_entry_price_none(self):
-        """Test _check_exit_conditions with None entry price."""
+    def testcheck_exit_conditions_invalid_entry_price_none(self):
+        """Test check_exit_conditions with None entry price."""
         position = {'symbol': 'TEST', 'entry_price': None}
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -62,11 +63,11 @@ class TestCliCoverageFill:
         
         assert result is None
     
-    def test_check_exit_conditions_invalid_entry_price_zero(self):
-        """Test _check_exit_conditions with zero entry price."""
+    def testcheck_exit_conditions_invalid_entry_price_zero(self):
+        """Test check_exit_conditions with zero entry price."""
         position = {'symbol': 'TEST', 'entry_price': 0}
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -78,11 +79,11 @@ class TestCliCoverageFill:
         
         assert result is None
     
-    def test_check_exit_conditions_invalid_entry_price_negative(self):
-        """Test _check_exit_conditions with negative entry price."""
+    def testcheck_exit_conditions_invalid_entry_price_negative(self):
+        """Test check_exit_conditions with negative entry price."""
         position = {'symbol': 'TEST', 'entry_price': -10.0}
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -94,14 +95,14 @@ class TestCliCoverageFill:
         
         assert result is None
     
-    def test_check_exit_conditions_stop_loss_triggered(self):
-        """Test _check_exit_conditions with stop loss triggered."""
+    def testcheck_exit_conditions_stop_loss_triggered(self):
+        """Test check_exit_conditions with stop loss triggered."""
         position = {'symbol': 'TEST', 'entry_price': 100.0}
         exit_conditions = [
             {'type': 'stop_loss_pct', 'params': {'percentage': 0.05}}
         ]
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=94.0,  # Below stop loss of 95.0
@@ -114,14 +115,14 @@ class TestCliCoverageFill:
         assert result is not None
         assert "Stop-loss triggered" in result
     
-    def test_check_exit_conditions_take_profit_triggered(self):
-        """Test _check_exit_conditions with take profit triggered."""
+    def testcheck_exit_conditions_take_profit_triggered(self):
+        """Test check_exit_conditions with take profit triggered."""
         position = {'symbol': 'TEST', 'entry_price': 100.0}
         exit_conditions = [
             {'type': 'take_profit_pct', 'params': {'percentage': 0.10}}
         ]
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -135,8 +136,8 @@ class TestCliCoverageFill:
         assert "Take-profit triggered" in result
     
     @patch('src.kiss_signal.rules.stop_loss_atr')
-    def test_check_exit_conditions_atr_stop_loss_triggered(self, mock_atr_stop):
-        """Test _check_exit_conditions with ATR stop loss triggered."""
+    def testcheck_exit_conditions_atr_stop_loss_triggered(self, mock_atr_stop):
+        """Test check_exit_conditions with ATR stop loss triggered."""
         mock_atr_stop.return_value = True
         
         position = {'symbol': 'TEST', 'entry_price': 100.0}
@@ -144,7 +145,7 @@ class TestCliCoverageFill:
             {'type': 'stop_loss_atr', 'params': {'period': 14, 'multiplier': 2.0}}
         ]
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -158,8 +159,8 @@ class TestCliCoverageFill:
         assert "ATR stop-loss triggered" in result
     
     @patch('src.kiss_signal.rules.stop_loss_atr')
-    def test_check_exit_conditions_atr_stop_loss_exception(self, mock_atr_stop):
-        """Test _check_exit_conditions with ATR stop loss exception."""
+    def testcheck_exit_conditions_atr_stop_loss_exception(self, mock_atr_stop):
+        """Test check_exit_conditions with ATR stop loss exception."""
         mock_atr_stop.side_effect = Exception("ATR calculation failed")
         
         position = {'symbol': 'TEST', 'entry_price': 100.0}
@@ -167,8 +168,8 @@ class TestCliCoverageFill:
             {'type': 'stop_loss_atr', 'params': {'period': 14, 'multiplier': 2.0}}
         ]
         
-        with patch('src.kiss_signal.cli.logger') as mock_logger:
-            result = _check_exit_conditions(
+        with patch('src.kiss_signal.reporter.logger') as mock_logger:
+            result = check_exit_conditions(
                 position=position,
                 price_data=Mock(),
                 current_low=95.0,
@@ -182,8 +183,8 @@ class TestCliCoverageFill:
         assert result is None
     
     @patch('src.kiss_signal.rules.take_profit_atr')
-    def test_check_exit_conditions_atr_take_profit_triggered(self, mock_atr_tp):
-        """Test _check_exit_conditions with ATR take profit triggered."""
+    def testcheck_exit_conditions_atr_take_profit_triggered(self, mock_atr_tp):
+        """Test check_exit_conditions with ATR take profit triggered."""
         mock_atr_tp.return_value = True
         
         position = {'symbol': 'TEST', 'entry_price': 100.0}
@@ -191,7 +192,7 @@ class TestCliCoverageFill:
             {'type': 'take_profit_atr', 'params': {'period': 14, 'multiplier': 4.0}}
         ]
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -205,8 +206,8 @@ class TestCliCoverageFill:
         assert "ATR take-profit triggered" in result
     
     @patch('src.kiss_signal.rules.sma_cross_under')
-    def test_check_exit_conditions_sma_cross_under_triggered(self, mock_sma_cross):
-        """Test _check_exit_conditions with SMA cross under triggered."""
+    def testcheck_exit_conditions_sma_cross_under_triggered(self, mock_sma_cross):
+        """Test check_exit_conditions with SMA cross under triggered."""
         # Mock to return series with True at the end
         import pandas as pd
         mock_signals = pd.Series([False, False, True])
@@ -217,7 +218,7 @@ class TestCliCoverageFill:
             {'type': 'sma_cross_under', 'params': {'fast_period': 10, 'slow_period': 20}}
         ]
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -231,8 +232,8 @@ class TestCliCoverageFill:
         assert "Indicator exit triggered" in result
     
     @patch('src.kiss_signal.rules.sma_crossover')
-    def test_check_exit_conditions_sma_crossover_triggered(self, mock_sma_cross):
-        """Test _check_exit_conditions with SMA crossover triggered."""
+    def testcheck_exit_conditions_sma_crossover_triggered(self, mock_sma_cross):
+        """Test check_exit_conditions with SMA crossover triggered."""
         # Mock to return series with True at the end
         import pandas as pd
         mock_signals = pd.Series([False, False, True])
@@ -243,7 +244,7 @@ class TestCliCoverageFill:
             {'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}}
         ]
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -257,8 +258,8 @@ class TestCliCoverageFill:
         assert "Indicator exit triggered" in result
     
     @patch('src.kiss_signal.rules.sma_cross_under')
-    def test_check_exit_conditions_indicator_exception(self, mock_sma_cross):
-        """Test _check_exit_conditions with indicator exception."""
+    def testcheck_exit_conditions_indicator_exception(self, mock_sma_cross):
+        """Test check_exit_conditions with indicator exception."""
         mock_sma_cross.side_effect = Exception("Indicator calculation failed")
         
         position = {'symbol': 'TEST', 'entry_price': 100.0}
@@ -266,8 +267,8 @@ class TestCliCoverageFill:
             {'type': 'sma_cross_under', 'params': {'fast_period': 10, 'slow_period': 20}}
         ]
         
-        with patch('src.kiss_signal.cli.logger') as mock_logger:
-            result = _check_exit_conditions(
+        with patch('src.kiss_signal.reporter.logger') as mock_logger:
+            result = check_exit_conditions(
                 position=position,
                 price_data=Mock(),
                 current_low=95.0,
@@ -280,11 +281,11 @@ class TestCliCoverageFill:
         mock_logger.warning.assert_called()
         assert result is None
     
-    def test_check_exit_conditions_time_based_exit(self):
-        """Test _check_exit_conditions with time-based exit."""
+    def testcheck_exit_conditions_time_based_exit(self):
+        """Test check_exit_conditions with time-based exit."""
         position = {'symbol': 'TEST', 'entry_price': 100.0}
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=95.0,
@@ -300,8 +301,8 @@ class TestCliCoverageFill:
         # Looking at the code, this continues to the end without explicit return
         pass
     
-    def test_check_exit_conditions_pydantic_model_exit_conditions(self):
-        """Test _check_exit_conditions with Pydantic model exit conditions."""
+    def testcheck_exit_conditions_pydantic_model_exit_conditions(self):
+        """Test check_exit_conditions with Pydantic model exit conditions."""
         # Mock a Pydantic-like object
         class MockExitCondition:
             def __init__(self, type_val, params):
@@ -313,7 +314,7 @@ class TestCliCoverageFill:
             MockExitCondition('stop_loss_pct', {'percentage': 0.05})
         ]
         
-        result = _check_exit_conditions(
+        result = check_exit_conditions(
             position=position,
             price_data=Mock(),
             current_low=94.0,  # Below stop loss
