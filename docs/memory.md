@@ -1,5 +1,12 @@
 # KISS Signal CLI - Memory & Learning Log
 
+## Test Framework Contract Violation: Script-style Test Structure (2025-08-05)
+- **Context**: `test_trailing_stop_direct.py` failed pytest execution despite generating correct performance data and functional output.
+- **Structural Issue**: Test function used `return baseline_result and trailing_result` instead of pytest-expected assertions. This violated pytest's discovery and execution contract where test functions must communicate success/failure through assertions or exceptions, not return values.
+- **Root Cause**: Mixing script-style execution patterns (return values, `__main__` blocks) with pytest function discovery. The test was structured as a script that happened to have a test function, rather than a proper pytest test.
+- **Fix**: Replaced `return` statement with explicit assertions validating test conditions: `assert baseline_result is not None`, `assert trailing_result is not None`, etc.
+- **Lesson**: Test functions must strictly adhere to the testing framework's execution contract. Pytest expects assertions for validation, not return values. Functional correctness ≠ structural compliance. Script-style patterns and pytest patterns are incompatible within the same function.
+
 ## Story 029 Trailing Stop Implementation: End-to-End Professional Completion (2025-08-05)
 - **Context**: Story 029 was initially marked "COMPLETED" but investigation revealed it was "implementation theater" - function existed but never tested end-to-end, generating zero performance data.
 - **Issues Discovered**:

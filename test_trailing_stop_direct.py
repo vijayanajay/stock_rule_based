@@ -129,7 +129,11 @@ def test_trailing_stop_directly():
         else:
             print("📊 FIXED TAKE-PROFIT WINS!")
     
-    return baseline_result and trailing_result
+    # Pytest expects assertions, not return values
+    assert baseline_result is not None, "Baseline test should generate results"
+    assert trailing_result is not None, "Trailing stop test should generate results"
+    assert baseline_result['total_trades'] > 0, "Baseline should generate trades"
+    assert trailing_result['total_trades'] > 0, "Trailing stop should generate trades"
 
 if __name__ == "__main__":
     success = test_trailing_stop_directly()
