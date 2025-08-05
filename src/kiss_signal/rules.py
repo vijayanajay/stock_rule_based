@@ -34,6 +34,8 @@ __all__ = [
     "is_volatile",
     # New functions (Story 029) - Simple trailing stop
     "simple_trailing_stop",
+    # New functions (Story 031) - Chandelier Exit
+    "chandelier_exit",
 ]
 
 logger = logging.getLogger(__name__)
@@ -899,4 +901,59 @@ def simple_trailing_stop(
     
     # Only trigger exit if we're actually below the trailing stop
     # This is much simpler than the previous logic
+    return exit_signals.fillna(False)
+
+
+# Story 031: Chandelier Exit - Professional Trailing Stop
+# =============================================================================
+
+def chandelier_exit(
+    data: pd.DataFrame,
+    atr_period: int = 22,
+    atr_multiplier: float = 3.0
+) -> pd.Series:
+    """
+    Chandelier Exit - ATR-based trailing stop.
+    
+    Exit when price drops below: HighestHigh(period) - multiplier * ATR(period)
+    Adapts to volatility unlike fixed percentage trailing stops.
+    
+    Professional trailing stop that uses Average True Range (ATR) to adapt
+    trail distance to market volatility. More sophisticated than simple 
+    percentage trailing stops as it adjusts to market conditions.
+    
+    Args:
+        data: DataFrame with OHLCV data (expects lowercase column names)
+        atr_period: Period for ATR and highest high calculation (default: 22)
+        atr_multiplier: ATR multiplier for stop distance (default: 3.0)
+        
+    Returns:
+        Boolean series where True indicates exit signal
+        
+    Raises:
+        ValueError: If missing required columns or invalid parameters
+        
+    Example:
+        >>> exit_signals = chandelier_exit(data, atr_period=22, atr_multiplier=3.0)
+        >>> print(f"Exit signals: {exit_signals.sum()}")
+    """
+    _validate_ohlcv_columns(data, ['high', 'low', 'close'])
+    
+    if atr_period <= 1:
+        raise ValueError(f"ATR period must be > 1, got {atr_period}")
+    if atr_multiplier <= 0:
+        raise ValueError(f"ATR multiplier must be positive, got {atr_multiplier}")
+    
+    # Calculate ATR using existing function
+    atr = calculate_atr(data, period=atr_period)
+    
+    # Calculate highest high over the ATR period
+    highest_high = data['high'].rolling(window=atr_period, min_periods=1).max()
+    
+    # Calculate Chandelier Exit stop level
+    stop_level = highest_high - (atr_multiplier * atr)
+    
+    # Exit when current close price drops below stop level
+    exit_signals = data['close'] <= stop_level
+    
     return exit_signals.fillna(False)

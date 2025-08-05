@@ -1,0 +1,25 @@
+entry_conditions:
+  - name: "price_above_sma_5"
+    type: "price_above_sma"
+    description: "ENTRY: Price above 5-day SMA (basic trend signal)"
+    params:
+      period: 5
+
+exit_conditions:
+  # Same stop loss as Story 029 baseline for fair comparison
+  - name: "stop_loss_5pct"
+    type: "stop_loss_pct"
+    description: "Risk management: 5% stop loss"
+    params:
+      percentage: 0.05
+
+  # NEW: Chandelier Exit replacing fixed take-profit
+  - name: "chandelier_exit_22_3x"
+    type: "chandelier_exit"
+    description: "PROFIT PROTECTION: ATR-based trailing stop"
+    params:
+      atr_period: 22
+      atr_multiplier: 3.0
+
+# Simple configuration for Chandelier Exit testing
+# Following Story 029 pattern but with ATR-based trailing stop
