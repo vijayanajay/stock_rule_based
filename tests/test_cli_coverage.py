@@ -46,6 +46,29 @@ class TestCliCoverageFill:
                 assert len(content) >= 0  # Console may be empty in tests
         finally:
             os.unlink(log_file)
+
+    @patch('src.kiss_signal.rules.take_profit_atr')
+    @patch('src.kiss_signal.rules.stop_loss_atr')
+    def test_check_exit_conditions_atr_exceptions(self, mock_atr_stop, mock_atr_tp):
+        """Test check_exit_conditions with ATR stop loss and take profit exceptions."""
+        mock_atr_stop.side_effect = Exception("ATR stop loss failed")
+        mock_atr_tp.side_effect = Exception("ATR take profit failed")
+        
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+
+        # Test stop loss exception
+        exit_conditions_sl = [{'type': 'stop_loss_atr', 'params': {}}]
+        with patch('src.kiss_signal.reporter.logger') as mock_logger:
+            result = check_exit_conditions(position, Mock(), 95.0, 105.0, exit_conditions_sl, 5, 30)
+        mock_logger.warning.assert_called_with("ATR stop loss check failed: ATR stop loss failed")
+        assert result is None
+
+        # Test take profit exception
+        exit_conditions_tp = [{'type': 'take_profit_atr', 'params': {}}]
+        with patch('src.kiss_signal.reporter.logger') as mock_logger:
+            result = check_exit_conditions(position, Mock(), 95.0, 105.0, exit_conditions_tp, 5, 30)
+        mock_logger.warning.assert_called_with("ATR take profit check failed: ATR take profit failed")
+        assert result is None
     
     def testcheck_exit_conditions_invalid_entry_price_none(self):
         """Test check_exit_conditions with None entry price."""
@@ -158,28 +181,27 @@ class TestCliCoverageFill:
         assert result is not None
         assert "ATR stop-loss triggered" in result
     
+    @patch('src.kiss_signal.rules.take_profit_atr')
     @patch('src.kiss_signal.rules.stop_loss_atr')
-    def testcheck_exit_conditions_atr_stop_loss_exception(self, mock_atr_stop):
-        """Test check_exit_conditions with ATR stop loss exception."""
-        mock_atr_stop.side_effect = Exception("ATR calculation failed")
+    def testcheck_exit_conditions_atr_exceptions(self, mock_atr_stop, mock_atr_tp):
+        """Test check_exit_conditions with ATR stop loss and take profit exceptions."""
+        mock_atr_stop.side_effect = Exception("ATR stop loss failed")
+        mock_atr_tp.side_effect = Exception("ATR take profit failed")
         
         position = {'symbol': 'TEST', 'entry_price': 100.0}
-        exit_conditions = [
-            {'type': 'stop_loss_atr', 'params': {'period': 14, 'multiplier': 2.0}}
-        ]
-        
+
+        # Test stop loss exception
+        exit_conditions_sl = [{'type': 'stop_loss_atr', 'params': {}}]
         with patch('src.kiss_signal.reporter.logger') as mock_logger:
-            result = check_exit_conditions(
-                position=position,
-                price_data=Mock(),
-                current_low=95.0,
-                current_high=105.0,
-                exit_conditions=exit_conditions,
-                days_held=5,
-                hold_period=30
-            )
-            
-        mock_logger.warning.assert_called()
+            result = check_exit_conditions(position, Mock(), 95.0, 105.0, exit_conditions_sl, 5, 30)
+        mock_logger.warning.assert_called_with("ATR stop loss check failed: ATR stop loss failed")
+        assert result is None
+
+        # Test take profit exception
+        exit_conditions_tp = [{'type': 'take_profit_atr', 'params': {}}]
+        with patch('src.kiss_signal.reporter.logger') as mock_logger:
+            result = check_exit_conditions(position, Mock(), 95.0, 105.0, exit_conditions_tp, 5, 30)
+        mock_logger.warning.assert_called_with("ATR take profit check failed: ATR take profit failed")
         assert result is None
     
     @patch('src.kiss_signal.rules.take_profit_atr')
@@ -214,22 +236,17 @@ class TestCliCoverageFill:
         mock_sma_cross.return_value = mock_signals
         
         position = {'symbol': 'TEST', 'entry_price': 100.0}
-        exit_conditions = [
-            {'type': 'sma_cross_under', 'params': {'fast_period': 10, 'slow_period': 20}}
-        ]
+        exit_conditions = [{'type': 'sma_cross_under', 'params': {}}]
         
-        result = check_exit_conditions(
-            position=position,
-            price_data=Mock(),
-            current_low=95.0,
-            current_high=105.0,
-            exit_conditions=exit_conditions,
-            days_held=5,
-            hold_period=30
-        )
+        result = check_exit_conditions(position, Mock(), 95.0, 105.0, exit_conditions, 5, 30)
         
         assert result is not None
         assert "Indicator exit triggered" in result
+
+        # Test with empty signals series
+        mock_sma_cross.return_value = pd.Series(dtype=bool)
+        result_empty = check_exit_conditions(position, Mock(), 95.0, 105.0, exit_conditions, 5, 30)
+        assert result_empty is None
     
     @patch('src.kiss_signal.rules.sma_crossover')
     def testcheck_exit_conditions_sma_crossover_triggered(self, mock_sma_cross):

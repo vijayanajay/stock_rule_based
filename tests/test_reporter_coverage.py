@@ -101,13 +101,14 @@ class TestReporterCoverageFill:
             {'symbol': 'TEST1', 'edge_score': None, 'date': '2023-01-01', 'entry_price': 100.0, 'rule_stack': 'test'},
             {'symbol': 'TEST2', 'edge_score': 0.8, 'date': '2023-01-02', 'entry_price': None, 'rule_stack': 'test'},
             {'symbol': 'TEST3', 'edge_score': 0.7, 'date': '2023-01-03', 'entry_price': 110.0, 'rule_stack': None},
+            # Add a dict with missing keys to test .get() with defaults
+            {'symbol': 'TEST4'}
         ]
         
         # Should handle None values gracefully with N/A
         table = _format_new_buys_table(strategies_with_none)
-        assert 'TEST1' in table
-        assert 'TEST2' in table
-        assert 'TEST3' in table
+        for i in range(1, 5):
+            assert f'TEST{i}' in table
         assert 'N/A' in table  # Should have N/A for None values
         
         # Test open positions with None values
@@ -115,12 +116,13 @@ class TestReporterCoverageFill:
             {'symbol': 'TEST1', 'entry_price': None, 'entry_date': '2023-01-01', 'return_pct': 50.0, 'days_held': 10, 'nifty_return_pct': 10.0, 'current_price': 105.0},
             {'symbol': 'TEST2', 'entry_price': 100.0, 'entry_date': '2023-01-02', 'return_pct': None, 'days_held': 8, 'nifty_return_pct': 8.0, 'current_price': 102.0},
             {'symbol': 'TEST3', 'entry_price': 110.0, 'entry_date': '2023-01-03', 'return_pct': 25.0, 'days_held': 5, 'nifty_return_pct': None, 'current_price': None},
+            # Add a dict with missing keys to test .get() with defaults
+            {'symbol': 'TEST4'}
         ]
         
         table = _format_open_positions_table(positions_with_none, 30)
-        assert 'TEST1' in table
-        assert 'TEST2' in table
-        assert 'TEST3' in table
+        for i in range(1, 5):
+            assert f'TEST{i}' in table
         assert 'N/A' in table  # Should have N/A for None values
     
     @patch('src.kiss_signal.persistence.get_connection')
@@ -179,21 +181,25 @@ class TestReporterCoverageFill:
     
     def test_walk_forward_report_calculation_edge_cases(self):
         """Test WalkForwardReport with edge case calculations."""
-        # Test with very small numbers
+        # Test with very small numbers and mixed date formats
         oos_results = [
             {
                 'avg_return': 0.001,
                 'sharpe': 0.001,
                 'win_pct': 0.501,  # Barely profitable
                 'total_trades': 1,
-                'edge_score': 0.501
+                'edge_score': 0.501,
+                'oos_test_start': '2023-01-01',  # string date
+                'oos_test_end': pd.Timestamp('2023-02-01')  # timestamp date
             },
             {
-                'avg_return': -0.001,
-                'sharpe': -0.001,
-                'win_pct': 0.499,  # Barely unprofitable
+                'avg_return': 0.002,
+                'sharpe': 0.002,
+                'win_pct': 0.502,  # Barely profitable
                 'total_trades': 1,
-                'edge_score': 0.499
+                'edge_score': 0.502,
+                'oos_test_start': '2023-02-01',  # string date
+                'oos_test_end': pd.Timestamp('2023-03-01')  # timestamp date
             }
         ]
         

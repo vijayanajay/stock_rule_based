@@ -564,6 +564,37 @@ class TestFormatting:
         assert "edge_score" in result
         assert "sma_crossover_10_20" in result
         assert "0.75" in result
+
+        # Test with None values to cover default formatting
+        analysis_with_none = [
+            {
+                'symbol': 'TEST_NONE',
+                'strategy_rule_stack': 'test_strategy',
+                'edge_score': None,
+                'win_pct': None,
+                'sharpe': None,
+                'total_return': None,
+                'total_trades': 15,
+                'config_hash': 'abc123',
+                'run_date': '2023-01-01',
+                'config_details': '{"rules_hash": "def456"}'
+            }
+        ]
+        result_none = reporter.format_strategy_analysis_as_csv(analysis_with_none, aggregate=False)
+        assert "0.0000" in result_none, "Should use default value for None"
+
+        # Test aggregated format with None values
+        agg_analysis_with_none = {
+            'strategy_rule_stack': 'test_strategy_agg',
+            'frequency': 1,
+            'avg_edge_score': None, 'avg_win_pct': None, 'avg_sharpe': None,
+            'avg_return': None, 'avg_trades': None, 'top_symbols': 'NA',
+            'config_hash': 'hash_agg', 'run_date': '2023-01-02',
+            'config_details': '{}'
+        }
+        result_agg_none = reporter.format_strategy_analysis_as_csv([agg_analysis_with_none], aggregate=True)
+        assert "0.0000" in result_agg_none, "Should use default value for None in aggregated format"
+        assert ",0.0," in result_agg_none, "Should use default value for None avg_trades"
         
         # Cover lines 391-393: Test edge cases with missing fields
         edge_case_data = [
@@ -662,11 +693,18 @@ class TestStrategyAnalysis:
                 INSERT INTO strategies (symbol, rule_stack, edge_score, win_pct, sharpe, 
                                       total_trades, avg_return, config_hash, config_snapshot, run_timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, ('MALFORMED', 'not-json', 0.5, 0.5, 1.0, 10, 0.01, 'hash456', 'not-json', '2023-01-01 12:00:00'))
+            
+            conn.execute("""
+                INSERT INTO strategies (symbol, rule_stack, edge_score, win_pct, sharpe, 
+                                      total_trades, avg_return, config_hash, config_snapshot, run_timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, ('RELIANCE', '[{"type": "sma_crossover"}]', 0.75, 0.65, 1.2, 25, 0.02, 'hash123', '{}', '2023-01-01 12:00:00'))
         
         result = reporter.analyze_strategy_performance(strategy_test_db)
         
-        assert len(result) == 1
+        # Malformed record should be skipped
+        assert len(result) == 1, "Malformed record should be skipped"
         assert result[0]['symbol'] == 'RELIANCE'
         assert result[0]['edge_score'] == 0.75
         assert result[0]['total_trades'] == 25
