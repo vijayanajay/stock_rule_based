@@ -1,6 +1,6 @@
 # Story 032: Implement Equal-Risk ATR Position Sizing - READY FOR DEVELOPMENT
 
-## Status: **READY FOR DEVELOPMENT** ✅
+## Status: **InProgress** 🚧
 
 **Priority:** CRITICAL (Fundamental Risk Management - Roadmap #3)  
 **Estimated Story Points:** 3  
@@ -236,5 +236,24 @@ Story 031 gave us ATR infrastructure. This story uses it for the most critical p
 This isn't feature development - it's **fixing a fundamental broken assumption** that invalidates everything else.
 
 ---
+
+## Implementation Progress
+
+### Tasks Completed ✅
+- [x] Step 1: Fixed CLI Configuration Integration
+  - Added `portfolio_initial_capital: 100000.0` and `risk_per_trade_pct: 0.01` to config.yaml
+  - Updated Config class with new fields and validation
+  - Fixed CLI to pass initial_capital to backtester
+- [x] Step 2: Added Risk Sizing Methods
+  - Implemented `_get_atr_multiplier()` method
+  - Implemented `_calculate_risk_based_size()` method
+- [x] Step 3: Replaced size=np.inf
+  - Fixed `_backtest_combination()` to use calculated sizing
+  - Fixed `_backtest_single_strategy_oos()` to use calculated sizing
+- [x] Step 4: Created Validation Test
+  - Created `tests/test_position_sizing.py` with comprehensive tests
+
+### Current Issue 🐛
+Tests failing with NaN position sizes. Need to debug ATR calculation and position sizing logic.
 
 **READY FOR DEVELOPMENT:** ~35 minutes of work to fix a critical foundational flaw.

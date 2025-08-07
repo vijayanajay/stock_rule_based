@@ -28,6 +28,10 @@ database_path: "data/kiss_signal.db"
 reports_output_dir: "reports/"
 edge_score_threshold: 0.50
 
+# Portfolio configuration
+portfolio_initial_capital: 100000.0
+risk_per_trade_pct: 0.01
+
 # Strategy seeker configuration (for adaptive rule combination testing)
 seeker_min_edge_score: 0.60
 seeker_min_trades: 20

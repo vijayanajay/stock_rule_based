@@ -56,6 +56,10 @@ class Config(BaseModel):
     freeze_date: Optional[date] = None
     verbose: bool = False
     
+    # Portfolio configuration for position sizing
+    portfolio_initial_capital: float = Field(default=100000.0, gt=0)
+    risk_per_trade_pct: float = Field(default=0.01, gt=0, le=0.1)
+    
     # Strategy seeker configuration
     seeker_min_edge_score: float = Field(default=0.60, ge=0.0, le=1.0)
     seeker_min_trades: int = Field(default=20, ge=5)

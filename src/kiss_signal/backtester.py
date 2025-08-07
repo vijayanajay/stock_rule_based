@@ -39,8 +39,63 @@ class Backtester:
         self.initial_capital = initial_capital
         logger.info(
             f"Backtester initialized: hold_period={hold_period}, "
-            f"min_trades={min_trades_threshold}"
+            f"min_trades={min_trades_threshold}, initial_capital={initial_capital}"
         )
+
+    def _get_atr_params(self, exit_conditions: List[Any]) -> tuple[int, float]:
+        """Find ATR period and multiplier from the first ATR-based stop-loss rule."""
+        for rule in exit_conditions:
+            # Handle both RuleDef objects and dict-like objects
+            if hasattr(rule, 'type'):
+                rule_type = rule.type
+                params = rule.params
+            else:
+                rule_type = rule.get('type', '')
+                params = rule.get('params', {})
+                
+            is_atr_stop = "stop_loss_atr" in rule_type or "chandelier_exit" in rule_type
+            if is_atr_stop:
+                period = params.get('atr_period', params.get('period', 22))
+                multiplier = params.get('atr_multiplier', params.get('multiplier', 2.0))
+                return int(period), float(multiplier)
+        # Default if no ATR-based stop is found
+        return 22, 2.0
+
+    def _calculate_risk_based_size(self, price_data: pd.DataFrame,
+                                  entry_signals: pd.Series,
+                                  exit_conditions: List[Any]) -> pd.Series:
+        """Calculate position sizes based on ATR risk."""
+        atr_period, atr_multiplier = self._get_atr_params(exit_conditions)
+        atr_values = rules.calculate_atr(price_data, period=atr_period)
+        risk_per_share = atr_values * atr_multiplier
+
+        risk_amount = self.initial_capital * 0.01  # 1% hardcoded for MVP
+
+        # Initialize sizes with NaN, which vectorbt treats as "no size specified"
+        sizes = pd.Series(np.nan, index=price_data.index, dtype=float)
+
+        # Handle each entry signal individually
+        for idx, signal in entry_signals.items():
+            if signal and idx in price_data.index:
+                current_risk = risk_per_share.loc[idx]
+                
+                # If ATR-based risk is available and valid, use it
+                if pd.notna(current_risk) and current_risk > 0:
+                    sizes.loc[idx] = risk_amount / current_risk
+                # Fallback: use simpler volatility measure for early entries
+                elif pd.isna(current_risk):
+                    # Calculate fallback risk using available data up to this point
+                    data_slice = price_data.loc[:idx]
+                    if len(data_slice) >= 3:  # Need minimum data for meaningful calculation
+                        # Use shorter-period ATR with available data
+                        fallback_period = min(len(data_slice), 5)  # Use 5-day or available data
+                        fallback_atr = rules.calculate_atr(data_slice, period=fallback_period)
+                        fallback_risk = fallback_atr.iloc[-1] * atr_multiplier
+                        
+                        if pd.notna(fallback_risk) and fallback_risk > 0:
+                            sizes.loc[idx] = risk_amount / fallback_risk
+
+        return sizes
 
     def _backtest_combination(
         self,
@@ -115,7 +170,7 @@ class Backtester:
                 fees=0.001,
                 slippage=0.0005,
                 init_cash=self.initial_capital,
-                size=np.inf,
+                size=self._calculate_risk_based_size(price_data, final_entry_signals, rules_config.exit_conditions),
             )
             
             # More debug logging
@@ -472,6 +527,7 @@ class Backtester:
                 init_cash=self.initial_capital,
                 sl_stop=sl_stop,
                 tp_stop=tp_stop,
+                size=self._calculate_risk_based_size(test_data, entry_signals, rules_config.exit_conditions),
             )
             
             total_trades = len(portfolio.trades.records_readable)

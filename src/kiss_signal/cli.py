@@ -155,6 +155,7 @@ def _run_backtests(
     bt = backtester.Backtester(
         hold_period=getattr(app_config, "hold_period", 20),
         min_trades_threshold=threshold,
+        initial_capital=getattr(app_config, "portfolio_initial_capital", 100000.0),
     )
     
     # Fetch market data once if context filters are present

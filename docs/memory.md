@@ -515,6 +515,16 @@
 - **Lesson**: The test harness is a critical part of the application's structure. Any change to a core data contract like a configuration model must be propagated to all test fixtures immediately. Fixtures must be self-contained and reflect valid user invocation patterns to be reliable. An incomplete fixture is a bug in the test suite.
 
 ## Test Harness Integrity: Configuration and Fixture Desynchronization (2025-07-22)
+- **Issue**: All position sizing tests failed because the calculated position size was consistently `NaN`. The root cause was a structural desynchronization between the position sizing logic and the risk management rules. The `_calculate_risk_based_size` function in `backtester.py` used a hardcoded ATR period (`period=22`) that was completely disconnected from the ATR parameters defined in the `exit_conditions` rules.
+- **Structural Root Cause**: The position sizing component made an independent, hardcoded assumption about a critical risk parameter instead of deriving it from the single source of truth: the user-defined `exit_conditions` in `rules.yaml`. This violated the principle of a single source of truth and created two conflicting definitions of risk within the system. The inefficient, non-vectorized loop for size calculation also masked the underlying `NaN` propagation issue.
+- **Fix**:
+    1.  The hardcoded ATR period was removed from `_calculate_risk_based_size`.
+    2.  A new helper, `_get_atr_params`, was introduced to parse the `exit_conditions` list and extract the period and multiplier from the first ATR-based stop-loss rule.
+    3.  `_calculate_risk_based_size` was updated to use these dynamically sourced parameters, ensuring position sizing is always synchronized with the configured exit strategy.
+    4.  The inefficient loop in `_calculate_risk_based_size` was replaced with a robust, vectorized implementation.
+- **Lesson**: Components that apply a policy (like position sizing) must derive their parameters from the component that defines the policy (risk management rules). Hardcoding critical parameters that are configurable elsewhere creates a structural flaw and leads to desynchronization bugs. Always ensure a single source of truth for key business logic parameters.
+
+## Test Harness Integrity: Flawed Invocation and Data Structure Flaw (2025-07-23)
 - **Issue**: A large number of test failures were caused by a structural desynchronization between the application's `Config` Pydantic model and the test fixtures that create `config.yaml` files or instantiate `Config` objects. The `Config` model was updated with new required fields (`reports_output_dir`, `edge_score_threshold`), but several test cases were not updated, leading to widespread `ValidationError` during test setup. Additionally, some CLI tests used incorrect argument ordering for Typer, and help-text tests were not resilient.
 - **Fix**:
     1.  **Fixtures Updated**: All inline test configurations (`sample_config_dict` in `test_cli_advanced.py`) were updated to provide all required fields for the `Config` model, resolving the `ValidationError`.
