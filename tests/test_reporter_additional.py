@@ -378,7 +378,10 @@ class TestReporterAdditionalCoverage:
         # Test 1: Permission error when creating directory
         config.reports_output_dir = "/root/cannot_write_here"
         result = reporter.generate_daily_report([], [], [], config)
-        assert result is None  # Should handle error gracefully
+        # Test 1: Permission error when creating directory (simulate)
+        with patch.object(Path, "mkdir", side_effect=PermissionError("Cannot create directory")):
+            result = reporter.generate_daily_report([], [], [], config)
+            assert result is None  # Should handle error gracefully
         
         # Test 2: Invalid report date handling
         config.reports_output_dir = str(tmp_path / "reports")
