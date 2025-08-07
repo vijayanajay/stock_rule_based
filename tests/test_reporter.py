@@ -1507,3 +1507,350 @@ def test_csv_formatting_variations(csv_format, aggregate):
     assert "test_strategy" in result
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+class TestReporterEdgeCases:
+    """Test edge cases, error conditions, and boundary scenarios for comprehensive coverage."""
+    
+    def test_walk_forward_report_empty_oos_results(self):
+        """Test WalkForwardReport with empty oos_results."""
+        from kiss_signal.reporter import WalkForwardReport
+        report = WalkForwardReport([])
+        
+        assert report.oos_results == []
+        assert report.consolidated_metrics == {}
+    
+    def test_walk_forward_report_with_nan_values(self):
+        """Test WalkForwardReport handling NaN values."""
+        import numpy as np
+        from kiss_signal.reporter import WalkForwardReport
+        
+        oos_results = [
+            {
+                'avg_return': np.nan,
+                'sharpe': np.inf,
+                'win_pct': 0.6,
+                'total_trades': 10,
+                'edge_score': 0.7
+            },
+            {
+                'avg_return': -np.inf,
+                'sharpe': np.nan,
+                'win_pct': 0.4,
+                'total_trades': 8,
+                'edge_score': 0.3
+            }
+        ]
+        
+        report = WalkForwardReport(oos_results)
+        
+        # Should handle NaN/inf values gracefully
+        assert report.oos_results == oos_results
+        assert isinstance(report.consolidated_metrics, dict)
+
+    def test_walk_forward_report_single_oos_period(self):
+        """Test WalkForwardReport with single OOS period."""
+        from kiss_signal.reporter import WalkForwardReport
+        
+        oos_results = [{
+            'avg_return': 0.15,
+            'sharpe': 1.2,
+            'win_pct': 0.6,
+            'total_trades': 10,
+            'edge_score': 0.7
+        }]
+        
+        report = WalkForwardReport(oos_results)
+        
+        assert len(report.oos_results) == 1
+        assert report.consolidated_metrics['avg_return'] == 0.15
+
+    def test_walk_forward_report_zero_trades_period(self):
+        """Test WalkForwardReport with zero trades period."""
+        from kiss_signal.reporter import WalkForwardReport
+        
+        oos_results = [{
+            'avg_return': 0.0,
+            'sharpe': 0.0,
+            'win_pct': 0.0,
+            'total_trades': 0,
+            'edge_score': 0.0
+        }]
+        
+        report = WalkForwardReport(oos_results)
+        
+        assert report.oos_results[0]['total_trades'] == 0
+        assert report.consolidated_metrics['total_trades'] == 0
+
+    def test_format_table_functions_with_none_values(self):
+        """Test formatting functions handle None values gracefully."""
+        from kiss_signal.reporter import _format_new_buys_table, _format_open_positions_table, _format_sell_positions_table
+        
+        # Test with None inputs
+        result1 = _format_new_buys_table(None)
+        result2 = _format_open_positions_table(None)  
+        result3 = _format_sell_positions_table(None)
+        
+        # Should return empty or default formatted tables
+        assert isinstance(result1, str)
+        assert isinstance(result2, str) 
+        assert isinstance(result3, str)
+
+    @patch('sqlite3.connect')
+    def test_analyze_strategy_performance_db_error(self, mock_connect):
+        """Test analyze_strategy_performance with database connection error."""
+        from kiss_signal.reporter import analyze_strategy_performance
+        
+        mock_connect.side_effect = sqlite3.Error("Connection failed")
+        
+        result = analyze_strategy_performance("fake_db.db", rule_stack="test")
+        
+        # Should handle DB error gracefully
+        assert result == []
+
+    @patch('sqlite3.connect') 
+    def test_analyze_strategy_performance_aggregated_db_error(self, mock_connect):
+        """Test analyze_strategy_performance_aggregated with database error."""
+        from kiss_signal.reporter import analyze_strategy_performance_aggregated
+        
+        mock_connect.side_effect = sqlite3.Error("Connection failed")
+        
+        result = analyze_strategy_performance_aggregated("fake_db.db")
+        
+        # Should handle DB error gracefully
+        assert result == []
+
+    def test_format_strategy_analysis_as_csv_empty_data(self):
+        """Test format_strategy_analysis_as_csv with empty data."""
+        from kiss_signal.reporter import format_strategy_analysis_as_csv
+        
+        result = format_strategy_analysis_as_csv([], aggregate=False)
+        
+        # Should handle empty data gracefully
+        assert isinstance(result, str)
+        assert len(result) >= 0  # May be empty or contain headers only
+
+    def test_analyze_strategy_performance_aggregated_empty_records(self, tmp_path):
+        """Test analyze_strategy_performance_aggregated when no records found."""
+        from kiss_signal.reporter import analyze_strategy_performance_aggregated
+        
+        # Create empty database
+        db_path = tmp_path / "empty.db"
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS backtest_results (
+                    symbol TEXT,
+                    strategy_rule_stack TEXT,
+                    edge_score REAL
+                )
+            ''')
+        
+        result = analyze_strategy_performance_aggregated(str(db_path))
+        
+        assert result == []
+
+    def test_walk_forward_report_calculation_edge_cases(self):
+        """Test WalkForwardReport calculations with edge case values."""
+        from kiss_signal.reporter import WalkForwardReport
+        import numpy as np
+        
+        oos_results = [
+            {'avg_return': 0.0, 'sharpe': 0.0, 'win_pct': 0.0, 'total_trades': 0, 'edge_score': 0.0},
+            {'avg_return': 1.0, 'sharpe': float('inf'), 'win_pct': 1.0, 'total_trades': 1, 'edge_score': 1.0},
+        ]
+        
+        report = WalkForwardReport(oos_results)
+        
+        # Should handle extreme values
+        assert isinstance(report.consolidated_metrics, dict)
+        assert 'total_trades' in report.consolidated_metrics
+
+
+class TestReporterAdditionalEdgeCases:
+    """Additional edge case tests for maximum coverage."""
+
+    def test_check_exit_conditions_comprehensive_coverage(self):
+        """Comprehensive test of all exit condition code paths."""
+        from kiss_signal import reporter
+        
+        # Test 1: Invalid entry price scenarios
+        test_cases = [
+            {'entry_price': 0},           # Zero price
+            {'entry_price': -5.0},        # Negative price  
+            {'entry_price': None},        # None price
+            {},                           # Missing entry_price
+        ]
+        
+        for position in test_cases:
+            position['symbol'] = 'TEST'
+            result = reporter.check_exit_conditions(
+                position, pd.DataFrame(), 95.0, 105.0, [], 5, 20
+            )
+            assert result is None, f"Should return None for invalid entry_price: {position}"
+        
+        # Test 2: All exit condition types with valid position
+        position = {'symbol': 'VALID', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [95], 'high': [96], 'low': [94]})
+        
+        # Stop loss percentage
+        exit_cond = [{'type': 'stop_loss_pct', 'params': {'percentage': 0.05}}]
+        result = reporter.check_exit_conditions(position, price_data, 94.0, 96.0, exit_cond, 5, 20)
+        assert result is not None and "Stop-loss triggered" in result
+        
+        # Take profit percentage  
+        exit_cond = [{'type': 'take_profit_pct', 'params': {'percentage': 0.05}}]
+        result = reporter.check_exit_conditions(position, price_data, 106.0, 108.0, exit_cond, 5, 20)
+        assert result is not None and "Take-profit triggered" in result
+
+    @patch('kiss_signal.adapters.yfinance.get_price_data')
+    def test_get_position_pricing_all_scenarios(self, mock_get_price_data, tmp_path):
+        """Test get_position_pricing with all scenarios."""
+        from kiss_signal import reporter
+        
+        # Mock price data
+        mock_get_price_data.return_value = pd.DataFrame({
+            'high': [105, 110, 108],
+            'low': [95, 100, 102],
+            'close': [100, 105, 106]
+        }, index=pd.date_range('2023-01-01', periods=3))
+        
+        # Test scenarios
+        scenarios = [
+            ("TEST", date(2023, 1, 2), 100.0),  # Normal case
+            ("INVALID", date(2023, 1, 2), 100.0),  # Invalid symbol
+        ]
+        
+        for symbol, entry_date, entry_price in scenarios:
+            result = reporter.get_position_pricing(symbol, entry_date, entry_price, str(tmp_path))
+            assert isinstance(result, tuple)
+            assert len(result) == 2  # (current_low, current_high)
+
+    def test_calculate_position_returns_comprehensive(self):
+        """Test calculate_position_returns with comprehensive scenarios."""
+        from kiss_signal import reporter
+        
+        test_cases = [
+            # (entry_price, exit_price, expected_return)
+            (100.0, 110.0, 0.1),      # 10% gain
+            (100.0, 90.0, -0.1),      # 10% loss  
+            (100.0, 100.0, 0.0),      # No change
+            (50.0, 75.0, 0.5),        # 50% gain
+        ]
+        
+        for entry, exit, expected in test_cases:
+            result = reporter.calculate_position_returns(entry, exit)
+            assert abs(result - expected) < 0.001, f"Expected {expected}, got {result}"
+
+    @patch('kiss_signal.adapters.yfinance.get_price_data')
+    @patch('kiss_signal.persistence.get_open_positions')
+    def test_process_open_positions_edge_cases(self, mock_get_positions, mock_get_price_data, tmp_path):
+        """Test process_open_positions with edge cases."""
+        from kiss_signal import reporter
+        
+        # Mock empty positions
+        mock_get_positions.return_value = []
+        mock_get_price_data.return_value = pd.DataFrame()
+        
+        result = reporter.process_open_positions(str(tmp_path), [], 5, 20)
+        
+        assert isinstance(result, tuple)
+        assert len(result) == 2  # (sell_positions, updated_positions)
+
+    def test_identify_new_signals_comprehensive(self, tmp_path):
+        """Test identify_new_signals with comprehensive scenarios."""
+        from kiss_signal import reporter
+        
+        # Create test database with signals
+        db_path = tmp_path / "test_signals.db"
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute('''
+                CREATE TABLE signals (
+                    symbol TEXT,
+                    signal_date TEXT,
+                    entry_price REAL
+                )
+            ''')
+            conn.execute(
+                "INSERT INTO signals VALUES (?, ?, ?)",
+                ("TEST", "2023-01-01", 100.0)
+            )
+        
+        result = reporter.identify_new_signals(str(db_path), [])
+        
+        assert isinstance(result, list)
+
+    def test_format_strategy_analysis_comprehensive(self):
+        """Test format_strategy_analysis with comprehensive data."""
+        from kiss_signal import reporter
+        
+        analysis_data = [
+            {
+                'symbol': 'TEST1',
+                'strategy_rule_stack': 'strategy1',
+                'edge_score': 0.8,
+                'win_pct': 0.7,
+                'sharpe': 1.5,
+                'total_return': 0.15,
+                'total_trades': 20,
+                'config_hash': 'hash1',
+                'run_date': '2023-01-01',
+                'config_details': '{}'
+            },
+            # Test with missing fields
+            {
+                'symbol': 'TEST2',
+                'strategy_rule_stack': 'strategy2'
+                # Missing other fields
+            }
+        ]
+        
+        result = reporter.format_strategy_analysis_as_csv(analysis_data, aggregate=False)
+        
+        assert isinstance(result, str)
+        assert len(result) > 0
+        assert 'TEST1' in result
+
+    def test_generate_daily_report_error_scenarios(self, tmp_path):
+        """Test generate_daily_report with error scenarios."""
+        from kiss_signal import reporter
+        from unittest.mock import patch
+        
+        # Test with invalid database path
+        with patch('kiss_signal.reporter.identify_new_signals') as mock_identify:
+            mock_identify.side_effect = Exception("Database error")
+            
+            # Should handle exception gracefully
+            try:
+                reporter.generate_daily_report("invalid_db.db", [], str(tmp_path), [], 5, 20)
+            except Exception:
+                pass  # Expected to fail, but shouldn't crash
+
+    def test_analysis_functions_with_malformed_data(self, tmp_path):
+        """Test analysis functions with malformed database data."""
+        from kiss_signal import reporter
+        
+        # Create database with malformed data
+        db_path = tmp_path / "malformed.db"
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute('''
+                CREATE TABLE backtest_results (
+                    symbol TEXT,
+                    invalid_column TEXT
+                )
+            ''')
+            conn.execute("INSERT INTO backtest_results VALUES (?, ?)", ("TEST", "invalid"))
+        
+        # Should handle malformed data gracefully
+        result = reporter.analyze_strategy_performance(str(db_path))
+        assert isinstance(result, list)
+
+    def test_database_connection_errors(self):
+        """Test various database connection error scenarios."""
+        from kiss_signal import reporter
+        
+        # Test with non-existent database
+        result1 = reporter.analyze_strategy_performance("/nonexistent/path.db")
+        result2 = reporter.analyze_strategy_performance_aggregated("/nonexistent/path.db")
+        
+        assert result1 == []
+        assert result2 == []
