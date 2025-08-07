@@ -430,12 +430,6 @@ tests/test_walk_forward.py::TestWalkForwardAnalysis::test_walk_forward_data_vali
 tests/test_walk_forward.py::TestWalkForwardAnalysis::test_walk_forward_data_validation_no_market_data PASSED [ 99%]
 tests/test_walk_forward.py::TestWalkForwardAnalysis::test_walk_forward_data_validation_empty_market_data PASSED [100%]
 
-============================== warnings summary ===============================
-venv\Lib\site-packages\_pytest\cacheprovider.py:475
-  D:\Code\stock_rule_based\venv\Lib\site-packages\_pytest\cacheprovider.py:475: PytestCacheWarning: could not create cache path D:\Code\stock_rule_based\.pytest_cache\v\cache\nodeids: [WinError 5] Access is denied: 'D:\\Code\\stock_rule_based\\.pytest_cache\\v\\cache'
-    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 =============================== tests coverage ================================
 ______________ coverage: platform win32, python 3.12.10-final-0 _______________
 
@@ -445,8 +439,8 @@ src\kiss_signal\__init__.py                5      0      0      0   100%
 src\kiss_signal\adapters\__init__.py       1      0      0      0   100%
 src\kiss_signal\adapters\yfinance.py      55      0     20      0   100%
 src\kiss_signal\backtester.py            493     55    224     35    87%
-src\kiss_signal\cli.py                   293     46     68     11    81%
-src\kiss_signal\config.py                 95      2     16      3    95%
+src\kiss_signal\cli.py                   294     46     68     11    81%
+src\kiss_signal\config.py                 92      2     16      3    95%
 src\kiss_signal\data.py                  201     22     78      9    89%
 src\kiss_signal\exceptions.py              6      0      0      0   100%
 src\kiss_signal\performance.py            41      0      4      0   100%
@@ -454,5 +448,5 @@ src\kiss_signal\persistence.py           236      4     40      4    97%
 src\kiss_signal\reporter.py              410    104    116     18    70%
 src\kiss_signal\rules.py                 311     12    110      7    95%
 ------------------------------------------------------------------------
-TOTAL                                   2147    245    676     87    86%
-================= 423 passed, 1 warning in 112.11s (0:01:52) ==================
+TOTAL                                   2145    245    676     87    86%
+======================= 423 passed in 130.96s (0:02:10) =======================

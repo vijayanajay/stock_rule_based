@@ -32,7 +32,6 @@ ENV/
 
 # Project-specific folders
 /logs/
-/reports/
 /data/cache/
 /state/
 .env

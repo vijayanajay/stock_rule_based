@@ -53,8 +53,6 @@ class Config(BaseModel):
     database_path: str
     reports_output_dir: str
     edge_score_threshold: float = Field(..., ge=0.0, le=1.0)
-    freeze_date: Optional[date] = None
-    verbose: bool = False
     
     # Portfolio configuration for position sizing
     portfolio_initial_capital: float = Field(default=100000.0, gt=0)
@@ -66,11 +64,7 @@ class Config(BaseModel):
     
     # Walk-forward analysis configuration
     walk_forward: WalkForwardConfig = Field(default_factory=WalkForwardConfig)
-
-    # The following are not in config.yaml but can be part of the object
-    # for runtime convenience, hence they are optional.
-    log_path: Optional[str] = None
-    report_dir: Optional[str] = None
+    freeze_date: Optional[date] = None
 
     @field_validator("universe_path")
     @classmethod

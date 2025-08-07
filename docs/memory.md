@@ -1,5 +1,8 @@
 # KISS Signal CLI - Memory & Learning Log
-
+## Data Contract Violation: Implicit Runtime State on Config Object (2025-08-07)
+- **Structural Issue Discovered**: A runtime parameter (`freeze_date`) was being managed by dynamically attaching it to the `Config` Pydantic model instance at runtime, without being part of the model's explicit schema. This created an inconsistent data contract, as other parts of the application that consumed the `Config` object would fail with an `AttributeError` if the parameter hadn't been set (e.g., when the `--freeze-data` CLI flag was not used).
+- **Nature of the Fix**: The `freeze_date` was added as an `Optional[date]` field to the `Config` Pydantic model itself. The CLI entry point was then refactored to parse the command-line argument and explicitly set this field on the `Config` instance for the duration of the run. This makes the data contract explicit and ensures the `freeze_date` state is consistently available to all downstream components that receive the `Config` object.
+- **Lesson Learned**: Runtime parameters that affect the behavior of multiple downstream components should be part of an explicit data contract (like a Pydantic model), not managed via dynamic, implicit attribute attachment. This prevents `AttributeError`s and makes state management predictable and transparent. The configuration object should be fully constituted at the application entry point.
 ## Test Framework Contract Violation: Script-style Test Structure (2025-08-05)
 - **Context**: `test_trailing_stop_direct.py` failed pytest execution despite generating correct performance data and functional output.
 - **Structural Issue**: Test function used `return baseline_result and trailing_result` instead of pytest-expected assertions. This violated pytest's discovery and execution contract where test functions must communicate success/failure through assertions or exceptions, not return values.

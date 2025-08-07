@@ -262,14 +262,13 @@ def _save_results(
         logger.error(f"Persistence error: {e}", exc_info=True)
 
 
-def _parse_freeze_date(freeze_data: Optional[str], app_config: Config) -> Optional[date]:
+def _parse_freeze_date(freeze_data: Optional[str]) -> Optional[date]:
     """Parse and validate freeze date parameter."""
     if not freeze_data:
         return None
     
     try:
         freeze_date_obj = date.fromisoformat(freeze_data)
-        app_config.freeze_date = freeze_date_obj
         return freeze_date_obj
     except ValueError:
         console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
@@ -430,7 +429,8 @@ def run(
     rules_config = ctx.obj["rules"]
     verbose = ctx.obj["verbose"]
     
-    freeze_date_obj = _parse_freeze_date(freeze_data, app_config)
+    freeze_date_obj = _parse_freeze_date(freeze_data)
+    app_config.freeze_date = freeze_date_obj
     db_connection = None
 
     try:
@@ -441,7 +441,7 @@ def run(
 
         with performance_monitor.monitor_execution("full_backtest"):
             console.print("[1/4] Configuration loaded.")
-            if app_config.freeze_date:
+            if app_config.freeze_date:  # Now safe to access
                 if verbose: logger.info(f"Freeze mode active: {app_config.freeze_date}")
                 console.print("[2/4] Skipping data refresh (freeze mode).")
             else:
@@ -451,10 +451,10 @@ def run(
                     universe_path=app_config.universe_path,
                     cache_dir=app_config.cache_dir,
                     years=app_config.historical_data_years,
-                    freeze_date=app_config.freeze_date,
+                    freeze_date=app_config.freeze_date,  # This is now None if not provided
                 )
 
-            all_results = _execute_backtesting_workflow(app_config, rules_config, freeze_date_obj, min_trades, in_sample)
+            all_results = _execute_backtesting_workflow(app_config, rules_config, app_config.freeze_date, min_trades, in_sample)
             console.print("[4/4] Analysis complete. Results summary:")
             _process_and_save_results(db_connection, all_results, app_config, rules_config)
 
@@ -539,7 +539,8 @@ def clear_and_recalculate(
     
     db_path = Path(app_config.database_path)
     _validate_database_path(db_path)
-    freeze_date_obj = _parse_freeze_date(freeze_data, app_config)
+    freeze_date_obj = _parse_freeze_date(freeze_data)
+    app_config.freeze_date = freeze_date_obj
 
     try:
         if not preserve_all and not force:
@@ -576,7 +577,7 @@ def clear_and_recalculate(
                 console.print(f"✅ Preserved: {clear_result['preserved_count']} historical strategies")
 
             console.print("Recalculating strategies...")
-            all_results = _execute_backtesting_workflow(app_config, rules_config, freeze_date_obj, app_config.min_trades_threshold)
+            all_results = _execute_backtesting_workflow(app_config, rules_config, app_config.freeze_date, app_config.min_trades_threshold)
             _process_and_save_results(conn, all_results, app_config, rules_config)
         
         console.print(f"✅ New strategies found: {len(all_results)}")
