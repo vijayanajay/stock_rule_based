@@ -893,6 +893,266 @@ class TestReportGeneration:
 
 
 # =============================================================================
+# Additional Coverage Tests for Exit Conditions and Position Processing
+# =============================================================================
+
+class TestExitConditionChecking:
+    """Tests for exit condition checking functionality."""
+    
+    def test_check_exit_conditions_invalid_entry_price(self):
+        """Test check_exit_conditions with invalid entry prices."""
+        position = {'symbol': 'TEST', 'entry_price': 0}
+        price_data = pd.DataFrame({'close': [100]})
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 95.0, 105.0, [], 5, 20
+        )
+        assert result is None  # Should return None for invalid entry price
+        
+        # Test with None entry_price
+        position = {'symbol': 'TEST', 'entry_price': None}
+        result = reporter.check_exit_conditions(
+            position, price_data, 95.0, 105.0, [], 5, 20
+        )
+        assert result is None
+        
+        # Test with negative entry_price
+        position = {'symbol': 'TEST', 'entry_price': -10}
+        result = reporter.check_exit_conditions(
+            position, price_data, 95.0, 105.0, [], 5, 20
+        )
+        assert result is None
+    
+    def test_check_exit_conditions_stop_loss_pct(self):
+        """Test stop loss percentage exit condition."""
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [95]})
+        exit_conditions = [{'type': 'stop_loss_pct', 'params': {'percentage': 0.05}}]
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 94.0, 96.0, exit_conditions, 5, 20
+        )
+        assert result is not None
+        assert "Stop-loss triggered" in result
+    
+    def test_check_exit_conditions_take_profit_pct(self):
+        """Test take profit percentage exit condition."""
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [110]})
+        exit_conditions = [{'type': 'take_profit_pct', 'params': {'percentage': 0.10}}]
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 109.0, 111.0, exit_conditions, 5, 20
+        )
+        assert result is not None
+        assert "Take-profit triggered" in result
+    
+    @patch('kiss_signal.reporter.rules.stop_loss_atr')
+    def test_check_exit_conditions_stop_loss_atr(self, mock_stop_loss_atr):
+        """Test ATR-based stop loss exit condition."""
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [95], 'high': [96], 'low': [94]})
+        exit_conditions = [{'type': 'stop_loss_atr', 'params': {'period': 14, 'multiplier': 2.0}}]
+        
+        mock_stop_loss_atr.return_value = True
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 94.0, 96.0, exit_conditions, 5, 20
+        )
+        assert result is not None
+        assert "ATR stop-loss triggered" in result
+        
+        # Test ATR exception handling
+        mock_stop_loss_atr.side_effect = Exception("ATR calculation failed")
+        result = reporter.check_exit_conditions(
+            position, price_data, 94.0, 96.0, exit_conditions, 5, 20
+        )
+        # Should return None when ATR fails but continue processing
+        assert result is None or "ATR" not in result
+    
+    @patch('kiss_signal.reporter.rules.take_profit_atr')
+    def test_check_exit_conditions_take_profit_atr(self, mock_take_profit_atr):
+        """Test ATR-based take profit exit condition."""
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [110], 'high': [111], 'low': [109]})
+        exit_conditions = [{'type': 'take_profit_atr', 'params': {'period': 14, 'multiplier': 4.0}}]
+        
+        mock_take_profit_atr.return_value = True
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 109.0, 111.0, exit_conditions, 5, 20
+        )
+        assert result is not None
+        assert "ATR take-profit triggered" in result
+        
+        # Test ATR exception handling
+        mock_take_profit_atr.side_effect = Exception("ATR calculation failed")
+        result = reporter.check_exit_conditions(
+            position, price_data, 109.0, 111.0, exit_conditions, 5, 20
+        )
+        assert result is None or "ATR" not in result
+    
+    @patch('kiss_signal.reporter.rules.sma_cross_under')
+    def test_check_exit_conditions_sma_cross_under(self, mock_sma_cross_under):
+        """Test SMA cross under exit condition."""
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [95, 94, 93]})
+        exit_conditions = [{'type': 'sma_cross_under', 'params': {'fast_period': 10, 'slow_period': 20}}]
+        
+        mock_signal = pd.Series([False, False, True])
+        mock_sma_cross_under.return_value = mock_signal
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 92.0, 94.0, exit_conditions, 5, 20
+        )
+        assert result is not None
+        assert "sma_cross_under" in result
+        
+        # Test with exception
+        mock_sma_cross_under.side_effect = Exception("SMA calculation failed")
+        result = reporter.check_exit_conditions(
+            position, price_data, 92.0, 94.0, exit_conditions, 5, 20
+        )
+        assert result is None or "sma_cross_under" not in result
+    
+    @patch('kiss_signal.reporter.rules.sma_crossover')
+    def test_check_exit_conditions_sma_crossover(self, mock_sma_crossover):
+        """Test SMA crossover exit condition."""
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [105, 106, 107]})
+        exit_conditions = [{'type': 'sma_crossover', 'params': {'fast_period': 10, 'slow_period': 20}}]
+        
+        mock_signal = pd.Series([False, False, True])
+        mock_sma_crossover.return_value = mock_signal
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 106.0, 108.0, exit_conditions, 5, 20
+        )
+        assert result is not None
+        assert "sma_crossover" in result
+    
+    def test_check_exit_conditions_time_based_exit(self):
+        """Test time-based exit condition."""
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [102]})
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 101.0, 103.0, [], 25, 20  # 25 days held > 20 hold period
+        )
+        assert result is not None
+        assert "20-day holding period" in result
+    
+    def test_check_exit_conditions_with_object_conditions(self):
+        """Test exit conditions with object-style conditions."""
+        # Mock condition object
+        condition = Mock()
+        condition.type = 'stop_loss_pct'
+        condition.params = {'percentage': 0.05}
+        
+        position = {'symbol': 'TEST', 'entry_price': 100.0}
+        price_data = pd.DataFrame({'close': [95]})
+        
+        result = reporter.check_exit_conditions(
+            position, price_data, 94.0, 96.0, [condition], 5, 20
+        )
+        assert result is not None
+        assert "Stop-loss triggered" in result
+
+
+class TestPositionPricingAndCalculations:
+    """Tests for position pricing and return calculations."""
+    
+    @patch('kiss_signal.data.get_price_data')
+    def test_get_position_pricing_success(self, mock_get_price_data, sample_config):
+        """Test successful position pricing retrieval."""
+        mock_price_data = pd.DataFrame({
+            'close': [105.0], 'high': [106.0], 'low': [104.0]
+        }, index=[pd.Timestamp('2023-01-01')])
+        mock_get_price_data.return_value = mock_price_data
+        
+        result = reporter.get_position_pricing('RELIANCE', sample_config)
+        
+        assert result is not None
+        assert result['current_price'] == 105.0
+        assert result['current_high'] == 106.0
+        assert result['current_low'] == 104.0
+    
+    @patch('kiss_signal.data.get_price_data')
+    def test_get_position_pricing_no_data(self, mock_get_price_data, sample_config):
+        """Test position pricing with no data available."""
+        mock_get_price_data.return_value = None
+        
+        result = reporter.get_position_pricing('UNKNOWN', sample_config)
+        assert result is None
+        
+        # Test with empty DataFrame
+        mock_get_price_data.return_value = pd.DataFrame()
+        result = reporter.get_position_pricing('EMPTY', sample_config)
+        assert result is None
+    
+    @patch('kiss_signal.data.get_price_data')
+    def test_get_position_pricing_exception(self, mock_get_price_data, sample_config):
+        """Test position pricing with exception."""
+        mock_get_price_data.side_effect = Exception("Data retrieval failed")
+        
+        result = reporter.get_position_pricing('ERROR', sample_config)
+        assert result is None
+    
+    def test_calculate_position_returns_basic(self):
+        """Test basic position return calculations."""
+        position = {'entry_price': 100.0, 'symbol': 'TEST'}
+        current_price = 110.0
+        
+        result = reporter.calculate_position_returns(position, current_price)
+        
+        assert result['return_pct'] == 10.0  # 10% gain
+        assert result['nifty_return_pct'] is None
+    
+    def test_calculate_position_returns_invalid_entry_price(self):
+        """Test position returns with invalid entry price."""
+        position = {'entry_price': 0, 'symbol': 'TEST'}
+        current_price = 110.0
+        
+        result = reporter.calculate_position_returns(position, current_price)
+        assert result['return_pct'] == 0.0
+        
+        # Test negative entry price
+        position = {'entry_price': -10, 'symbol': 'TEST'}
+        result = reporter.calculate_position_returns(position, current_price)
+        assert result['return_pct'] == 0.0
+    
+    def test_calculate_position_returns_with_nifty_data(self):
+        """Test position returns with NIFTY benchmark data."""
+        position = {'entry_price': 100.0, 'entry_date': '2023-01-01', 'symbol': 'TEST'}
+        current_price = 110.0
+        
+        nifty_data = pd.DataFrame({
+            'close': [18000, 18500, 19000]
+        }, index=pd.date_range('2023-01-01', periods=3))
+        
+        result = reporter.calculate_position_returns(position, current_price, nifty_data)
+        
+        assert result['return_pct'] == 10.0
+        assert result['nifty_return_pct'] is not None
+        # NIFTY return should be from 18000 to 19000 = ~5.56%
+        assert abs(result['nifty_return_pct'] - 5.555555555555555) < 0.01
+    
+    def test_calculate_position_returns_nifty_error(self):
+        """Test position returns with NIFTY calculation error."""
+        position = {'entry_price': 100.0, 'entry_date': 'invalid-date', 'symbol': 'TEST'}
+        current_price = 110.0
+        
+        nifty_data = pd.DataFrame({
+            'close': [18000, 18500, 19000]
+        }, index=pd.date_range('2023-01-01', periods=3))
+        
+        result = reporter.calculate_position_returns(position, current_price, nifty_data)
+        
+        assert result['return_pct'] == 10.0
+        assert result['nifty_return_pct'] is None  # Should be None due to error
+
+
+# =============================================================================
 # Parameterized Tests
 # =============================================================================
 
@@ -936,6 +1196,269 @@ def test_fetch_strategies_threshold_variations(tmp_path, sample_strategies, thre
     
     result = reporter._fetch_best_strategies(db_path, 'test_timestamp', threshold)
     assert len(result) == expected_count
+
+
+class TestPositionProcessing:
+    """Tests for position processing functionality."""
+    
+    @patch('kiss_signal.data.get_price_data')
+    @patch('kiss_signal.persistence.get_open_positions')
+    def test_process_open_positions_basic(self, mock_get_positions, mock_get_price_data, tmp_path):
+        """Test basic position processing."""
+        # Mock open positions
+        mock_get_positions.return_value = [
+            {
+                'id': 1,
+                'symbol': 'RELIANCE',
+                'entry_date': '2023-01-01',
+                'entry_price': 100.0
+            }
+        ]
+        
+        # Mock price data
+        mock_get_price_data.return_value = pd.DataFrame({
+            'close': [105], 'high': [106], 'low': [104]
+        }, index=[pd.Timestamp('2023-01-15')])
+        
+        config = Mock()
+        config.cache_dir = str(tmp_path)
+        config.freeze_date = date(2023, 1, 15)
+        config.hold_period = 20
+        
+        positions_to_hold, positions_to_close = reporter.process_open_positions(
+            tmp_path / "test.db", config, [], None
+        )
+        
+        assert len(positions_to_hold) == 1
+        assert len(positions_to_close) == 0
+        assert positions_to_hold[0]['symbol'] == 'RELIANCE'
+        assert 'current_price' in positions_to_hold[0]
+    
+    @patch('kiss_signal.persistence.get_open_positions')
+    def test_process_open_positions_no_pricing(self, mock_get_positions, tmp_path):
+        """Test position processing when pricing is unavailable."""
+        mock_get_positions.return_value = [
+            {
+                'id': 1,
+                'symbol': 'UNKNOWN',
+                'entry_date': '2023-01-01',
+                'entry_price': 100.0
+            }
+        ]
+        
+        config = Mock()
+        config.cache_dir = str(tmp_path)
+        config.freeze_date = date(2023, 1, 15)
+        config.hold_period = 20
+        
+        with patch.object(reporter, 'get_position_pricing', return_value=None):
+            positions_to_hold, positions_to_close = reporter.process_open_positions(
+                tmp_path / "test.db", config, [], None
+            )
+        
+        assert len(positions_to_hold) == 1  # Should keep position open when pricing unavailable
+        assert len(positions_to_close) == 0
+    
+    @patch('kiss_signal.persistence.get_open_positions')
+    def test_identify_new_signals_basic(self, mock_get_positions, tmp_path):
+        """Test new signal identification."""
+        mock_get_positions.return_value = [
+            {'symbol': 'EXISTING'}
+        ]
+        
+        all_results = [
+            {
+                'symbol': 'EXISTING',  # Should be filtered out
+                'rule_stack': [Mock(name='test_rule', type='test')],
+                'edge_score': 0.8,
+                'latest_close': 100.0
+            },
+            {
+                'symbol': 'NEW_SIGNAL',  # Should be included
+                'rule_stack': [Mock(name='new_rule', type='new')],
+                'edge_score': 0.7,
+                'latest_close': 200.0
+            }
+        ]
+        
+        new_signals = reporter.identify_new_signals(all_results, tmp_path / "test.db")
+        
+        assert len(new_signals) == 1
+        assert new_signals[0]['ticker'] == 'NEW_SIGNAL'
+        assert new_signals[0]['entry_price'] == 200.0
+    
+    def test_identify_new_signals_empty_results(self, tmp_path):
+        """Test new signal identification with empty results."""
+        new_signals = reporter.identify_new_signals([], tmp_path / "test.db")
+        assert new_signals == []
+    
+    @patch('kiss_signal.data.get_price_data')
+    @patch('kiss_signal.persistence.close_positions_batch')
+    @patch('kiss_signal.persistence.add_new_positions_from_signals')
+    def test_update_positions_and_generate_report_data(
+        self, mock_add_positions, mock_close_positions, mock_get_price_data, tmp_path
+    ):
+        """Test the main update positions and generate report data function."""
+        config = Mock()
+        config.cache_dir = str(tmp_path)
+        config.freeze_date = date(2023, 1, 15)
+        config.hold_period = 20
+        
+        rules_config = Mock()
+        rules_config.exit_conditions = []
+        
+        # Mock NIFTY data
+        mock_get_price_data.return_value = pd.DataFrame({
+            'close': [18000, 18100]
+        }, index=pd.date_range('2023-01-01', periods=2))
+        
+        all_results = [
+            {
+                'symbol': 'TEST',
+                'rule_stack': [Mock(name='test_rule', type='test')],
+                'edge_score': 0.8,
+                'latest_close': 100.0
+            }
+        ]
+        
+        with patch.object(reporter, 'process_open_positions', return_value=([], [])):
+            with patch.object(reporter, 'identify_new_signals', return_value=[{'ticker': 'TEST'}]):
+                result = reporter.update_positions_and_generate_report_data(
+                    tmp_path / "test.db", "test_run", config, rules_config, all_results
+                )
+        
+        assert 'new_buys' in result
+        assert 'open' in result
+        assert 'closed' in result
+    
+    @patch('kiss_signal.data.get_price_data')
+    def test_update_positions_nifty_data_error(self, mock_get_price_data, tmp_path):
+        """Test update positions when NIFTY data loading fails."""
+        mock_get_price_data.side_effect = Exception("NIFTY data error")
+        
+        config = Mock()
+        config.cache_dir = str(tmp_path)
+        config.freeze_date = date(2023, 1, 15)
+        config.hold_period = 20
+        
+        rules_config = Mock()
+        rules_config.exit_conditions = []
+        
+        with patch.object(reporter, 'process_open_positions', return_value=([], [])):
+            with patch.object(reporter, 'identify_new_signals', return_value=[]):
+                result = reporter.update_positions_and_generate_report_data(
+                    tmp_path / "test.db", "test_run", config, rules_config, []
+                )
+        
+        assert result is not None
+        assert 'new_buys' in result
+
+
+class TestAdvancedFormatting:
+    """Tests for advanced formatting scenarios."""
+    
+    def test_format_new_buys_table_with_missing_fields(self):
+        """Test new buys table with missing fields."""
+        signals = [
+            {},  # Empty dict
+            {'ticker': 'TEST1'},  # Missing other fields
+            {
+                'ticker': 'TEST2',
+                'date': None,
+                'entry_price': None,
+                'rule_stack': None,
+                'edge_score': None
+            }
+        ]
+        
+        result = reporter._format_new_buys_table(signals)
+        assert isinstance(result, str)
+        assert 'TEST1' in result or 'TEST2' in result or 'N/A' in result
+    
+    def test_format_open_positions_with_extreme_values(self):
+        """Test open positions formatting with extreme values."""
+        positions = [
+            {
+                'symbol': 'EXTREME',
+                'entry_date': '2023-01-01',
+                'entry_price': float('inf'),
+                'current_price': float('-inf'),
+                'return_pct': float('nan'),
+                'days_held': 999999
+            }
+        ]
+        
+        result = reporter._format_open_positions_table(positions, 20)
+        assert isinstance(result, str)
+        assert 'EXTREME' in result
+    
+    def test_format_sell_positions_with_missing_exit_reason(self):
+        """Test sell positions formatting with missing exit reason."""
+        positions = [
+            {
+                'symbol': 'TEST',
+                'entry_date': '2023-01-01',
+                'exit_date': '2023-01-15',
+                'entry_price': 100.0,
+                'exit_price': 105.0,
+                'return_pct': 5.0,
+                'days_held': 14
+                # Missing exit_reason
+            }
+        ]
+        
+        result = reporter._format_sell_positions_table(positions)
+        assert 'Unknown' in result  # Should use default value
+    
+    def test_generate_daily_report_comprehensive(self, sample_config):
+        """Test comprehensive daily report generation."""
+        new_buy_signals = [
+            {
+                'ticker': 'NEWBUY1',
+                'date': '2023-01-15',
+                'entry_price': 100.0,
+                'rule_stack': 'sma_crossover',
+                'edge_score': 0.8
+            }
+        ]
+        
+        open_positions = [
+            {
+                'symbol': 'OPEN1',
+                'entry_date': '2023-01-01',
+                'entry_price': 90.0,
+                'current_price': 95.0,
+                'return_pct': 5.56,
+                'days_held': 14
+            }
+        ]
+        
+        closed_positions = [
+            {
+                'symbol': 'CLOSED1',
+                'entry_date': '2023-01-01',
+                'exit_date': '2023-01-10',
+                'entry_price': 80.0,
+                'exit_price': 88.0,
+                'return_pct': 10.0,
+                'days_held': 9,
+                'exit_reason': 'Take-profit triggered'
+            }
+        ]
+        
+        result = reporter.generate_daily_report(
+            new_buy_signals, open_positions, closed_positions, sample_config
+        )
+        
+        assert result is not None
+        assert isinstance(result, Path)
+        
+        # Verify report content
+        content = result.read_text()
+        assert 'NEWBUY1' in content
+        assert 'OPEN1' in content
+        assert 'CLOSED1' in content
+        assert 'Take-profit triggered' in content
 
 
 @pytest.mark.parametrize("csv_format,aggregate", [
