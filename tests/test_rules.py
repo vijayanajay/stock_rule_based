@@ -39,29 +39,6 @@ from kiss_signal.backtester import Backtester
 
 
 @pytest.fixture
-def sample_price_data() -> pd.DataFrame:
-    """Create sample OHLCV data for testing."""
-    dates = pd.date_range('2023-01-01', periods=50, freq='D')
-    
-    # Create trending price data that should trigger crossovers
-    base_price = 100
-    trend = 0.5  # Positive trend
-    
-    prices = []
-    for i in range(len(dates)):
-        price = base_price + trend * i + (i % 5 - 2)  # Add some volatility
-        prices.append(price)
-    
-    return pd.DataFrame({
-        'open': prices,
-        'high': [p * 1.02 for p in prices],
-        'low': [p * 0.98 for p in prices],
-        'close': prices,
-        'volume': [1000 + i * 10 for i in range(len(dates))]
-    }, index=dates)
-
-
-@pytest.fixture
 def declining_price_data() -> pd.DataFrame:
     """Create declining price data for RSI testing."""
     dates = pd.date_range('2023-01-01', periods=30, freq='D')
@@ -129,14 +106,14 @@ def engulfing_pattern_data() -> pd.DataFrame:
 class TestSMACrossover:
     """Test SMA crossover functionality."""
     
-    def test_valid_crossover_signal(self, sample_price_data: pd.DataFrame) -> None:
+    def test_valid_crossover_signal(self, trending_price_data: pd.DataFrame) -> None:
         """Test that SMA crossover generates signals with valid parameters."""
-        signals = sma_crossover(sample_price_data, fast_period=5, slow_period=10)
+        signals = sma_crossover(trending_price_data, fast_period=5, slow_period=10)
         
         assert isinstance(signals, pd.Series)
         assert signals.dtype == bool
-        assert len(signals) == len(sample_price_data)
-        assert signals.index.equals(sample_price_data.index)
+        assert len(signals) == len(trending_price_data)
+        assert signals.index.equals(trending_price_data.index)
     
     def test_insufficient_data(self) -> None:
         """Test handling of insufficient data."""
@@ -147,13 +124,13 @@ class TestSMACrossover:
         signals = sma_crossover(short_data, fast_period=5, slow_period=10)
         assert signals.sum() == 0  # No signals with insufficient data
     
-    def test_invalid_periods(self, sample_price_data: pd.DataFrame) -> None:
+    def test_invalid_periods(self, trending_price_data: pd.DataFrame) -> None:
         """Test error handling for invalid period parameters."""
         with pytest.raises(ValueError, match="fast_period.*must be.*slow_period"):
-            sma_crossover(sample_price_data, fast_period=20, slow_period=10)
+            sma_crossover(trending_price_data, fast_period=20, slow_period=10)
         
         with pytest.raises(ValueError, match="fast_period.*must be.*slow_period"):
-            sma_crossover(sample_price_data, fast_period=10, slow_period=10)
+            sma_crossover(trending_price_data, fast_period=10, slow_period=10)
 
 
 class TestCalculateRSI:
@@ -211,14 +188,14 @@ class TestRSIOversold:
 class TestEMACrossover:
     """Test EMA crossover functionality."""
     
-    def test_ema_crossover_signal(self, sample_price_data: pd.DataFrame) -> None:
+    def test_ema_crossover_signal(self, trending_price_data: pd.DataFrame) -> None:
         """Test EMA crossover signal generation."""
-        signals = ema_crossover(sample_price_data, fast_period=5, slow_period=15)
+        signals = ema_crossover(trending_price_data, fast_period=5, slow_period=15)
         
         assert isinstance(signals, pd.Series)
         assert signals.dtype == bool
-        assert len(signals) == len(sample_price_data)
-        assert signals.index.equals(sample_price_data.index)
+        assert len(signals) == len(trending_price_data)
+        assert signals.index.equals(trending_price_data.index)
 
 
 class TestEdgeCases:
@@ -258,20 +235,20 @@ class TestEdgeCases:
 class TestIntegration:
     """Integration tests with combined functionality."""
     
-    def test_all_rules_with_real_data(self, sample_price_data: pd.DataFrame) -> None:
+    def test_all_rules_with_real_data(self, trending_price_data: pd.DataFrame) -> None:
         """Test all rule types with realistic data."""
         # Test SMA crossover
-        sma_signals = sma_crossover(sample_price_data, fast_period=5, slow_period=10)
+        sma_signals = sma_crossover(trending_price_data, fast_period=5, slow_period=10)
         assert isinstance(sma_signals, pd.Series)
         assert sma_signals.dtype == bool
         
         # Test RSI oversold
-        rsi_signals = rsi_oversold(sample_price_data, period=14, oversold_threshold=30)
+        rsi_signals = rsi_oversold(trending_price_data, period=14, oversold_threshold=30)
         assert isinstance(rsi_signals, pd.Series)
         assert rsi_signals.dtype == bool
         
         # Test EMA crossover
-        ema_signals = ema_crossover(sample_price_data, fast_period=5, slow_period=10)
+        ema_signals = ema_crossover(trending_price_data, fast_period=5, slow_period=10)
         assert isinstance(ema_signals, pd.Series)
         assert ema_signals.dtype == bool
 
@@ -300,16 +277,16 @@ class TestVolumeSpike:
         signals = volume_spike(short_data, period=20)
         assert signals.sum() == 0
     
-    def test_volume_spike_invalid_params(self, sample_price_data: pd.DataFrame) -> None:
+    def test_volume_spike_invalid_params(self, trending_price_data: pd.DataFrame) -> None:
         """Test error handling for invalid parameters."""
         with pytest.raises(ValueError, match="period.*must be > 0"):
-            volume_spike(sample_price_data, period=0)
+            volume_spike(trending_price_data, period=0)
         
         with pytest.raises(ValueError, match="spike_multiplier.*must be > 1.0"):
-            volume_spike(sample_price_data, spike_multiplier=0.5)
+            volume_spike(trending_price_data, spike_multiplier=0.5)
         
         with pytest.raises(ValueError, match="price_change_threshold.*must be > 0"):
-            volume_spike(sample_price_data, price_change_threshold=-0.01)
+            volume_spike(trending_price_data, price_change_threshold=-0.01)
     
     def test_volume_spike_missing_columns(self) -> None:
         """Test error handling for missing required columns."""
@@ -339,13 +316,13 @@ class TestHammerPattern:
         signals = hammer_pattern(empty_data)
         assert len(signals) == 0
     
-    def test_hammer_pattern_invalid_params(self, sample_price_data: pd.DataFrame) -> None:
+    def test_hammer_pattern_invalid_params(self, trending_price_data: pd.DataFrame) -> None:
         """Test error handling for invalid parameters."""
         with pytest.raises(ValueError, match="body_ratio.*must be between 0 and 1"):
-            hammer_pattern(sample_price_data, body_ratio=1.5)
+            hammer_pattern(trending_price_data, body_ratio=1.5)
         
         with pytest.raises(ValueError, match="shadow_ratio.*must be > 0"):
-            hammer_pattern(sample_price_data, shadow_ratio=-1.0)
+            hammer_pattern(trending_price_data, shadow_ratio=-1.0)
     
     def test_hammer_pattern_missing_columns(self) -> None:
         """Test error handling for missing required columns."""
@@ -379,10 +356,10 @@ class TestEngulfingPattern:
         signals = engulfing_pattern(short_data)
         assert signals.sum() == 0
     
-    def test_engulfing_pattern_invalid_params(self, sample_price_data: pd.DataFrame) -> None:
+    def test_engulfing_pattern_invalid_params(self, trending_price_data: pd.DataFrame) -> None:
         """Test error handling for invalid parameters."""
         with pytest.raises(ValueError, match="min_body_ratio.*must be > 1.0"):
-            engulfing_pattern(sample_price_data, min_body_ratio=0.8)
+            engulfing_pattern(trending_price_data, min_body_ratio=0.8)
     
     def test_engulfing_pattern_missing_columns(self) -> None:
         """Test error handling for missing required columns."""
@@ -395,14 +372,14 @@ class TestEngulfingPattern:
 class TestMACDCrossover:
     """Test MACD crossover functionality."""
     
-    def test_macd_crossover_signal(self, sample_price_data: pd.DataFrame) -> None:
+    def test_macd_crossover_signal(self, trending_price_data: pd.DataFrame) -> None:
         """Test MACD crossover signal generation."""
-        signals = macd_crossover(sample_price_data, fast_period=12, slow_period=26, signal_period=9)
+        signals = macd_crossover(trending_price_data, fast_period=12, slow_period=26, signal_period=9)
         
         assert isinstance(signals, pd.Series)
         assert signals.dtype == bool
-        assert len(signals) == len(sample_price_data)
-        assert signals.index.equals(sample_price_data.index)
+        assert len(signals) == len(trending_price_data)
+        assert signals.index.equals(trending_price_data.index)
     
     def test_macd_crossover_insufficient_data(self) -> None:
         """Test handling of insufficient data."""
@@ -413,13 +390,13 @@ class TestMACDCrossover:
         signals = macd_crossover(short_data)
         assert signals.sum() == 0
     
-    def test_macd_crossover_invalid_params(self, sample_price_data: pd.DataFrame) -> None:
+    def test_macd_crossover_invalid_params(self, trending_price_data: pd.DataFrame) -> None:
         """Test error handling for invalid parameters."""
         with pytest.raises(ValueError, match="fast_period.*must be.*slow_period"):
-            macd_crossover(sample_price_data, fast_period=26, slow_period=12)
+            macd_crossover(trending_price_data, fast_period=26, slow_period=12)
         
         with pytest.raises(ValueError, match="signal_period.*must be > 0"):
-            macd_crossover(sample_price_data, signal_period=0)
+            macd_crossover(trending_price_data, signal_period=0)
     
     def test_macd_crossover_missing_columns(self) -> None:
         """Test error handling for missing required columns."""
@@ -432,14 +409,14 @@ class TestMACDCrossover:
 class TestBollingerSqueeze:
     """Test Bollinger squeeze functionality."""
     
-    def test_bollinger_squeeze_signal(self, sample_price_data: pd.DataFrame) -> None:
+    def test_bollinger_squeeze_signal(self, trending_price_data: pd.DataFrame) -> None:
         """Test Bollinger squeeze signal generation."""
-        signals = bollinger_squeeze(sample_price_data, period=20, std_dev=2.0, squeeze_threshold=0.1)
+        signals = bollinger_squeeze(trending_price_data, period=20, std_dev=2.0, squeeze_threshold=0.1)
         
         assert isinstance(signals, pd.Series)
         assert signals.dtype == bool
-        assert len(signals) == len(sample_price_data)
-        assert signals.index.equals(sample_price_data.index)
+        assert len(signals) == len(trending_price_data)
+        assert signals.index.equals(trending_price_data.index)
     
     def test_bollinger_squeeze_insufficient_data(self) -> None:
         """Test handling of insufficient data."""
@@ -450,16 +427,16 @@ class TestBollingerSqueeze:
         signals = bollinger_squeeze(short_data)
         assert signals.sum() == 0
     
-    def test_bollinger_squeeze_invalid_params(self, sample_price_data: pd.DataFrame) -> None:
+    def test_bollinger_squeeze_invalid_params(self, trending_price_data: pd.DataFrame) -> None:
         """Test error handling for invalid parameters."""
         with pytest.raises(ValueError, match="period.*must be > 0"):
-            bollinger_squeeze(sample_price_data, period=0)
+            bollinger_squeeze(trending_price_data, period=0)
         
         with pytest.raises(ValueError, match="std_dev.*must be > 0"):
-            bollinger_squeeze(sample_price_data, std_dev=-1.0)
+            bollinger_squeeze(trending_price_data, std_dev=-1.0)
         
         with pytest.raises(ValueError, match="squeeze_threshold.*must be > 0"):
-            bollinger_squeeze(sample_price_data, squeeze_threshold=0)
+            bollinger_squeeze(trending_price_data, squeeze_threshold=0)
     
     def test_bollinger_squeeze_missing_columns(self) -> None:
         """Test error handling for missing required columns."""
@@ -472,30 +449,30 @@ class TestBollingerSqueeze:
 class TestNewRulesIntegration:
     """Integration tests for new rule functions."""
     
-    def test_all_new_rules_with_sample_data(self, sample_price_data: pd.DataFrame) -> None:
+    def test_all_new_rules_with_sample_data(self, trending_price_data: pd.DataFrame) -> None:
         """Test all new rules with realistic data."""
         # Test volume spike
-        volume_signals = volume_spike(sample_price_data, period=20, spike_multiplier=2.0)
+        volume_signals = volume_spike(trending_price_data, period=20, spike_multiplier=2.0)
         assert isinstance(volume_signals, pd.Series)
         assert volume_signals.dtype == bool
         
         # Test hammer pattern
-        hammer_signals = hammer_pattern(sample_price_data, body_ratio=0.3, shadow_ratio=2.0)
+        hammer_signals = hammer_pattern(trending_price_data, body_ratio=0.3, shadow_ratio=2.0)
         assert isinstance(hammer_signals, pd.Series)
         assert hammer_signals.dtype == bool
         
         # Test engulfing pattern
-        engulfing_signals = engulfing_pattern(sample_price_data, min_body_ratio=1.2)
+        engulfing_signals = engulfing_pattern(trending_price_data, min_body_ratio=1.2)
         assert isinstance(engulfing_signals, pd.Series)
         assert engulfing_signals.dtype == bool
         
         # Test MACD crossover
-        macd_signals = macd_crossover(sample_price_data, fast_period=12, slow_period=26, signal_period=9)
+        macd_signals = macd_crossover(trending_price_data, fast_period=12, slow_period=26, signal_period=9)
         assert isinstance(macd_signals, pd.Series)
         assert macd_signals.dtype == bool
         
         # Test Bollinger squeeze
-        bollinger_signals = bollinger_squeeze(sample_price_data, period=20, std_dev=2.0, squeeze_threshold=0.1)
+        bollinger_signals = bollinger_squeeze(trending_price_data, period=20, std_dev=2.0, squeeze_threshold=0.1)
         assert isinstance(bollinger_signals, pd.Series)
         assert bollinger_signals.dtype == bool
         
@@ -552,52 +529,36 @@ def test_sma_cross_under_parameter_validation():
         sma_cross_under(price_data, fast_period=10, slow_period=10)
 
 
-def test_stop_loss_pct_validation():
+def test_stop_loss_pct_validation(simple_price_data):
     """Test parameter validation for stop_loss_pct."""
-    price_data = pd.DataFrame({
-        'open': [100, 101, 102],
-        'high': [101, 102, 103],
-        'low': [99, 100, 101],
-        'close': [100, 101, 102],
-        'volume': [1000, 1000, 1000]
-    })
-    
     # Valid percentage
-    signals = stop_loss_pct(price_data, percentage=0.05)
+    signals = stop_loss_pct(simple_price_data, percentage=0.05)
     assert isinstance(signals, pd.Series)
     assert signals.dtype == bool
     assert all(~signals)  # Should always return False
     
     # Invalid percentage
     with pytest.raises(ValueError, match="percentage must be > 0"):
-        stop_loss_pct(price_data, percentage=0)
+        stop_loss_pct(simple_price_data, percentage=0)
     
     with pytest.raises(ValueError, match="percentage must be > 0"):
-        stop_loss_pct(price_data, percentage=-0.05)
+        stop_loss_pct(simple_price_data, percentage=-0.05)
 
 
-def test_take_profit_pct_validation():
+def test_take_profit_pct_validation(simple_price_data):
     """Test parameter validation for take_profit_pct."""
-    price_data = pd.DataFrame({
-        'open': [100, 101, 102],
-        'high': [101, 102, 103],
-        'low': [99, 100, 101],
-        'close': [100, 101, 102],
-        'volume': [1000, 1000, 1000]
-    })
-    
     # Valid percentage
-    signals = take_profit_pct(price_data, percentage=0.15)
+    signals = take_profit_pct(simple_price_data, percentage=0.15)
     assert isinstance(signals, pd.Series)
     assert signals.dtype == bool
     assert all(~signals)  # Should always return False
     
     # Invalid percentage
     with pytest.raises(ValueError, match="percentage must be > 0"):
-        take_profit_pct(price_data, percentage=0)
+        take_profit_pct(simple_price_data, percentage=0)
     
     with pytest.raises(ValueError, match="percentage must be > 0"):
-        take_profit_pct(price_data, percentage=-0.15)
+        take_profit_pct(simple_price_data, percentage=-0.15)
 
 
 def test_sma_cross_under_insufficient_data():
@@ -935,17 +896,17 @@ class TestMarketAboveSMA:
         assert signals.any(), "Should have some bullish periods"
         assert not signals.all(), "Should have some bearish periods"
     
-    def test_different_sma_periods(self, sample_price_data: pd.DataFrame) -> None:
+    def test_different_sma_periods(self, trending_price_data: pd.DataFrame) -> None:
         """Test market filter with different SMA periods."""
         periods_to_test = [20, 50, 200]
         
         for period in periods_to_test:
-            signals = market_above_sma(sample_price_data, period=period)
+            signals = market_above_sma(trending_price_data, period=period)
             
             assert isinstance(signals, pd.Series)
             assert signals.dtype == bool
-            assert len(signals) == len(sample_price_data)
-            assert signals.index.equals(sample_price_data.index)
+            assert len(signals) == len(trending_price_data)
+            assert signals.index.equals(trending_price_data.index)
             
             # All values should be boolean (True/False, no NaN after fillna)
             assert not signals.isna().any(), f"Found NaN values with period={period}"
@@ -972,19 +933,19 @@ class TestMarketAboveSMA:
         assert not signals.any(), "Should return all False with insufficient data"
         assert signals.sum() == 0, "Should have zero bullish signals with insufficient data"
     
-    def test_parameter_validation(self, sample_price_data: pd.DataFrame) -> None:
+    def test_parameter_validation(self, trending_price_data: pd.DataFrame) -> None:
         """Test parameter validation for market_above_sma function."""
         # Test invalid period values
         with pytest.raises(ValueError, match="SMA period must be positive"):
-            market_above_sma(sample_price_data, period=0)
+            market_above_sma(trending_price_data, period=0)
         
         with pytest.raises(ValueError, match="SMA period must be positive"):
-            market_above_sma(sample_price_data, period=-10)
+            market_above_sma(trending_price_data, period=-10)
         
         # Test valid periods
         valid_periods = [1, 5, 10, 20, 50, 100, 200]
         for period in valid_periods:
-            signals = market_above_sma(sample_price_data, period=period)
+            signals = market_above_sma(trending_price_data, period=period)
             assert isinstance(signals, pd.Series)
             assert signals.dtype == bool
     

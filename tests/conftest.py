@@ -98,3 +98,38 @@ def reporter_config_obj_fixture(tmp_path: Path) -> "Config":
         reports_output_dir=str(reports_dir), # Corrected field name
         edge_score_threshold=0.50
     )
+
+
+@pytest.fixture
+def simple_price_data():
+    """Simple 3-day OHLCV data for basic testing and validation."""
+    return pd.DataFrame({
+        'open': [100, 101, 102],
+        'high': [101, 102, 103],
+        'low': [99, 100, 101],
+        'close': [100, 101, 102],
+        'volume': [1000, 1000, 1000]
+    }, index=pd.date_range('2023-01-01', periods=3, freq='D'))
+
+
+@pytest.fixture
+def trending_price_data():
+    """Generate trending price data for crossover and signal testing."""
+    dates = pd.date_range('2023-01-01', periods=50, freq='D')
+    
+    # Create trending price data that should trigger crossovers
+    base_price = 100
+    trend = 0.5  # Positive trend
+    
+    prices = []
+    for i in range(len(dates)):
+        price = base_price + trend * i + (i % 5 - 2)  # Add some volatility
+        prices.append(price)
+    
+    return pd.DataFrame({
+        'open': prices,
+        'high': [p * 1.02 for p in prices],
+        'low': [p * 0.98 for p in prices],
+        'close': prices,
+        'volume': [1000 + i * 10 for i in range(len(dates))]
+    }, index=dates)
