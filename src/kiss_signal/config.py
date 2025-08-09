@@ -70,7 +70,7 @@ class Config(BaseModel):
     @classmethod
     def validate_universe_path(cls, v: str) -> str:
         path = Path(v)
-        if not path.exists():
+        if not path.exists():  # strict: caller must ensure file exists
             raise ValueError(f"Universe file not found: {v}")
         if not path.is_file():
             raise ValueError(f"Universe path is not a file: {v}")

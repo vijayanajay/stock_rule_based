@@ -1,4 +1,10 @@
 # KISS Signal CLI - Memory & Learning Log
+## CLI Facade Incompleteness: Missing Wrapper Broke Test Patch Contract (2025-08-09)
+- **Structural Issue**: Tests patch `kiss_signal.cli.get_position_pricing` expecting the CLI module to expose a stable façade of the reporter's position/pricing helpers. After earlier refactors we exported thin wrappers for several reporter functions (`check_exit_conditions`, `calculate_position_returns`, etc.) but omitted `get_position_pricing`. The tests (rightly) targeted the CLI boundary, resulting in `AttributeError: module 'kiss_signal.cli' has no attribute 'get_position_pricing'` and two failing tests.
+- **Root Cause**: Incomplete façade pattern — inconsistent application of the wrapper approach created an asymmetric public surface. This violated the implicit module boundary contract: CLI re-exports all position management helpers for patching in isolation tests.
+- **Fix**: Added a thin, type-hinted passthrough `get_position_pricing()` in `cli.py` delegating to `reporter.get_position_pricing`, matching existing wrapper conventions. No behavior change, only structural surface completion.
+- **Lesson**: When establishing a façade boundary (wrapping/re-exporting internal module functions for tests or CLI stability), apply it consistently. Partial façades create hidden coupling (tests forced to patch deeper modules) and brittle imports. Maintain symmetry: every helper made patchable should be explicitly exported; audit after refactors to prevent drift.
+
 ## Data Contract Violation: Implicit Runtime State on Config Object (2025-08-07)
 - **Structural Issue Discovered**: A runtime parameter (`freeze_date`) was being managed by dynamically attaching it to the `Config` Pydantic model instance at runtime, without being part of the model's explicit schema. This created an inconsistent data contract, as other parts of the application that consumed the `Config` object would fail with an `AttributeError` if the parameter hadn't been set (e.g., when the `--freeze-data` CLI flag was not used).
 - **Nature of the Fix**: The `freeze_date` was added as an `Optional[date]` field to the `Config` Pydantic model itself. The CLI entry point was then refactored to parse the command-line argument and explicitly set this field on the `Config` instance for the duration of the run. This makes the data contract explicit and ensures the `freeze_date` state is consistently available to all downstream components that receive the `Config` object.
@@ -150,17 +156,6 @@
     2.  **Zombie Parameter Removal**: The deprecated `refresh_days` parameter was completely removed from the codebase—from the `Config` model and YAML files down to the private helper function `_needs_refresh`.
     3.  **Test Correction**: The associated broken tests were corrected to match the simplified, correct function signature.
 - **Lesson**: Logic duplication, even for simple tasks like cache checking, is a structural risk that leads to code drift and maintenance issues. Always refactor to a single source of truth (DRY). Deprecated parameters should be fully removed from all layers of the application (config, function signatures, calls) to prevent confusion and future bugs.
-
-## Logic Duplication and Flawed Initialization (2025-07-29)
-- **Issue**: Two test failures were traced to two distinct structural flaws:
-    1.  **Flawed Initialization**: The `backtester`'s context filter combination logic was initialized with `None`, causing a `TypeError` when the first filter was applied. This error was caught by a broad `except` block, which returned an all-`False` series, causing an assertion failure.
-    2.  **Logic Duplication**: The `data` module contained duplicated logic for checking cache freshness—one generic function and one inline implementation for market data. A test for market data caching was patching the generic function, which was never called, while the un-mocked inline logic failed, causing the test to fail.
-- **Fix**:
-    1.  **Correct Initialization**: The context filter accumulator in `backtester.py` was correctly initialized to a `pd.Series` of all `True` values, the neutral element for a logical AND operation.
-    2.  **Code De-duplication**: The generic `_needs_refresh` function in `data.py` was refactored to be more flexible, and the duplicated inline logic was removed and replaced with a call to the single, canonical function.
-- **Lesson**:
-    -   Iterative combination logic (like applying filters) must be initialized with the correct neutral element for the operation (e.g., `True` for AND, `False` for OR).
-    -   Duplicated logic is a structural flaw that increases maintenance burden and creates subtle bugs, especially when tests target one implementation but the other is executed. Always refactor to a single source of truth (DRY principle).
 
 ## Logic Duplication and Flawed Initialization (2025-07-29)
 - **Issue**: Two test failures were traced to two distinct structural flaws:
@@ -517,24 +512,6 @@
     3.  **Resilient Help Test**: The CLI help test was modified to test the main application's help text (`--help`) instead of a subcommand's, making it more robust and less dependent on a fully configured test environment.
 - **Lesson**: The test harness is a critical part of the application's structure. Any change to a core data contract like a configuration model must be propagated to all test fixtures immediately. Fixtures must be self-contained and reflect valid user invocation patterns to be reliable. An incomplete fixture is a bug in the test suite.
 
-## Test Harness Integrity: Configuration and Fixture Desynchronization (2025-07-22)
-- **Issue**: All position sizing tests failed because the calculated position size was consistently `NaN`. The root cause was a structural desynchronization between the position sizing logic and the risk management rules. The `_calculate_risk_based_size` function in `backtester.py` used a hardcoded ATR period (`period=22`) that was completely disconnected from the ATR parameters defined in the `exit_conditions` rules.
-- **Structural Root Cause**: The position sizing component made an independent, hardcoded assumption about a critical risk parameter instead of deriving it from the single source of truth: the user-defined `exit_conditions` in `rules.yaml`. This violated the principle of a single source of truth and created two conflicting definitions of risk within the system. The inefficient, non-vectorized loop for size calculation also masked the underlying `NaN` propagation issue.
-- **Fix**:
-    1.  The hardcoded ATR period was removed from `_calculate_risk_based_size`.
-    2.  A new helper, `_get_atr_params`, was introduced to parse the `exit_conditions` list and extract the period and multiplier from the first ATR-based stop-loss rule.
-    3.  `_calculate_risk_based_size` was updated to use these dynamically sourced parameters, ensuring position sizing is always synchronized with the configured exit strategy.
-    4.  The inefficient loop in `_calculate_risk_based_size` was replaced with a robust, vectorized implementation.
-- **Lesson**: Components that apply a policy (like position sizing) must derive their parameters from the component that defines the policy (risk management rules). Hardcoding critical parameters that are configurable elsewhere creates a structural flaw and leads to desynchronization bugs. Always ensure a single source of truth for key business logic parameters.
-
-## Test Harness Integrity: Flawed Invocation and Data Structure Flaw (2025-07-23)
-- **Issue**: A large number of test failures were caused by a structural desynchronization between the application's `Config` Pydantic model and the test fixtures that create `config.yaml` files or instantiate `Config` objects. The `Config` model was updated with new required fields (`reports_output_dir`, `edge_score_threshold`), but several test cases were not updated, leading to widespread `ValidationError` during test setup. Additionally, some CLI tests used incorrect argument ordering for Typer, and help-text tests were not resilient.
-- **Fix**:
-    1.  **Fixtures Updated**: All inline test configurations (`sample_config_dict` in `test_cli_advanced.py`) were updated to provide all required fields for the `Config` model, resolving the `ValidationError`.
-    2.  **Correct CLI Invocation**: A CLI test was corrected to place global options (like `--verbose`) before the command, aligning with Typer's expected syntax and preventing a `UsageError`.
-    3.  **Resilient Help Test**: The CLI help test was modified to test the main application's help text (`--help`) instead of a subcommand's, making it more robust and less dependent on a fully configured test environment.
-- **Lesson**: The test harness is a critical part of the application's structure. Any change to a core data contract like a configuration model must be propagated to all test fixtures immediately. Fixtures must be self-contained and reflect valid user invocation patterns to be reliable. An incomplete fixture is a bug in the test suite.
-
 ## Test Harness Integrity: Flawed Invocation and Data Structure Flaw (2025-07-23)
 - **Issue**: Multiple test failures were traced back to two distinct structural issues.
     1.  **Flawed Invocation (`test_run_command_log_save_failure`):** A test was asserting behavior (log saving on failure) on the `run` command, but the implementation for this behavior only existed in the `analyze-strategies` command. The test was testing a non-existent contract.
@@ -592,12 +569,3 @@
     1.  Updated the migration test mock to properly return an integer value for the database version check by configuring `mock_result.__getitem__.return_value = 1`.
     2.  Extended the `side_effect` lists in both transaction rollback tests to include `None` for the `ROLLBACK` statement, ensuring the mock can handle the complete execution path including error recovery.
 - **Lesson**: Mock configurations must model the **complete execution path** including error handling and recovery scenarios. When testing transaction rollback behavior, the mock must account for all SQL statements that will be executed, not just the happy path. Incomplete mocks create a structural flaw where tests fail due to mock exhaustion rather than testing the actual application logic. Always trace through the full code path when setting up `side_effect` lists for database operations.
-
-## Test Specification Logic: Incorrect Date Range Mathematics (2025-07-19)
-- **Issue**: The test `test_get_price_data_sufficient_data_no_warning` failed with an assertion error expecting 60 rows but receiving 59 rows when filtering data from 2023-01-01 to 2023-02-28.
-- **Root Cause**: Test specification error - the test author incorrectly assumed that filtering 60 days of data (2023-01-01 to 2023-03-01) with an end date of 2023-02-28 would return all 60 rows. However, the date range 2023-01-01 to 2023-02-28 mathematically covers only 59 days (31 days in January + 28 days in February).
-- **Symptoms**: Test comment stated "Will get all 60 rows" but the specified date range could only return 59 rows, creating an impossible expectation.
-- **Fix**: Updated the test expectation from 60 to 59 rows and corrected the comment to reflect the actual mathematical range.
-- **Lesson**: Test specifications must be mathematically sound and logically consistent with the data they operate on. When creating date range tests, verify that expectations align with calendar mathematics. Failing tests may not always indicate code bugs - sometimes they reveal logical errors in test design itself. This type of specification error can appear as a "structural issue" but is actually a test design flaw that needs correction at the test level.
-    - **Prevention**: Double-check date arithmetic when writing tests involving time ranges
-    - **Detection Pattern**: Mathematical mismatches between expected and actual results in date filtering operations

@@ -178,14 +178,21 @@ def process_open_positions(
             logger.warning(f"Could not get pricing for {symbol}, keeping position open")
             positions_to_hold.append(pos)
             continue
-            
-        # Get price data for exit condition checking
-        price_data = data.get_price_data(
-            symbol=symbol,
-            cache_dir=Path(app_config.cache_dir),
-            years=1,
-            freeze_date=app_config.freeze_date,
-        )
+        
+        # Reuse embedded price_data if test/mocked helper already supplied it (structural: prevent second fetch in freeze mode)
+        price_data = pricing.get('price_data') if isinstance(pricing, dict) else None  # type: ignore[assignment]
+        if price_data is not None and not isinstance(price_data, pd.DataFrame):  # Defensive: wrong type
+            logger.debug(f"Ignoring non-DataFrame price_data for {symbol} provided by pricing helper")
+            price_data = None
+        
+        # Fetch price data for exit condition checking only if not provided
+        if price_data is None:
+            price_data = data.get_price_data(
+                symbol=symbol,
+                cache_dir=Path(app_config.cache_dir),
+                years=1,
+                freeze_date=app_config.freeze_date,
+            )
         
         if price_data is None:
             logger.warning(f"No price data for exit checking on {symbol}")
