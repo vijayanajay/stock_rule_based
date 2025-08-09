@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Dict, Any
 
 import yaml
+import pandas as pd
+from kiss_signal.config import Config
 
 
 @pytest.fixture

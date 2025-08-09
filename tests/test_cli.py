@@ -1066,14 +1066,14 @@ class TestCliEdgeCases:
         import tempfile
         import os
         
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log', encoding='utf-8') as f:
             log_file = f.name
         
         try:
             _save_command_log(log_file)
             
             # Verify log was written
-            with open(log_file, 'r') as f:
+            with open(log_file, 'r', encoding='utf-8') as f:
                 content = f.read()
                 # Basic check that some content was written
                 assert len(content) >= 0  # Console may be empty in tests

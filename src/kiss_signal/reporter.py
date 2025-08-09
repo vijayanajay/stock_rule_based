@@ -139,7 +139,7 @@ def calculate_position_returns(position: Dict[str, Any], current_price: float, n
     nifty_return_pct = None
     if nifty_data is not None:
         try:
-            entry_date = pd.to_datetime(position['entry_date']).date()
+            entry_date = pd.to_datetime(position['entry_date'])
             nifty_entry_idx = nifty_data.index.searchsorted(entry_date)
             if nifty_entry_idx < len(nifty_data):
                 nifty_entry_price = nifty_data.iloc[nifty_entry_idx]['close']
