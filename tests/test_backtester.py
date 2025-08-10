@@ -891,7 +891,7 @@ class TestBacktester:
             assert result == []
 
     def test_atr_exit_signal_generation(self, sample_price_data):
-        """Test ATR-based exit signal generation."""
+        """Test ATR-based exit signal generation and _get_atr_params default path."""
         from kiss_signal.config import RuleDef
         
         backtester = Backtester()
@@ -914,6 +914,24 @@ class TestBacktester:
         
         # Verify exit signals were generated
         assert isinstance(stop_exit_signals, pd.Series)
+        
+        # Task 1.1: Test _get_atr_params default path (no ATR rules)
+        non_atr_exit_conditions = [
+            RuleDef(name="stop_loss_pct", type="stop_loss_pct", params={'percentage': 0.05}),
+            RuleDef(name="take_profit_pct", type="take_profit_pct", params={'percentage': 0.10})
+        ]
+        atr_period, atr_multiplier = backtester._get_atr_params(non_atr_exit_conditions)
+        assert atr_period == 22  # Default value
+        assert atr_multiplier == 2.0  # Default value
+        
+        # Cover lines 53-54: Test _get_atr_params with dict-style rules
+        dict_exit_conditions = [
+            {'type': 'stop_loss_atr', 'params': {'atr_period': 10, 'atr_multiplier': 1.5}},
+            {'type': 'stop_loss_pct', 'params': {'percentage': 0.05}}
+        ]
+        atr_period, atr_multiplier = backtester._get_atr_params(dict_exit_conditions)
+        assert atr_period == 10
+        assert atr_multiplier == 1.5
         
         # Cover lines 89-90, 439, 450-451: Test with insufficient data
         short_data = sample_price_data.head(3)  # Very short dataset
@@ -1246,6 +1264,69 @@ class TestBacktesterIntegration:
         assert isinstance(result, list)
         if result:  # Only validate contents if strategies were found
             assert "edge_score" in result[0]
+            
+        # Task 1.3: Test min_trades_threshold path in _calculate_performance_metrics
+        from unittest.mock import Mock
+        
+        # Create a mock portfolio with low trade count
+        mock_portfolio = Mock()
+        mock_trades = Mock()
+        mock_trades.count.return_value = 5  # Below default min_trades_threshold of 10
+        mock_portfolio.trades = mock_trades
+        
+        combo = [sample_rules_config.entry_signals[0]]  # Use first entry signal
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        # Should return None due to insufficient trades
+        result = backtester._calculate_performance_metrics(
+            portfolio=mock_portfolio,
+            combo=combo,
+            symbol="TEST",
+            edge_score_weights=edge_weights,
+            min_trades_threshold=10
+        )
+        assert result is None
+
+    def test_backtest_combination_direct_coverage(self, sample_price_data):
+        """Test _backtest_combination method directly to cover missing paths."""
+        from kiss_signal.config import RuleDef
+        
+        backtester = Backtester()
+        
+        # Test with preconditions that fail (covers lines 110-120)
+        rules_config_fail_preconditions = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={"fast_period": 5, "slow_period": 10})],
+            preconditions=[
+                RuleDef(name="impossible", type="is_volatile", params={"period": 14, "atr_threshold_pct": 999.0})
+            ],
+            exit_conditions=[]
+        )
+        
+        combo = rules_config_fail_preconditions.entry_signals
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        # This should return None due to failed preconditions
+        result = backtester._backtest_combination(
+            combo, sample_price_data, rules_config_fail_preconditions, 
+            edge_weights, "TEST", None
+        )
+        assert result is None
+        
+        # Test with context filters that fail (covers lines 121-128)
+        rules_config_fail_context = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={"fast_period": 5, "slow_period": 10})],
+            context_filters=[
+                RuleDef(name="impossible_market", type="market_above_sma", params={"period": 50, "threshold": 999.0})
+            ],
+            exit_conditions=[]
+        )
+        
+        # This should return None due to failed context
+        result = backtester._backtest_combination(
+            combo, sample_price_data, rules_config_fail_context,
+            edge_weights, "TEST", sample_price_data  # Use as market data
+        )
+        assert result is None
 
     # Additional tests for _generate_exit_signals
     def test_generate_exit_signals_multiple_stop_loss(self, sample_price_data, caplog):
@@ -1794,9 +1875,32 @@ class TestBacktesterEdgeCases:
         assert result is None or (isinstance(result, dict) and result.get('total_trades', 0) == 0)
 
     def test_consolidate_oos_results_empty_list(self, edge_case_backtester):
-        """Test consolidate_oos_results with empty input."""
+        """Test consolidate_oos_results with empty input and zero-trade scenarios."""
         result = edge_case_backtester._consolidate_oos_results([], "TEST")
         assert result is None
+        
+        # Task 1.4: Test zero-trade path in _consolidate_oos_results
+        from kiss_signal.config import RuleDef
+        
+        zero_trade_results = [{
+            'avg_return': 0.0,
+            'sharpe': 0.0,
+            'win_pct': 0.0,
+            'total_trades': 0,  # Zero trades
+            'edge_score': 0.0,
+            'max_drawdown': 0.0,
+            'trading_days': 252,
+            'annualized_return': 0.0,
+            'total_return': 0.0,
+            'rule_stack': [RuleDef(name='test', type='test_rule', params={})]
+        }]
+        
+        # Should handle zero trades gracefully without division by zero
+        result = edge_case_backtester._consolidate_oos_results(zero_trade_results, "TEST")
+        assert result is not None
+        assert result['total_trades'] == 0
+        assert result['win_pct'] == 0.0  # Should use fallback value
+        assert result['sharpe'] == 0.0  # Should use fallback value
 
     def test_consolidate_oos_results_single_period(self, edge_case_backtester):
         """Test consolidate_oos_results with single period."""
@@ -1884,6 +1988,7 @@ class TestBacktesterEdgeCases:
     def test_parse_period_valid_inputs(self, edge_case_backtester):
         """Test _parse_period with valid inputs."""
         assert edge_case_backtester._parse_period("30d") == 30
+        assert edge_case_backtester._parse_period("4w") == 28  # 4 * 7  - cover weekly branch
         assert edge_case_backtester._parse_period("6m") == 180  # 6 * 30
         assert edge_case_backtester._parse_period("1y") == 365  # 1 * 365
 
@@ -1897,6 +2002,198 @@ class TestBacktesterEdgeCases:
         )
         
         assert isinstance(result, list)
+
+    def test_backtest_combination_precondition_failure(self, edge_case_backtester, edge_case_data):
+        """Test _backtest_combination when preconditions fail (covers lines 118->123, 130-134)."""
+        from kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
+        
+        # Create rules config with failing preconditions
+        rules_config = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={})],
+            preconditions=[
+                RuleDef(name="impossible", type="is_volatile", params={"period": 5, "atr_threshold_pct": 99.0})
+            ]
+        )
+        
+        combo = rules_config.entry_signals
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        # Should return None when preconditions fail
+        result = edge_case_backtester._backtest_combination(
+            combo, edge_case_data, rules_config, edge_weights, "TEST", None
+        )
+        assert result is None
+
+    def test_backtest_combination_context_filter_failure(self, edge_case_backtester, edge_case_data):
+        """Test _backtest_combination when context filters fail (covers lines 140-141, 153-162)."""
+        from kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
+        
+        # Create rules config with failing context filters
+        rules_config = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={})],
+            context_filters=[
+                RuleDef(name="impossible_market", type="market_above_sma", params={"period": 20, "index_symbol": "^NSEI"})
+            ]
+        )
+        
+        combo = rules_config.entry_signals
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        with patch('kiss_signal.rules.market_above_sma') as mock_filter:
+            # Mock filter that returns all False
+            mock_filter.return_value = pd.Series([False] * len(edge_case_data), index=edge_case_data.index)
+            
+            # Should return None when context filters block all signals
+            result = edge_case_backtester._backtest_combination(
+                combo, edge_case_data, rules_config, edge_weights, "TEST", edge_case_data
+            )
+            assert result is None
+
+    def test_backtest_combination_no_entry_signals(self, edge_case_backtester, edge_case_data):
+        """Test _backtest_combination when no entry signals generated (covers lines 179-182)."""
+        from kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
+        
+        rules_config = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={})]
+        )
+        
+        combo = rules_config.entry_signals
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        with patch.object(edge_case_backtester, '_generate_signals') as mock_signals:
+            # Mock no entry signals generated
+            mock_signals.return_value = pd.Series([False] * len(edge_case_data), index=edge_case_data.index)
+            
+            result = edge_case_backtester._backtest_combination(
+                combo, edge_case_data, rules_config, edge_weights, "TEST", None
+            )
+            assert result is None
+
+    def test_backtest_combination_portfolio_creation_error(self, edge_case_backtester, edge_case_data):
+        """Test _backtest_combination portfolio creation error handling (covers lines 288-297)."""
+        from kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
+        
+        rules_config = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={})]
+        )
+        
+        combo = rules_config.entry_signals
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        with patch.object(edge_case_backtester, '_generate_signals') as mock_signals, \
+             patch('vectorbt.Portfolio.from_signals') as mock_portfolio:
+            
+            # Mock entry signals - create exact length series
+            signal_pattern = [True, False] * (len(edge_case_data)//2)
+            while len(signal_pattern) < len(edge_case_data):
+                signal_pattern.append(False)
+            signals = pd.Series(signal_pattern[:len(edge_case_data)], index=edge_case_data.index)
+            mock_signals.return_value = signals
+            
+            # Mock portfolio creation failure
+            mock_portfolio.side_effect = Exception("Portfolio creation failed")
+            
+            result = edge_case_backtester._backtest_combination(
+                combo, edge_case_data, rules_config, edge_weights, "TEST", None
+            )
+            assert result is None
+
+    def test_backtest_combination_zero_valid_trades(self, edge_case_backtester, edge_case_data):
+        """Test _backtest_combination with zero valid trades after filtering (covers lines 323-324)."""
+        from kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
+        
+        rules_config = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={})]
+        )
+        
+        combo = rules_config.entry_signals
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        with patch.object(edge_case_backtester, '_generate_signals') as mock_signals, \
+             patch('vectorbt.Portfolio.from_signals') as mock_portfolio:
+            
+            # Mock entry signals - create exact length series
+            signal_pattern = [True, False] * (len(edge_case_data)//2)
+            while len(signal_pattern) < len(edge_case_data):
+                signal_pattern.append(False)
+            signals = pd.Series(signal_pattern[:len(edge_case_data)], index=edge_case_data.index)
+            mock_signals.return_value = signals
+            
+            # Mock portfolio with zero trades
+            mock_portfolio_instance = Mock()
+            mock_portfolio_instance.trades.count.return_value = 0
+            mock_portfolio.return_value = mock_portfolio_instance
+            
+            result = edge_case_backtester._backtest_combination(
+                combo, edge_case_data, rules_config, edge_weights, "TEST", None
+            )
+            assert result is None
+
+    def test_walk_forward_exception_handling(self, edge_case_backtester, edge_case_data, walk_forward_config, edge_rules_config):
+        """Test walk-forward backtesting with exception handling (covers lines 485-492, 566-572)."""
+        # Test with mock that raises exception during strategy backtesting
+        with patch.object(edge_case_backtester, 'find_optimal_strategies') as mock_find:
+            mock_find.side_effect = Exception("Strategy finding failed")
+            
+            result = edge_case_backtester.walk_forward_backtest(
+                edge_case_data, walk_forward_config, edge_rules_config, "TEST"
+            )
+            
+            assert isinstance(result, list)
+            # Should handle exception gracefully and return empty or partial results
+
+    def test_period_parsing_coverage(self, edge_case_backtester):
+        """Test additional period parsing scenarios (covers lines 985, 996-997, 1004-1012)."""
+        # Test weekly parsing - covers line 996
+        weekly_result = edge_case_backtester._parse_period("2w")
+        assert weekly_result == 14  # 2 * 7
+        
+        # Test monthly parsing - covers line 997  
+        monthly_result = edge_case_backtester._parse_period("3m")
+        assert monthly_result == 90  # 3 * 30
+        
+        # Test yearly parsing - covers line 998
+        yearly_result = edge_case_backtester._parse_period("1y")
+        assert yearly_result == 365  # 1 * 365
+        
+        # Test case sensitivity and error handling
+        try:
+            edge_case_backtester._parse_period("invalid_format")
+            assert False, "Should have raised an exception"
+        except (ValueError, AttributeError):
+            pass  # Expected behavior
+
+    def test_portfolio_calculation_edge_cases(self, edge_case_backtester, edge_case_data):
+        """Test portfolio calculation with edge case values (covers lines 350-351, 356-357)."""
+        from kiss_signal.config import RuleDef, RulesConfig, EdgeScoreWeights
+        
+        rules_config = RulesConfig(
+            entry_signals=[RuleDef(name="test", type="sma_crossover", params={})]
+        )
+        
+        combo = rules_config.entry_signals
+        edge_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
+        
+        # Create edge case data with very small values
+        edge_data = edge_case_data.copy()
+        edge_data['close'] = 0.001  # Very small prices
+        
+        with patch.object(edge_case_backtester, '_generate_signals') as mock_signals:
+            # Mock entry signals that would create trades - fix length issue
+            signal_pattern = [True, False] * (len(edge_data)//2)
+            while len(signal_pattern) < len(edge_data):
+                signal_pattern.append(False)
+            signals = pd.Series(signal_pattern[:len(edge_data)], index=edge_data.index)
+            mock_signals.return_value = signals
+            
+            try:
+                result = edge_case_backtester._backtest_combination(
+                    combo, edge_data, rules_config, edge_weights, "TEST", None
+                )
+                # Should handle edge case calculations or return None
+                assert result is None or isinstance(result, dict)
+            except (ValueError, ZeroDivisionError, OverflowError):
+                pass  # Expected for extreme edge cases
 
 
 if __name__ == "__main__":

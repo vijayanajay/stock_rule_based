@@ -343,39 +343,6 @@ def _fetch_and_store_data(
     return False
 
 
-def _log_refresh_summary(results: Dict[str, bool], total_to_fetch: int) -> None:
-    """Log the summary of the data refresh operation."""
-    successful = sum(1 for success in results.values() if success)
-    logger.info(f"Successfully refreshed {successful}/{total_to_fetch} symbols")
-
-
-def _get_symbols_to_fetch(symbols: List[str], cache_path: Path) -> List[str]:
-    """Filter a list of symbols to only those that need a data refresh."""
-    return [symbol for symbol in symbols if _needs_refresh(cache_path / f"{symbol}.NS.csv")]
-
-
-def _fetch_data_for_symbols(
-    symbols_to_fetch: List[str], years: int, freeze_date: Optional[date], cache_path: Path
-) -> Dict[str, bool]:
-    """Fetch and store data for a list of symbols, returning the results."""
-    if not symbols_to_fetch:
-        logger.info("All symbols are fresh, no refresh needed")
-        return {}
-
-    logger.info(f"Refreshing {len(symbols_to_fetch)} symbols")
-    
-    results = {}
-    for i, symbol in enumerate(symbols_to_fetch):
-        # Add rate limiting between requests
-        if i > 0:
-            time.sleep(0.5)  # 500ms delay between requests to avoid rate limiting
-            
-        logger.debug(f"Fetching {symbol} ({i+1}/{len(symbols_to_fetch)})")
-        results[symbol] = _fetch_and_store_data(symbol, years, freeze_date, cache_path)
-    
-    return results
-
-
 def refresh_market_data(
     universe_path: Union[str, List[str]],
     cache_dir: str,
@@ -392,9 +359,29 @@ def refresh_market_data(
         logger.info("Freeze mode active, skipping cache refresh")
         return {symbol: True for symbol in symbols}
     
-    symbols_to_fetch = _get_symbols_to_fetch(symbols, cache_path)
-    results = _fetch_data_for_symbols(symbols_to_fetch, years, freeze_date, cache_path)
-    _log_refresh_summary(results, len(symbols_to_fetch))
+    # Filter symbols that need refresh
+    symbols_to_fetch = [symbol for symbol in symbols if _needs_refresh(cache_path / f"{symbol}.NS.csv")]
+    
+    if not symbols_to_fetch:
+        logger.info("All symbols are fresh, no refresh needed")
+        return {symbol: True for symbol in symbols}
+
+    logger.info(f"Refreshing {len(symbols_to_fetch)} symbols")
+    
+    # Fetch data for each symbol
+    results = {}
+    for i, symbol in enumerate(symbols_to_fetch):
+        # Add rate limiting between requests
+        if i > 0:
+            time.sleep(0.5)  # 500ms delay between requests to avoid rate limiting
+            
+        logger.debug(f"Fetching {symbol} ({i+1}/{len(symbols_to_fetch)})")
+        results[symbol] = _fetch_and_store_data(symbol, years, freeze_date, cache_path)
+    
+    # Log summary
+    successful = sum(1 for success in results.values() if success)
+    logger.info(f"Successfully refreshed {successful}/{len(symbols_to_fetch)} symbols")
+    
     return {symbol: results.get(symbol, True) for symbol in symbols}
 
 

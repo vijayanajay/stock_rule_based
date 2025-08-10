@@ -57,14 +57,57 @@ def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, curre
 
 def process_open_positions(db_path: Path, app_config: Config, exit_conditions: List[Any], nifty_data: Optional[_DataFrame]) -> _Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:  # pragma: no cover thin wrapper
     # Bridge: if tests patched cli.get_position_pricing, mirror into reporter namespace
-    if _reporter.get_position_pricing is not get_position_pricing:  # type: ignore[attr-defined]
+    if _reporter.get_position_pricing is not get_position_pricing:
         original = _reporter.get_position_pricing
         try:
-            _reporter.get_position_pricing = get_position_pricing  # type: ignore[assignment]
+            _reporter.get_position_pricing = get_position_pricing
             return _reporter_process_open_positions(db_path, app_config, exit_conditions, nifty_data)
         finally:
-            _reporter.get_position_pricing = original  # type: ignore[assignment]
+            _reporter.get_position_pricing = original
     return _reporter_process_open_positions(db_path, app_config, exit_conditions, nifty_data)
+
+# Backwards compatibility shim for tests (deleted function)
+def _run_backtests(
+    app_config: Config,
+    rules_config: Dict[str, Any],
+    symbols: List[str],
+    freeze_date: Optional[date],
+    min_trades_threshold: Optional[int] = None,
+    in_sample: bool = False,
+) -> List[Dict[str, Any]]:
+    """Backwards compatibility shim - logic moved to _execute_command_pipeline."""
+    threshold = min_trades_threshold if min_trades_threshold is not None else getattr(app_config, "min_trades_threshold", 0)
+    bt = backtester.Backtester(
+        hold_period=getattr(app_config, "hold_period", 20),
+        min_trades_threshold=threshold,
+        initial_capital=getattr(app_config, "portfolio_initial_capital", 100000.0),
+    )
+    
+    # Fetch market data once if context filters are present
+    market_data = None
+    context_filters = getattr(rules_config, 'context_filters', [])
+    if context_filters:
+        for filter_def in context_filters:
+            if hasattr(filter_def, 'type') and filter_def.type == "market_above_sma":
+                index_symbol = filter_def.params.get("index_symbol", "^NSEI")
+                try:
+                    market_data = data.get_price_data(
+                        symbol=index_symbol,
+                        cache_dir=Path(app_config.cache_dir),
+                        years=app_config.historical_data_years,
+                        freeze_date=freeze_date,
+                    )
+                    logger.info(f"Loaded market data for {index_symbol}")
+                    break  # Only need to load once
+                except Exception as e:
+                    logger.warning(f"Could not load market data for {index_symbol}: {e}")
+    
+    all_results = []
+    with console.status("[bold green]Running backtests...") as status:
+        for i, symbol in enumerate(symbols):
+            status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
+            all_results.extend(_analyze_symbol(symbol, app_config, rules_config, freeze_date, bt, market_data, in_sample))
+    return all_results
 
 from .performance import performance_monitor
 from .exceptions import DataMismatchError
@@ -181,50 +224,6 @@ def _analyze_symbol(
         return []
 
 
-def _run_backtests(
-    app_config: Config,
-    rules_config: Dict[str, Any],
-    symbols: List[str],
-    freeze_date: Optional[date],
-    min_trades_threshold: Optional[int] = None,
-    in_sample: bool = False,
-) -> List[Dict[str, Any]]:
-    """Run backtester for all symbols and return combined results."""
-    # Use provided threshold, or fall back to config, or default to 0
-    threshold = min_trades_threshold if min_trades_threshold is not None else getattr(app_config, "min_trades_threshold", 0)
-    
-    bt = backtester.Backtester(
-        hold_period=getattr(app_config, "hold_period", 20),
-        min_trades_threshold=threshold,
-        initial_capital=getattr(app_config, "portfolio_initial_capital", 100000.0),
-    )
-    
-    # Fetch market data once if context filters are present
-    market_data = None
-    context_filters = getattr(rules_config, 'context_filters', [])
-    if context_filters:
-        for filter_def in context_filters:
-            if hasattr(filter_def, 'type') and filter_def.type == "market_above_sma":
-                index_symbol = filter_def.params.get("index_symbol", "^NSEI")
-                try:
-                    market_data = data.get_price_data(
-                        symbol=index_symbol,
-                        cache_dir=Path(app_config.cache_dir),
-                        years=app_config.historical_data_years,  # Use configured historical period
-                        freeze_date=freeze_date,
-                    )
-                    logger.info(f"Loaded market data for {index_symbol}")
-                    break  # Only need to load once
-                except Exception as e:
-                    logger.warning(f"Could not load market data for {index_symbol}: {e}")
-    
-    all_results = []
-    with console.status("[bold green]Running backtests...") as status:
-        for i, symbol in enumerate(symbols):
-            status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
-            all_results.extend(_analyze_symbol(symbol, app_config, rules_config, freeze_date, bt, market_data, in_sample))
-    return all_results
-
 
 def display_results(results: List[Dict[str, Any]]) -> None:
     """Build and display a Rich Table of top strategies."""
@@ -258,7 +257,7 @@ def display_results(results: List[Dict[str, Any]]) -> None:
             # The rule_stack now contains RuleDef Pydantic models.
             # We extract the name for display purposes.
             # Handle both dict (from tests) and object formats
-            def extract_rule_name(r):
+            def extract_rule_name(r: Any) -> str:
                 if isinstance(r, dict):
                     return r.get('name') or r.get('type') or str(r)
                 else:
@@ -321,32 +320,20 @@ def _parse_freeze_date(freeze_data: Optional[str]) -> Optional[date]:
         return None
     
     try:
-        freeze_date_obj = date.fromisoformat(freeze_data)
-        return freeze_date_obj
+        return date.fromisoformat(freeze_data)
     except ValueError:
         console.print(f"[red]Error: Invalid isoformat string for freeze_date: '{freeze_data}'[/red]")
         raise typer.Exit(1)
 
 
-def _validate_database_path(db_path: Path) -> None:
-    """Validate that database path exists."""
-    if not db_path.exists():
-        console.print(f"[red]Error: Database file not found at {db_path}[/red]")
-        raise typer.Exit(1)
-
-
 def _save_command_log(log_filename: Optional[str]) -> None:
     """Save command log to file with error handling."""
-    # --- FIX STARTS HERE ---
-    # Add a guard clause to prevent writing a file if the filename is None or empty.
     if not log_filename:
         logger.debug("No log filename provided, skipping log file save.")
         return
-    # --- FIX ENDS HERE ---
 
     try:
         log_path = Path(log_filename)
-        # Ensure the parent directory exists, in case the path includes a directory
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.write_text(console.export_text(clear=False), encoding="utf-8")
         logger.info(f"Log file saved to {log_path}")
@@ -358,136 +345,23 @@ def _save_command_log(log_filename: Optional[str]) -> None:
 
 def _handle_command_exception(e: Exception, verbose: bool, context: str = "") -> None:
     """Handle command exceptions with appropriate logging."""
-    # Treat file not found as simple user error
     if isinstance(e, FileNotFoundError):
         console.print(f"[red]Error: {e}[/red]")
-    # Treat ValueError with database corruption as unexpected system error
     elif isinstance(e, ValueError) and "Database corruption" in str(e):
-        if context:
-            console.print(f"[red]An unexpected error occurred {context}: {e}[/red]")
-        else:
-            console.print(f"[red]An unexpected error occurred: {e}[/red]")
+        msg = f"An unexpected error occurred {context}: {e}" if context else f"An unexpected error occurred: {e}"
+        console.print(f"[red]{msg}[/red]")
         if verbose:
             console.print_exception()
-    # Other ValueErrors are user errors (date parsing, etc.)
     elif isinstance(e, ValueError):
         console.print(f"[red]Error: {e}[/red]")
-    else:  # Everything else is an unexpected system error
-        if context:
-            console.print(f"[red]An unexpected error occurred {context}: {e}[/red]")
-        else:
-            console.print(f"[red]An unexpected error occurred: {e}[/red]")
+    else:
+        msg = f"An unexpected error occurred {context}: {e}" if context else f"An unexpected error occurred: {e}"
+        console.print(f"[red]{msg}[/red]")
         if verbose:
             console.print_exception()
     raise typer.Exit(1)
 
 
-def _execute_backtesting_workflow(
-    app_config: Config, 
-    rules_config: Any, 
-    freeze_date: Optional[date], 
-    min_trades: Optional[int] = None,
-    in_sample: bool = False
-) -> List[Dict[str, Any]]:
-    """Execute the complete backtesting workflow."""
-    console.print("[3/4] Analyzing strategies for each ticker...")
-    symbols = data.load_universe(app_config.universe_path)
-    threshold = min_trades if min_trades is not None else getattr(app_config, "min_trades_threshold", 0)
-    return _run_backtests(app_config, rules_config, symbols, freeze_date, threshold, in_sample)
-
-
-def _execute_full_pipeline(
-    app_config: Config,
-    rules_config: Any,
-    verbose: bool,
-    min_trades: Optional[int] = None,
-    in_sample: bool = False,
-    clear_strategies: bool = False,
-    force_clear: bool = False,
-    preserve_all: bool = False,
-    show_banner: bool = False
-) -> None:
-    """Execute the complete analysis pipeline - single source of truth for all commands."""
-    if show_banner:
-        _show_banner()
-    
-    db_connection = None
-    
-    try:
-        # Standard database setup (DRY)
-        db_path = Path(app_config.database_path)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        persistence.create_database(db_path)
-        db_connection = persistence.get_connection(db_path)
-
-        # Strategy clearing logic (only for clear-and-recalculate)
-        if clear_strategies and not preserve_all:
-            if not force_clear:
-                from .config import get_active_strategy_combinations
-                
-                rules_dict = rules_config.model_dump()
-                current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
-                active_strategies = get_active_strategy_combinations(rules_config)
-
-                total_count = db_connection.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
-                delete_count_query = f"""
-                    SELECT COUNT(*) FROM strategies
-                    WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
-                """
-                will_delete = db_connection.execute(delete_count_query, [current_config_hash] + active_strategies).fetchone()[0]
-                preserved_count = total_count - will_delete
-
-                console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
-                console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
-                console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
-
-                # Always prompt for confirmation when --force is not used
-                if not typer.confirm("Are you sure you want to continue with intelligent clearing?"):
-                    console.print("[blue]Operation cancelled.[/blue]")
-                    raise typer.Exit(0)
-
-            clear_result = persistence.clear_strategies_for_config(db_connection, app_config, rules_config)
-            console.print(f"✅ Cleared: {clear_result['cleared_count']} strategies")
-            console.print(f"✅ Preserved: {clear_result['preserved_count']} historical strategies")
-
-        # Standard workflow execution (DRY)
-        with performance_monitor.monitor_execution("full_backtest"):
-            console.print("[1/4] Configuration loaded.")
-            if app_config.freeze_date:
-                if verbose: logger.info(f"Freeze mode active: {app_config.freeze_date}")
-                console.print("[2/4] Skipping data refresh (freeze mode).")
-            else:
-                if verbose: logger.info("Refreshing market data")
-                console.print("[2/4] Refreshing market data...")
-                data.refresh_market_data(
-                    universe_path=app_config.universe_path,
-                    cache_dir=app_config.cache_dir,
-                    years=app_config.historical_data_years,
-                    freeze_date=app_config.freeze_date,
-                )
-
-            all_results = _execute_backtesting_workflow(app_config, rules_config, app_config.freeze_date, min_trades, in_sample)
-            console.print("[4/4] Analysis complete. Results summary:")
-            _process_and_save_results(db_connection, all_results, app_config, rules_config)
-            
-            if clear_strategies:
-                console.print(f"✅ New strategies found: {len(all_results)}")
-
-        # Performance summary (DRY)
-        if verbose:
-            perf_summary = performance_monitor.get_summary()
-            if perf_summary:
-                console.print("\n[bold blue]Performance Summary:[/bold blue]")
-                console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
-                console.print(f"Slowest Function: {perf_summary['slowest_function']}")
-
-    except Exception as e:
-        context = "during clearing and recalculation" if clear_strategies else "during run pipeline"
-        _handle_command_exception(e, verbose, context)
-    finally:
-        if db_connection:
-            db_connection.close()
-            logger.info("Database connection closed.")
 
 
 def _process_and_save_results(
@@ -557,6 +431,177 @@ def main(
         raise typer.Exit(1)
 
 
+def _execute_command_pipeline(
+    ctx: typer.Context,
+    freeze_data: Optional[str],
+    log_file: str,
+    command_type: str = "run",
+    min_trades: Optional[int] = None,
+    in_sample: bool = False,
+    force: bool = False,
+    preserve_all: bool = False,
+    output_file: Optional[Path] = None,
+    per_stock: bool = False,
+) -> None:
+    """Single pipeline for all commands - eliminates 50+ LOC duplication."""
+    app_config = ctx.obj["config"]
+    rules_config = ctx.obj["rules"]
+    verbose = ctx.obj["verbose"]
+    
+    # Handle analyze-strategies command separately but reuse infrastructure
+    if command_type == "analyze":
+        db_path = Path(app_config.database_path)
+        if not db_path.exists():
+            console.print("[yellow]No historical strategies found to analyze.[/yellow]")
+            _save_command_log(log_file)
+            return
+        
+        format_desc = "per-stock strategy" if per_stock else "aggregated strategy"
+        console.print(f"[bold blue]Analyzing {format_desc} performance...[/bold blue]")
+        
+        try:
+            min_trades_value = min_trades if min_trades is not None else 10
+            strategy_performance = (analyze_strategy_performance if per_stock else analyze_strategy_performance_aggregated)(db_path, min_trades=min_trades_value)
+            
+            if not strategy_performance:
+                console.print("[yellow]No strategy data found.[/yellow]")
+                console.print("[yellow]No historical strategies found to analyze.[/yellow]")
+                return
+            
+            report_content = format_strategy_analysis_as_csv(strategy_performance, aggregate=not per_stock)
+            if output_file is not None:
+                output_file.write_text(report_content, encoding="utf-8")
+                console.print(f"✅ Strategy performance analysis saved to: [cyan]{output_file}[/cyan]")
+        except (OSError, PermissionError) as write_error:
+            raise ValueError(f"Cannot write to output path: {output_file}") from write_error
+        except Exception as e:
+            _handle_command_exception(e, verbose, "during analysis")
+        finally:
+            _save_command_log(log_file)
+        return
+    
+    # Handle run/clear commands
+    app_config.freeze_date = _parse_freeze_date(freeze_data)
+    
+    if command_type != "clear":  # Only show banner for run command
+        _show_banner()
+    
+    # Determine command type early for exception handling
+    clear_strategies = (command_type == "clear")
+    db_connection = None
+    
+    try:
+        # Database setup
+        db_path = Path(app_config.database_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        persistence.create_database(db_path)
+        db_connection = persistence.get_connection(db_path)
+
+        # Strategy clearing (clear-and-recalculate only)
+        if clear_strategies and not preserve_all:
+            if not force:
+                from .config import get_active_strategy_combinations
+                
+                rules_dict = rules_config.model_dump()
+                current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
+                active_strategies = get_active_strategy_combinations(rules_config)
+
+                total_count = db_connection.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
+                delete_count_query = f"""
+                    SELECT COUNT(*) FROM strategies
+                    WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
+                """
+                will_delete = db_connection.execute(delete_count_query, [current_config_hash] + active_strategies).fetchone()[0]
+                preserved_count = total_count - will_delete
+
+                console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
+                console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
+                console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
+
+                if not typer.confirm("Are you sure you want to continue with intelligent clearing?"):
+                    console.print("[blue]Operation cancelled.[/blue]")
+                    raise typer.Exit(0)
+
+            clear_result = persistence.clear_strategies_for_config(db_connection, app_config, rules_config)
+            console.print(f"✅ Cleared: {clear_result['cleared_count']} strategies")
+            console.print(f"✅ Preserved: {clear_result['preserved_count']} historical strategies")
+
+        # Core workflow - inline backtesting workflow
+        with performance_monitor.monitor_execution("full_backtest"):
+            console.print("[1/4] Configuration loaded.")
+            if app_config.freeze_date:
+                if verbose: logger.info(f"Freeze mode active: {app_config.freeze_date}")
+                console.print("[2/4] Skipping data refresh (freeze mode).")
+            else:
+                if verbose: logger.info("Refreshing market data")
+                console.print("[2/4] Refreshing market data...")
+                data.refresh_market_data(
+                    universe_path=app_config.universe_path,
+                    cache_dir=app_config.cache_dir,
+                    years=app_config.historical_data_years,
+                    freeze_date=app_config.freeze_date,
+                )
+
+            console.print("[3/4] Analyzing strategies for each ticker...")
+            symbols = data.load_universe(app_config.universe_path)
+            threshold = min_trades if min_trades is not None else getattr(app_config, "min_trades_threshold", 0)
+            
+            # Inline backtester logic (eliminates _run_backtests)
+            bt = backtester.Backtester(
+                hold_period=getattr(app_config, "hold_period", 20),
+                min_trades_threshold=threshold,
+                initial_capital=getattr(app_config, "portfolio_initial_capital", 100000.0),
+            )
+            
+            # Fetch market data once if context filters are present
+            market_data = None
+            context_filters = getattr(rules_config, 'context_filters', [])
+            if context_filters:
+                for filter_def in context_filters:
+                    if hasattr(filter_def, 'type') and filter_def.type == "market_above_sma":
+                        index_symbol = filter_def.params.get("index_symbol", "^NSEI")
+                        try:
+                            market_data = data.get_price_data(
+                                symbol=index_symbol,
+                                cache_dir=Path(app_config.cache_dir),
+                                years=app_config.historical_data_years,
+                                freeze_date=app_config.freeze_date,
+                            )
+                            logger.info(f"Loaded market data for {index_symbol}")
+                            break  # Only need to load once
+                        except Exception as e:
+                            logger.warning(f"Could not load market data for {index_symbol}: {e}")
+            
+            all_results = []
+            with console.status("[bold green]Running backtests...") as status:
+                for i, symbol in enumerate(symbols):
+                    status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
+                    all_results.extend(_analyze_symbol(symbol, app_config, rules_config, app_config.freeze_date, bt, market_data, in_sample))
+            
+            console.print("[4/4] Analysis complete. Results summary:")
+            _process_and_save_results(db_connection, all_results, app_config, rules_config)
+            
+            if clear_strategies:
+                console.print(f"✅ New strategies found: {len(all_results)}")
+
+        # Performance summary
+        if verbose:
+            perf_summary = performance_monitor.get_summary()
+            if perf_summary:
+                console.print("\n[bold blue]Performance Summary:[/bold blue]")
+                console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
+                console.print(f"Slowest Function: {perf_summary['slowest_function']}")
+
+    except Exception as e:
+        context = "during clearing and recalculation" if clear_strategies else "during run pipeline"
+        _handle_command_exception(e, verbose, context)
+    finally:
+        if db_connection:
+            db_connection.close()
+            logger.info("Database connection closed.")
+        _save_command_log(log_file)
+
+
 @app.command(name="run")
 def run(
     ctx: typer.Context,
@@ -569,67 +614,18 @@ def run(
         console.print("[bold red]WARNING: Using IN-SAMPLE optimization![/bold red]")
         console.print("[yellow]Results are NOT reliable for live trading decisions![/yellow]")
 
-    app_config = ctx.obj["config"]
-    rules_config = ctx.obj["rules"]
-    verbose = ctx.obj["verbose"]
-    
-    app_config.freeze_date = _parse_freeze_date(freeze_data)
-    
-    try:
-        _execute_full_pipeline(app_config, rules_config, verbose, min_trades, in_sample, show_banner=True)
-    finally:
-        _save_command_log("run_log.txt")
+    _execute_command_pipeline(ctx, freeze_data, "run_log.txt", "run", min_trades, in_sample)
 
 
 @app.command(name="analyze-strategies")
 def analyze_strategies(
     ctx: typer.Context,
-    output_file: Path = typer.Option(
-        "strategy_performance_report.csv",
-        "--output", "-o",
-        help="Path to save the strategy performance report as a CSV file.",
-    ),
-    per_stock: bool = typer.Option(
-        False,
-        "--per-stock",
-        help="Generate detailed per-stock strategy report instead of the aggregated leaderboard.",
-    ),
-    min_trades: Optional[int] = typer.Option(
-        None,
-        "--min-trades",
-        help="Minimum trades required for analysis (None = use default threshold)",
-    ),
+    output_file: Path = typer.Option("strategy_performance_report.csv", "--output", "-o", help="Path to save the strategy performance report as a CSV file."),
+    per_stock: bool = typer.Option(False, "--per-stock", help="Generate detailed per-stock strategy report instead of the aggregated leaderboard."),
+    min_trades: Optional[int] = typer.Option(None, "--min-trades", help="Minimum trades required for analysis (None = use default threshold)"),
 ) -> None:
     """Analyze and report on the comprehensive performance of all strategies."""
-    format_desc = "per-stock strategy" if per_stock else "aggregated strategy"
-    console.print(f"[bold blue]Analyzing {format_desc} performance...[/bold blue]")
-    app_config = ctx.obj["config"]
-    verbose = ctx.obj.get("verbose", False)
-    db_path = Path(app_config.database_path)
-    # Consistent behavior: no data to analyze is success, not error
-    if not db_path.exists():
-        msg = "No historical strategies found to analyze."
-        console.print(f"[yellow]{msg}[/yellow]")
-        _save_command_log("analyze_strategies_log.txt")
-        return
-    try:
-        min_trades_value = min_trades if min_trades is not None else 10
-        if per_stock:
-            strategy_performance = analyze_strategy_performance(db_path, min_trades=min_trades_value)
-        else:
-            strategy_performance = analyze_strategy_performance_aggregated(db_path, min_trades=min_trades_value)
-        if not strategy_performance:
-            # Emit both old and new phrasing for backward compatibility.
-            console.print("[yellow]No strategy data found.[/yellow]")
-            console.print("[yellow]No historical strategies found to analyze.[/yellow]")
-            return
-        report_content = format_strategy_analysis_as_csv(strategy_performance, aggregate=not per_stock)
-        output_file.write_text(report_content, encoding="utf-8")
-        console.print(f"✅ Strategy performance analysis saved to: [cyan]{output_file}[/cyan]")
-    except Exception as e:
-        _handle_command_exception(e, verbose, "during analysis")
-    finally:
-        _save_command_log("analyze_strategies_log.txt")
+    _execute_command_pipeline(ctx, None, "analyze_strategies_log.txt", "analyze", min_trades, False, False, False, output_file, per_stock)
 
 
 @app.command(name="clear-and-recalculate")
@@ -640,21 +636,4 @@ def clear_and_recalculate(
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data at this date (YYYY-MM-DD format)"),
 ) -> None:
     """Intelligently clear current strategies and recalculate with preservation of historical data."""
-    app_config = ctx.obj["config"]
-    rules_config = ctx.obj["rules"]
-    verbose = ctx.obj.get("verbose", False)
-    
-    app_config.freeze_date = _parse_freeze_date(freeze_data)
-
-    try:
-        _execute_full_pipeline(
-            app_config=app_config,
-            rules_config=rules_config, 
-            verbose=verbose,
-            min_trades=getattr(app_config, "min_trades_threshold", 0),
-            clear_strategies=True,
-            force_clear=force,
-            preserve_all=preserve_all
-        )
-    finally:
-        _save_command_log("clear_and_recalculate_log.txt")
+    _execute_command_pipeline(ctx, freeze_data, "clear_and_recalculate_log.txt", "clear", None, False, force, preserve_all)

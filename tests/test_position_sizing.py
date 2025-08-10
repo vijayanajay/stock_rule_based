@@ -163,3 +163,37 @@ def test_no_size_where_no_entry():
             assert not pd.isna(size) and size > 0, "Entry day should have positive position size"
         else:  # Non-entry days
             assert pd.isna(size), f"Non-entry day {i} should have NaN position size, got {size}"
+
+
+def test_position_sizing_with_nan_atr():
+    """Task 1.2: Test position sizing fallback logic when ATR is NaN for early data points."""
+    # Create short price series where initial ATR will be NaN but fallback can work
+    dates = pd.date_range('2024-01-01', periods=5, freq='D')
+    
+    price_data = pd.DataFrame({
+        'high': [100, 101, 102, 103, 104],
+        'low': [99, 100, 101, 102, 103], 
+        'close': [99.5, 100.5, 101.5, 102.5, 103.5],
+        'volume': [1000, 1000, 1000, 1000, 1000]
+    }, index=dates)
+    
+    bt = Backtester(initial_capital=100000.0)
+    
+    # Entry signal on third day where 22-day ATR will be NaN but we have 3 data points for fallback
+    entry_signals = pd.Series(False, index=dates)
+    entry_signals.iloc[2] = True  # Third day - enough for fallback but not for 22-day ATR
+    
+    exit_conditions = [
+        RuleDef(
+            name="atr_stop", 
+            type="stop_loss_atr",
+            params={"atr_period": 22, "atr_multiplier": 2.0}  # 22-day ATR with only 5 days of data
+        )
+    ]
+    
+    sizes = bt._calculate_risk_based_size(price_data, entry_signals, exit_conditions)
+    
+    # Should still calculate a position size via fallback logic
+    entry_size = sizes.iloc[2]
+    assert not pd.isna(entry_size), "Should calculate fallback position size when ATR is NaN"
+    assert entry_size > 0, "Fallback position size should be positive"

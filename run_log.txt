@@ -1,4 +1,4 @@
-[2025-08-10 17:57:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -14,12 +14,12 @@
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 0 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-10.md 
-* Report generated: reports\signals_2025-08-10.md
+                      INFO     Report generated: reports\signals_2025-08-11.md 
+* Report generated: reports\signals_2025-08-11.md
                       INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-10 17:57:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -42,16 +42,16 @@ No valid strategies found. Check data quality and rule configurations.
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 0 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-10.md 
-* Report generated: reports\signals_2025-08-10.md
-                      INFO     full_backtest completed in 0.01s                
+                      INFO     Report generated: reports\signals_2025-08-11.md 
+* Report generated: reports\signals_2025-08-11.md
+                      INFO     full_backtest completed in 0.02s                
 
 Performance Summary:
 Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-10 17:57:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -72,9 +72,9 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.01s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-10 17:57:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-10 17:57:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -86,7 +86,6 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
 [2/4] Refreshing market data...
                       INFO     Loaded 13 symbols from universe                 
                       INFO     All symbols are fresh, no refresh needed        
-                      INFO     Successfully refreshed 0/0 symbols              
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 13 symbols from universe                 
                       INFO     Backtester initialized: hold_period=20,         
@@ -119,7 +118,7 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
                       ERROR    Error analyzing WIPRO:                          
                                Backtester.find_optimal_strategies() got an     
                                unexpected keyword argument 'in_sample'         
-[2025-08-10 17:57:11] INFO     find_optimal_strategies completed in 0.00s      
+                      INFO     find_optimal_strategies completed in 0.00s      
                       ERROR    Error analyzing HCLTECH:                        
                                Backtester.find_optimal_strategies() got an     
                                unexpected keyword argument 'in_sample'         
@@ -147,7 +146,7 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 8 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-10.md 
-* Report generated: reports\signals_2025-08-10.md
-                      INFO     full_backtest completed in 0.33s                
+[2025-08-11 01:17:49] INFO     Report generated: reports\signals_2025-08-11.md 
+* Report generated: reports\signals_2025-08-11.md
+                      INFO     full_backtest completed in 0.27s                
                       INFO     Database connection closed.                     
