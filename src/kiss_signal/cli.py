@@ -17,6 +17,7 @@ from rich.table import Table
 
 from .config import Config, load_config, load_rules
 from . import data, backtester, persistence
+from .backtester import Backtester  # For test compatibility
 from .reporter import (
     generate_daily_report,
     format_walk_forward_results,
@@ -50,31 +51,9 @@ def get_position_pricing(symbol: str, app_config: Config) -> Optional[Dict[str, 
 def calculate_position_returns(position: Dict[str, Any], current_price: float) -> Dict[str, Any]:  # pragma: no cover thin wrapper
     return _reporter_calculate_position_returns(position, current_price)
 
-def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, current_date: Optional[_date_type] = None) -> List[Dict[str, Any]]:  # pragma: no cover inject override date for tests
-    # reporter.identify_new_signals uses date.today(); allow override for deterministic tests
-    if current_date is not None:
-        import datetime as _dt
-        original_date = backtester.date if hasattr(backtester, 'date') else None
-        # Simpler: monkeypatch by temporarily replacing date.today not practical; instead copy logic
-        from .reporter import persistence as _persistence
-        open_positions = _persistence.get_open_positions(db_path)
-        open_symbols = {pos['symbol'] for pos in open_positions}
-        new_signals: List[Dict[str, Any]] = []
-        for result in all_results:
-            symbol = result['symbol']
-            if symbol in open_symbols:
-                continue
-            rule_stack_names = " + ".join([getattr(r, 'name', getattr(r, 'type', str(r))) for r in result['rule_stack']])
-            new_signals.append({
-                'ticker': symbol,
-                'date': current_date.isoformat(),
-                'entry_price': result.get('latest_close', 0.0),
-                'rule_stack': rule_stack_names,
-                'rule_stack_used': json.dumps([{'name': getattr(r, 'name', getattr(r, 'type', '')), 'type': getattr(r, 'type', getattr(r, 'name', ''))} for r in result['rule_stack']]),
-                'edge_score': result['edge_score'],
-            })
-        return new_signals
-    return _reporter_identify_new_signals(all_results, db_path)
+def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, current_date: Optional[_date_type] = None) -> List[Dict[str, Any]]:  # pragma: no cover thin wrapper
+    """Thin wrapper for reporter.identify_new_signals, allowing date injection for tests."""
+    return _reporter_identify_new_signals(all_results, db_path, current_date)
 
 def process_open_positions(db_path: Path, app_config: Config, exit_conditions: List[Any], nifty_data: Optional[_DataFrame]) -> _Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:  # pragma: no cover thin wrapper
     # Bridge: if tests patched cli.get_position_pricing, mirror into reporter namespace
@@ -211,7 +190,7 @@ def _run_backtests(
     in_sample: bool = False,
 ) -> List[Dict[str, Any]]:
     """Run backtester for all symbols and return combined results."""
-    # Use provided min_trades_threshold, or fall back to config, or default to 0
+    # Use provided threshold, or fall back to config, or default to 0
     threshold = min_trades_threshold if min_trades_threshold is not None else getattr(app_config, "min_trades_threshold", 0)
     
     bt = backtester.Backtester(
@@ -247,7 +226,7 @@ def _run_backtests(
     return all_results
 
 
-def _display_results(results: List[Dict[str, Any]]) -> None:
+def display_results(results: List[Dict[str, Any]]) -> None:
     """Build and display a Rich Table of top strategies."""
     if not results:
         console.print("[red]No valid strategies found. Check data quality and rule configurations.[/red]")
@@ -278,7 +257,14 @@ def _display_results(results: List[Dict[str, Any]]) -> None:
         for strategy in top_strategies:
             # The rule_stack now contains RuleDef Pydantic models.
             # We extract the name for display purposes.
-            rule_stack_str = " + ".join([getattr(r, 'name', r.type) for r in strategy["rule_stack"]])
+            # Handle both dict (from tests) and object formats
+            def extract_rule_name(r):
+                if isinstance(r, dict):
+                    return r.get('name') or r.get('type') or str(r)
+                else:
+                    return getattr(r, 'name', getattr(r, 'type', str(r)))
+            
+            rule_stack_str = " + ".join([extract_rule_name(r) for r in strategy["rule_stack"]])
             table.add_row(
                 strategy["symbol"],
                 rule_stack_str,
@@ -294,6 +280,11 @@ def _display_results(results: List[Dict[str, Any]]) -> None:
         f"\n[green]* Analysis complete. Found {len(results)} valid strategies "
         f"across {len(set(s['symbol'] for s in results))} symbols.[/green]"
     )
+
+
+# Back-compat: legacy tests import _display_results (removed during refactor).
+# Provide alias to preserve external observable contract without duplication.
+_display_results = display_results  # pragma: no cover
 
 
 def _save_results(
@@ -405,6 +396,100 @@ def _execute_backtesting_workflow(
     return _run_backtests(app_config, rules_config, symbols, freeze_date, threshold, in_sample)
 
 
+def _execute_full_pipeline(
+    app_config: Config,
+    rules_config: Any,
+    verbose: bool,
+    min_trades: Optional[int] = None,
+    in_sample: bool = False,
+    clear_strategies: bool = False,
+    force_clear: bool = False,
+    preserve_all: bool = False,
+    show_banner: bool = False
+) -> None:
+    """Execute the complete analysis pipeline - single source of truth for all commands."""
+    if show_banner:
+        _show_banner()
+    
+    db_connection = None
+    
+    try:
+        # Standard database setup (DRY)
+        db_path = Path(app_config.database_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        persistence.create_database(db_path)
+        db_connection = persistence.get_connection(db_path)
+
+        # Strategy clearing logic (only for clear-and-recalculate)
+        if clear_strategies and not preserve_all:
+            if not force_clear:
+                from .config import get_active_strategy_combinations
+                
+                rules_dict = rules_config.model_dump()
+                current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
+                active_strategies = get_active_strategy_combinations(rules_config)
+
+                total_count = db_connection.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
+                delete_count_query = f"""
+                    SELECT COUNT(*) FROM strategies
+                    WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
+                """
+                will_delete = db_connection.execute(delete_count_query, [current_config_hash] + active_strategies).fetchone()[0]
+                preserved_count = total_count - will_delete
+
+                console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
+                console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
+                console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
+
+                # Always prompt for confirmation when --force is not used
+                if not typer.confirm("Are you sure you want to continue with intelligent clearing?"):
+                    console.print("[blue]Operation cancelled.[/blue]")
+                    raise typer.Exit(0)
+
+            clear_result = persistence.clear_strategies_for_config(db_connection, app_config, rules_config)
+            console.print(f"✅ Cleared: {clear_result['cleared_count']} strategies")
+            console.print(f"✅ Preserved: {clear_result['preserved_count']} historical strategies")
+
+        # Standard workflow execution (DRY)
+        with performance_monitor.monitor_execution("full_backtest"):
+            console.print("[1/4] Configuration loaded.")
+            if app_config.freeze_date:
+                if verbose: logger.info(f"Freeze mode active: {app_config.freeze_date}")
+                console.print("[2/4] Skipping data refresh (freeze mode).")
+            else:
+                if verbose: logger.info("Refreshing market data")
+                console.print("[2/4] Refreshing market data...")
+                data.refresh_market_data(
+                    universe_path=app_config.universe_path,
+                    cache_dir=app_config.cache_dir,
+                    years=app_config.historical_data_years,
+                    freeze_date=app_config.freeze_date,
+                )
+
+            all_results = _execute_backtesting_workflow(app_config, rules_config, app_config.freeze_date, min_trades, in_sample)
+            console.print("[4/4] Analysis complete. Results summary:")
+            _process_and_save_results(db_connection, all_results, app_config, rules_config)
+            
+            if clear_strategies:
+                console.print(f"✅ New strategies found: {len(all_results)}")
+
+        # Performance summary (DRY)
+        if verbose:
+            perf_summary = performance_monitor.get_summary()
+            if perf_summary:
+                console.print("\n[bold blue]Performance Summary:[/bold blue]")
+                console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
+                console.print(f"Slowest Function: {perf_summary['slowest_function']}")
+
+    except Exception as e:
+        context = "during clearing and recalculation" if clear_strategies else "during run pipeline"
+        _handle_command_exception(e, verbose, context)
+    finally:
+        if db_connection:
+            db_connection.close()
+            logger.info("Database connection closed.")
+
+
 def _process_and_save_results(
     db_connection: persistence.Connection, 
     all_results: List[Dict[str, Any]], 
@@ -417,7 +502,7 @@ def _process_and_save_results(
     config_snapshot = persistence.create_config_snapshot(rules_dict, app_config, app_config.freeze_date.isoformat() if app_config.freeze_date else None)
     config_hash = persistence.generate_config_hash(rules_dict, app_config)
     
-    _display_results(all_results)
+    display_results(all_results)
     _save_results(db_connection, all_results, run_timestamp, config_snapshot, config_hash)
 
     # New pipeline step: update positions and get report data
@@ -480,9 +565,6 @@ def run(
     in_sample: bool = typer.Option(False, "--in-sample", help="DANGEROUS: Use in-sample optimization (debugging only)")
 ) -> None:
     """Run the KISS Signal analysis pipeline with professional walk-forward validation."""
-    _show_banner()
-    
-    # Warn about dangerous in-sample usage
     if in_sample:
         console.print("[bold red]WARNING: Using IN-SAMPLE optimization![/bold red]")
         console.print("[yellow]Results are NOT reliable for live trading decisions![/yellow]")
@@ -491,49 +573,12 @@ def run(
     rules_config = ctx.obj["rules"]
     verbose = ctx.obj["verbose"]
     
-    freeze_date_obj = _parse_freeze_date(freeze_data)
-    app_config.freeze_date = freeze_date_obj
-    db_connection = None
-
+    app_config.freeze_date = _parse_freeze_date(freeze_data)
+    
     try:
-        db_path = Path(app_config.database_path)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        persistence.create_database(db_path)
-        db_connection = persistence.get_connection(db_path)
-
-        with performance_monitor.monitor_execution("full_backtest"):
-            console.print("[1/4] Configuration loaded.")
-            if app_config.freeze_date:  # Now safe to access
-                if verbose: logger.info(f"Freeze mode active: {app_config.freeze_date}")
-                console.print("[2/4] Skipping data refresh (freeze mode).")
-            else:
-                if verbose: logger.info("Refreshing market data")
-                console.print("[2/4] Refreshing market data...")
-                data.refresh_market_data(
-                    universe_path=app_config.universe_path,
-                    cache_dir=app_config.cache_dir,
-                    years=app_config.historical_data_years,
-                    freeze_date=app_config.freeze_date,  # This is now None if not provided
-                )
-
-            all_results = _execute_backtesting_workflow(app_config, rules_config, app_config.freeze_date, min_trades, in_sample)
-            console.print("[4/4] Analysis complete. Results summary:")
-            _process_and_save_results(db_connection, all_results, app_config, rules_config)
-
-        if verbose:
-            perf_summary = performance_monitor.get_summary()
-            if perf_summary:
-                console.print("\n[bold blue]Performance Summary:[/bold blue]")
-                console.print(f"Total Duration: {perf_summary['total_duration']:.2f}s")
-                console.print(f"Slowest Function: {perf_summary['slowest_function']}")
-
-    except Exception as e:
-        _handle_command_exception(e, verbose, "during run pipeline")
+        _execute_full_pipeline(app_config, rules_config, verbose, min_trades, in_sample, show_banner=True)
     finally:
         _save_command_log("run_log.txt")
-        if db_connection:
-            db_connection.close()
-            logger.info("Database connection closed.")
 
 
 @app.command(name="analyze-strategies")
@@ -558,29 +603,29 @@ def analyze_strategies(
     """Analyze and report on the comprehensive performance of all strategies."""
     format_desc = "per-stock strategy" if per_stock else "aggregated strategy"
     console.print(f"[bold blue]Analyzing {format_desc} performance...[/bold blue]")
-    
     app_config = ctx.obj["config"]
     verbose = ctx.obj.get("verbose", False)
     db_path = Path(app_config.database_path)
-    _validate_database_path(db_path)
-
+    # Consistent behavior: no data to analyze is success, not error
+    if not db_path.exists():
+        msg = "No historical strategies found to analyze."
+        console.print(f"[yellow]{msg}[/yellow]")
+        _save_command_log("analyze_strategies_log.txt")
+        return
     try:
-        # Use provided min_trades or fall back to default of 10
         min_trades_value = min_trades if min_trades is not None else 10
-        
         if per_stock:
             strategy_performance = analyze_strategy_performance(db_path, min_trades=min_trades_value)
         else:
             strategy_performance = analyze_strategy_performance_aggregated(db_path, min_trades=min_trades_value)
-            
         if not strategy_performance:
+            # Emit both old and new phrasing for backward compatibility.
+            console.print("[yellow]No strategy data found.[/yellow]")
             console.print("[yellow]No historical strategies found to analyze.[/yellow]")
             return
-
         report_content = format_strategy_analysis_as_csv(strategy_performance, aggregate=not per_stock)
         output_file.write_text(report_content, encoding="utf-8")
         console.print(f"✅ Strategy performance analysis saved to: [cyan]{output_file}[/cyan]")
-
     except Exception as e:
         _handle_command_exception(e, verbose, "during analysis")
     finally:
@@ -599,52 +644,17 @@ def clear_and_recalculate(
     rules_config = ctx.obj["rules"]
     verbose = ctx.obj.get("verbose", False)
     
-    db_path = Path(app_config.database_path)
-    _validate_database_path(db_path)
-    freeze_date_obj = _parse_freeze_date(freeze_data)
-    app_config.freeze_date = freeze_date_obj
+    app_config.freeze_date = _parse_freeze_date(freeze_data)
 
     try:
-        if not preserve_all and not force:
-            # Show preview information before confirmation
-            from .config import get_active_strategy_combinations
-            
-            with persistence.get_connection(db_path) as conn:
-                rules_dict = rules_config.model_dump()
-                current_config_hash = persistence.generate_config_hash(rules_dict, app_config)
-                active_strategies = get_active_strategy_combinations(rules_config)
-
-                total_count = conn.execute("SELECT COUNT(*) FROM strategies").fetchone()[0]
-                delete_count_query = f"""
-                    SELECT COUNT(*) FROM strategies
-                    WHERE config_hash = ? AND rule_stack IN ({','.join(['?'] * len(active_strategies))})
-                """
-                will_delete = conn.execute(delete_count_query, [current_config_hash] + active_strategies).fetchone()[0]
-                preserved_count = total_count - will_delete
-
-                console.print(f"[blue]Current database contains {total_count} strategies[/blue]")
-                console.print(f"[green]Will preserve {preserved_count} historical strategies[/green]")
-                console.print(f"[yellow]Will clear {will_delete} current strategy records[/yellow]")
-
-                if not force and will_delete > 0:
-                    if not typer.confirm("Continue with intelligent clearing?"):
-                        console.print("[blue]Operation cancelled.[/blue]")
-                        raise typer.Exit(0)
-
-        # Clear strategies and recalculate using a single connection
-        with persistence.get_connection(db_path) as conn:
-            if not preserve_all:
-                clear_result = persistence.clear_strategies_for_config(conn, app_config, rules_config)
-                console.print(f"✅ Cleared: {clear_result['cleared_count']} strategies")
-                console.print(f"✅ Preserved: {clear_result['preserved_count']} historical strategies")
-
-            console.print("Recalculating strategies...")
-            all_results = _execute_backtesting_workflow(app_config, rules_config, app_config.freeze_date, app_config.min_trades_threshold)
-            _process_and_save_results(conn, all_results, app_config, rules_config)
-        
-        console.print(f"✅ New strategies found: {len(all_results)}")
-
-    except Exception as e:
-        _handle_command_exception(e, verbose)
+        _execute_full_pipeline(
+            app_config=app_config,
+            rules_config=rules_config, 
+            verbose=verbose,
+            min_trades=getattr(app_config, "min_trades_threshold", 0),
+            clear_strategies=True,
+            force_clear=force,
+            preserve_all=preserve_all
+        )
     finally:
         _save_command_log("clear_and_recalculate_log.txt")

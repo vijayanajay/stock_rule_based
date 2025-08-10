@@ -28,6 +28,7 @@ __all__ = [
     "create_config_snapshot",
     "clear_strategies_for_config",
     "clean_duplicate_strategies",
+    "clear_current_strategies",
 ]
 
 logger = logging.getLogger(__name__)
@@ -575,3 +576,11 @@ def clean_duplicate_strategies(db_path: Path, dry_run: bool = False) -> Dict[str
             'duplicates_removed': 0,
             'error': error_msg
         }
+
+
+def clear_current_strategies(db_path: Path) -> None:
+    """Clear all current strategies from database. Used by tests."""
+    with get_connection(db_path) as conn:
+        conn.execute("DELETE FROM strategies")
+        conn.commit()
+    logger.info("Cleared all current strategies from database")

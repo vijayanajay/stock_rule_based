@@ -1228,7 +1228,7 @@ class TestPositionProcessing:
         config.freeze_date = date(2023, 1, 15)
         config.hold_period = 20
         
-        positions_to_hold, positions_to_close = reporter.process_open_positions(
+        positions_to_close, positions_to_hold = reporter.process_open_positions(
             tmp_path / "test.db", config, [], None
         )
         
@@ -1255,7 +1255,7 @@ class TestPositionProcessing:
         config.hold_period = 20
         
         with patch.object(reporter, 'get_position_pricing', return_value=None):
-            positions_to_hold, positions_to_close = reporter.process_open_positions(
+            positions_to_close, positions_to_hold = reporter.process_open_positions(
                 tmp_path / "test.db", config, [], None
             )
         

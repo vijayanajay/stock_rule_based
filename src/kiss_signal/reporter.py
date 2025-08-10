@@ -47,13 +47,13 @@ def check_exit_conditions(
             stop_pct = condition_params.get('percentage', 0.05)
             stop_price = entry_price * (1 - stop_pct)
             if current_low <= stop_price:
-                return f"Stop-loss triggered at {current_low:.2f} (target: {stop_price:.2f})"
+                return f"Stop-loss triggered at {current_low:.2f} (target: {stop_price:.2f}) - stop_loss_pct"
                 
         elif condition_type == 'take_profit_pct':
             profit_pct = condition_params.get('percentage', 0.10)
             profit_price = entry_price * (1 + profit_pct)
             if current_high >= profit_price:
-                return f"Take-profit triggered at {current_high:.2f} (target: {profit_price:.2f})"
+                return f"Take-profit triggered at {current_high:.2f} (target: {profit_price:.2f}) - take_profit_pct"
                 
         elif condition_type == 'stop_loss_atr':
             try:
@@ -150,6 +150,7 @@ def calculate_position_returns(position: Dict[str, Any], current_price: float, n
     
     return {
         'return_pct': return_pct,
+        'absolute_return': current_price - entry_price,  # Add for backward compatibility
         'nifty_return_pct': nifty_return_pct,
     }
 
@@ -160,7 +161,11 @@ def process_open_positions(
     exit_conditions: List[Any],
     nifty_data: Optional[pd.DataFrame] = None
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Process open positions and determine which to hold vs close."""
+    """Process open positions and determine which to hold vs close.
+    
+    Returns:
+        Tuple of (positions_to_close, positions_to_hold)
+    """
     open_positions = persistence.get_open_positions(db_path)
     positions_to_hold = []
     positions_to_close = []
@@ -234,21 +239,22 @@ def process_open_positions(
             }
             positions_to_hold.append(pos_to_hold)
     
-    return positions_to_hold, positions_to_close
+    return positions_to_close, positions_to_hold
 
 
-def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path) -> List[Dict[str, Any]]:
+def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, current_date: Optional[date] = None) -> List[Dict[str, Any]]:
     """Identify new buy signals that don't conflict with existing positions."""
     if not all_results:
         return []
-        
+
     # Get symbols that already have open positions
     open_positions = persistence.get_open_positions(db_path)
     open_symbols = {pos['symbol'] for pos in open_positions}
-    
+
     # Filter out signals for stocks that already have open positions
     new_signals = []
-    current_date = date.today()
+    if current_date is None:
+        current_date = date.today()
     
     for result in all_results:
         symbol = result['symbol']
@@ -256,16 +262,35 @@ def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path) -> Li
         if symbol in open_symbols:
             logger.info(f"Skipping new signal for {symbol} - position already open")
             continue
-            
+
         # Format for position tracking
-        rule_stack_names = " + ".join([getattr(r, 'name', r.type) for r in result['rule_stack']])
+        # Structural Fix: Make this robust to handle both RuleDef objects and strings
+        # This resolves the data contract violation where tests passed a List[str].
+        def extract_rule_name(r):
+            """Extract rule name from various formats (dict, object, string)."""
+            if isinstance(r, dict):
+                return r.get('name') or r.get('type') or str(r)
+            else:
+                return getattr(r, 'name', getattr(r, 'type', str(r)))
         
+        def extract_rule_type(r):
+            """Extract rule type from various formats (dict, object, string)."""
+            if isinstance(r, dict):
+                return r.get('type', str(r))
+            else:
+                return getattr(r, 'type', str(r))
+        
+        rule_stack_names = " + ".join([extract_rule_name(r) for r in result['rule_stack']])
+        rule_stack_used = json.dumps([
+            {'name': extract_rule_name(r), 'type': extract_rule_type(r)}
+            for r in result['rule_stack']
+        ])
         signal = {
             'ticker': symbol,
             'date': current_date.isoformat(),
             'entry_price': result.get('latest_close', 0.0),  # Use the actual latest close price
             'rule_stack': rule_stack_names,
-            'rule_stack_used': json.dumps([{'name': getattr(r, 'name', r.type), 'type': r.type} for r in result['rule_stack']]),
+            'rule_stack_used': rule_stack_used,
             'edge_score': result['edge_score'],
         }
         new_signals.append(signal)
@@ -299,7 +324,7 @@ def update_positions_and_generate_report_data(
         logger.warning(f"Could not load NIFTY data for benchmark: {e}")
     
     # Process existing positions
-    positions_to_hold, positions_to_close = process_open_positions(
+    positions_to_close, positions_to_hold = process_open_positions(
         db_path, config, exit_conditions, nifty_data
     )
     

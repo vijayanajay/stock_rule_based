@@ -135,3 +135,73 @@ def trending_price_data():
         'close': prices,
         'volume': [1000 + i * 10 for i in range(len(dates))]
     }, index=dates)
+
+
+@pytest.fixture
+def test_environment(tmp_path: Path) -> Path:
+    """Create a test environment with necessary directories and files."""
+    # Create required directories
+    config_dir = tmp_path / "config"
+    config_dir.mkdir()
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    cache_dir = data_dir / "cache"
+    cache_dir.mkdir()
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    
+    # Create config files
+    config_yaml = tmp_path / "config.yaml"
+    config_yaml.write_text(yaml.dump({
+        "universe_path": "data/nifty_large_mid.csv",
+        "historical_data_years": 1,
+        "cache_dir": "data/cache",
+        "cache_refresh_days": 30,
+        "hold_period": 20,
+        "min_trades_threshold": 10,
+        "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
+        "database_path": "data/test.db",
+        "reports_output_dir": "reports/",
+        "edge_score_threshold": 0.5,
+        "portfolio_initial_capital": 100000.0,
+        "risk_per_trade_pct": 0.01,
+        "seeker_min_edge_score": 0.60,
+        "seeker_min_trades": 20
+    }))
+    
+    rules_yaml = config_dir / "rules.yaml"
+    rules_yaml.write_text("""
+entry_signals:
+  - name: "test_baseline"
+    type: "sma_crossover"
+    params:
+      fast_period: 5
+      slow_period: 10
+""")
+    
+    # Create universe file
+    universe_file = data_dir / "nifty_large_mid.csv"
+    universe_file.write_text("symbol,name\nRELIANCE.NS,Reliance Industries\nTCS.NS,TCS\n")
+    
+    return tmp_path
+
+
+@pytest.fixture
+def test_config(tmp_path: Path) -> Config:
+    """Create a test Config object."""
+    universe_file = tmp_path / "test_universe.csv"
+    universe_file.write_text("symbol,name\nRELIANCE.NS,Reliance Industries\nTCS.NS,TCS\n")
+    
+    config_data = {
+        "universe_path": str(universe_file),
+        "historical_data_years": 1,
+        "cache_dir": str(tmp_path / "cache/"),
+        "cache_refresh_days": 30,
+        "hold_period": 20,
+        "min_trades_threshold": 10,
+        "edge_score_weights": {"win_pct": 0.6, "sharpe": 0.4},
+        "database_path": str(tmp_path / "test.db"),
+        "reports_output_dir": str(tmp_path / "reports/"),
+        "edge_score_threshold": 0.5
+    }
+    return Config(**config_data)
