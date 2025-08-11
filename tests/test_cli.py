@@ -1364,37 +1364,6 @@ def test_analyze_strategies_write_error():
                 assert "Cannot write to output path" in result.stdout
 
 
-def test_in_sample_warning():
-    """Test in-sample warning display to cover lines 614-615."""
-    with runner.isolated_filesystem() as fs:
-        fs_path = Path(fs)
-        (fs_path / "config").mkdir()
-        (fs_path / "data").mkdir()
-        
-        universe_path = fs_path / "data" / "universe.csv"
-        universe_path.write_text("symbol\nTEST\n")
-        
-        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
-        config_dict["universe_path"] = str(universe_path)
-        
-        config_path = fs_path / "config.yaml"
-        config_path.write_text(yaml.dump(config_dict))
-        
-        rules_path = fs_path / "config" / "rules.yaml"
-        rules_path.write_text(VALID_RULES_YAML)
-        
-        # Test --in-sample flag to trigger warning
-        result = runner.invoke(app, [
-            "--config", str(config_path),
-            "--rules", str(rules_path),
-            "run", "--in-sample"
-        ])
-        
-        # Should display in-sample warning
-        assert "WARNING: Using IN-SAMPLE optimization!" in result.stdout
-        assert "Results are NOT reliable for live trading decisions!" in result.stdout
-
-
 def test_clear_strategies_preserve_all():
     """Test clear-and-recalculate with preserve-all flag to cover different execution path."""
     with runner.isolated_filesystem() as fs:

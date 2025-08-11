@@ -96,7 +96,6 @@ def _analyze_symbol(
     freeze_date: Optional[date], 
     bt: backtester.Backtester,
     market_data: Optional[pd.DataFrame] = None,
-    in_sample: bool = False
 ) -> List[Dict[str, Any]]:
     """Helper to run backtest analysis for a single symbol."""
     try:
@@ -121,7 +120,6 @@ def _analyze_symbol(
             freeze_date=freeze_date,
             edge_score_weights=app_config.edge_score_weights,
             config=app_config,  # Add config parameter
-            in_sample=in_sample  # Add in_sample parameter
         )
         
         result = []
@@ -398,7 +396,6 @@ def _execute_backtest_pipeline(
     log_file: str,
     clear_strategies: bool,
     min_trades: Optional[int],
-    in_sample: bool,
     force: bool,
     preserve_all: bool,
 ) -> None:
@@ -500,7 +497,7 @@ def _execute_backtest_pipeline(
             with console.status("[bold green]Running backtests...") as status:
                 for i, symbol in enumerate(symbols):
                     status.update(f"Analyzing {symbol} ({i+1}/{len(symbols)})...")
-                    all_results.extend(_analyze_symbol(symbol, app_config, rules_config, app_config.freeze_date, bt, market_data, in_sample))
+                    all_results.extend(_analyze_symbol(symbol, app_config, rules_config, app_config.freeze_date, bt, market_data))
             
             console.print("[4/4] Analysis complete. Results summary:")
             _process_and_save_results(db_connection, all_results, app_config, rules_config)
@@ -531,14 +528,9 @@ def run(
     ctx: typer.Context,
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data to specific date (YYYY-MM-DD)"),
     min_trades: Optional[int] = typer.Option(None, "--min-trades", help="Minimum trades required during backtesting (None = use config default)"),
-    in_sample: bool = typer.Option(False, "--in-sample", help="DANGEROUS: Use in-sample optimization (debugging only)")
 ) -> None:
     """Run the KISS Signal analysis pipeline with professional walk-forward validation."""
-    if in_sample:
-        console.print("[bold red]WARNING: Using IN-SAMPLE optimization![/bold red]")
-        console.print("[yellow]Results are NOT reliable for live trading decisions![/yellow]")
-
-    _execute_backtest_pipeline(ctx, freeze_data, "run_log.txt", clear_strategies=False, min_trades=min_trades, in_sample=in_sample, force=False, preserve_all=False)
+    _execute_backtest_pipeline(ctx, freeze_data, "run_log.txt", clear_strategies=False, min_trades=min_trades, force=False, preserve_all=False)
 
 
 @app.command(name="analyze-strategies")
@@ -560,4 +552,4 @@ def clear_and_recalculate(
     freeze_data: Optional[str] = typer.Option(None, "--freeze-data", help="Freeze data at this date (YYYY-MM-DD format)"),
 ) -> None:
     """Intelligently clear current strategies and recalculate with preservation of historical data."""
-    _execute_backtest_pipeline(ctx, freeze_data, "clear_and_recalculate_log.txt", clear_strategies=True, min_trades=None, in_sample=False, force=force, preserve_all=preserve_all)
+    _execute_backtest_pipeline(ctx, freeze_data, "clear_and_recalculate_log.txt", clear_strategies=True, min_trades=None, force=force, preserve_all=preserve_all)
