@@ -32,11 +32,16 @@ from rich.console import Console
 from typer.testing import CliRunner
 
 from kiss_signal.cli import (
-    app, _create_progress_context, _run_backtests, _show_banner,
-    check_exit_conditions, calculate_position_returns, identify_new_signals,
-    process_open_positions, get_position_pricing
+    app, _create_progress_context, _show_banner,
+    get_position_pricing
 )
-from kiss_signal.reporter import update_positions_and_generate_report_data
+from kiss_signal.reporter import (
+    update_positions_and_generate_report_data,
+    check_exit_conditions,
+    calculate_position_returns,
+    identify_new_signals,
+    process_open_positions,
+)
 from kiss_signal.config import Config, RuleDef
 from kiss_signal import persistence
 
@@ -473,7 +478,7 @@ def test_analyze_strategies_command_no_database(test_environment):
 # Clear and Recalculate Tests  
 # =============================================================================
 
-@patch("kiss_signal.cli._execute_command_pipeline")
+@patch("kiss_signal.cli._execute_backtest_pipeline")
 def test_clear_and_recalculate_basic_flow(mock_execute, test_environment):
     """Test basic clear and recalculate flow."""
     mock_execute.return_value = None
@@ -492,11 +497,12 @@ def test_clear_and_recalculate_basic_flow(mock_execute, test_environment):
         ])
         
         assert result.exit_code == 0
-        # Verify that _execute_command_pipeline was called with command_type="clear"
+        # Verify that _execute_backtest_pipeline was called with clear_strategies=True
         mock_execute.assert_called_once()
         call_args = mock_execute.call_args
-        assert call_args.args[3] == "clear"  # command_type parameter
-        assert call_args.args[6] is True     # force parameter
+        # Check keyword arguments instead since the new function uses different parameter names
+        assert call_args.kwargs["clear_strategies"] is True
+        assert call_args.kwargs["force"] is True
     finally:
         os.chdir(original_cwd)
 
@@ -639,14 +645,15 @@ def test_cli_with_min_trades_config(test_environment):
         config_path = test_environment / "config.yaml"
         rules_path = test_environment / "config" / "rules.yaml"
         
-        with patch('kiss_signal.cli._run_backtests') as mock_run:
-            mock_run.return_value = [
+        # Mock the analyze symbol function to return test results
+        with patch('kiss_signal.cli._analyze_symbol') as mock_analyze:
+            mock_analyze.return_value = [
                 {
                     'symbol': 'RELIANCE', 
                     'total_trades': 15, 
                     'edge_score': 0.6,
-                    'win_pct': 0.75,  # Add missing win_pct
-                    'sharpe': 1.2,    # Add missing sharpe
+                    'win_pct': 0.75,
+                    'sharpe': 1.2,
                     'rule_stack': [{'name': 'test_rule', 'type': 'test_rule'}],
                     'latest_close': 2500.0
                 }
@@ -694,15 +701,11 @@ def test_min_trades_filtering_applied():
             {'symbol': 'C', 'total_trades': 7, 'edge_score': 0.6}
         ]
         
-        with patch('kiss_signal.cli._run_backtests') as mock_run:
-            mock_run.return_value = strategies
-            
-            # Test the filtering via direct _run_backtests call instead of removed abstraction
-            result = mock_run.return_value
-            
-            # Should filter out strategies with < 5 trades
-            filtered = [s for s in result if s['total_trades'] >= 5]
-            assert len(filtered) == 2  # B and C should remain
+        # Test the filtering logic directly
+        min_trades_threshold = 5
+        filtered = [s for s in strategies if s['total_trades'] >= min_trades_threshold]
+        assert len(filtered) == 2  # B and C should remain
+        assert all(s['total_trades'] >= min_trades_threshold for s in filtered)
     finally:
         import os
         os.unlink(universe_path)
@@ -1067,42 +1070,6 @@ def test_save_command_log_error_handling():
         mock_console.print.assert_called()
 
 
-def test_context_filter_market_data_loading():
-    """Test context filter market data loading with various exception scenarios."""
-    from kiss_signal.cli import _run_backtests
-    from kiss_signal.config import Config
-    from types import SimpleNamespace
-    
-    # Create mock config and rules with context filters
-    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
-    
-    # Mock rules_config with context filters
-    rules_config = SimpleNamespace()
-    rules_config.context_filters = [
-        SimpleNamespace(
-            type="market_above_sma",
-            params={"index_symbol": "^NSEI", "sma_period": 50}
-        )
-    ]
-    
-    # Test successful market data loading
-    with patch('kiss_signal.data.get_price_data') as mock_get_data, \
-         patch('kiss_signal.cli._analyze_symbol') as mock_analyze, \
-         patch('kiss_signal.cli.console') as mock_console:
-        
-        # First call for market data succeeds
-        mock_get_data.return_value = pd.DataFrame({
-            'close': [1500, 1510], 'volume': [1000, 1100]
-        })
-        mock_analyze.return_value = []
-        
-        result = _run_backtests(app_config, rules_config, ['TEST'], None)
-        
-        # Should load market data and log success
-        assert mock_get_data.call_count >= 1
-        assert result == []
-
-
 def test_analyze_symbol_exception_paths():
     """Test _analyze_symbol with various exception scenarios."""
     from kiss_signal.cli import _analyze_symbol
@@ -1250,85 +1217,6 @@ def test_process_and_save_results_report_error():
         mock_logger.error.assert_called()
 
 
-def test_context_filters_market_data_exception_handling():
-    """Test context filter market data loading with exception to cover lines 89-105."""
-    from kiss_signal.cli import _run_backtests
-    from kiss_signal.config import Config
-    from types import SimpleNamespace
-    
-    # Create config and rules with context filters
-    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
-    
-    # Mock rules_config with context filters that will trigger exception
-    rules_config = SimpleNamespace()
-    rules_config.context_filters = [
-        SimpleNamespace(
-            type="market_above_sma",
-            params={"index_symbol": "^NSEI", "sma_period": 50}
-        )
-    ]
-    
-    symbols = ['TEST']
-    
-    with patch('kiss_signal.data.get_price_data') as mock_get_data, \
-         patch('kiss_signal.cli._analyze_symbol') as mock_analyze, \
-         patch('kiss_signal.cli.logger') as mock_logger:
-        
-        # First call for market data fails, should trigger exception handling
-        def side_effect(*args, **kwargs):
-            symbol = kwargs.get('symbol') or args[0]
-            if symbol == "^NSEI":
-                raise Exception("Failed to load market data")
-            return pd.DataFrame({'close': [100], 'volume': [1000]})
-        
-        mock_get_data.side_effect = side_effect
-        mock_analyze.return_value = []
-        
-        result = _run_backtests(app_config, rules_config, symbols, None)
-        
-        # Should log warning about market data failure
-        mock_logger.warning.assert_called()
-        assert "Could not load market data" in str(mock_logger.warning.call_args)
-        assert result == []
-
-
-def test_context_filters_successful_loading():
-    """Test context filter market data successful loading to cover lines 95-103."""
-    from kiss_signal.cli import _run_backtests
-    from kiss_signal.config import Config
-    from types import SimpleNamespace
-    
-    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
-    
-    # Mock rules_config with context filters
-    rules_config = SimpleNamespace()
-    rules_config.context_filters = [
-        SimpleNamespace(
-            type="market_above_sma",
-            params={"index_symbol": "^NSEI", "sma_period": 50}
-        )
-    ]
-    
-    symbols = ['TEST']
-    
-    with patch('kiss_signal.data.get_price_data') as mock_get_data, \
-         patch('kiss_signal.cli._analyze_symbol') as mock_analyze, \
-         patch('kiss_signal.cli.logger') as mock_logger:
-        
-        # Market data loads successfully
-        mock_get_data.return_value = pd.DataFrame({
-            'close': [1500, 1510], 'volume': [1000, 1100]
-        })
-        mock_analyze.return_value = []
-        
-        result = _run_backtests(app_config, rules_config, symbols, None)
-        
-        # Should log success message 
-        mock_logger.info.assert_called()
-        assert "Loaded market data" in str(mock_logger.info.call_args)
-        assert result == []
-
-
 def test_insufficient_data_warnings():
     """Test insufficient data handling to cover lines 309-314."""
     from kiss_signal.cli import _analyze_symbol
@@ -1410,33 +1298,6 @@ def test_save_results_exception():
         # Should handle exception gracefully
         mock_console.print.assert_called()
         mock_logger.error.assert_called()
-
-
-def test_no_context_filters():
-    """Test _run_backtests without context filters to cover lines 102-103."""
-    from kiss_signal.cli import _run_backtests
-    from kiss_signal.config import Config
-    from types import SimpleNamespace
-    
-    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
-    
-    # Mock rules_config WITHOUT context filters
-    rules_config = SimpleNamespace()
-    rules_config.context_filters = []  # Empty list
-    
-    symbols = ['TEST']
-    
-    with patch('kiss_signal.cli._analyze_symbol') as mock_analyze:
-        mock_analyze.return_value = []
-        
-        result = _run_backtests(app_config, rules_config, symbols, None)
-        
-        # Should call analyze_symbol with None market_data  
-        assert mock_analyze.called
-        call_args = mock_analyze.call_args[0] 
-        assert len(call_args) >= 6  # Make sure we have enough args
-        assert call_args[5] is None  # market_data parameter should be None (6th parameter, index 5)
-        assert result == []
 
 
 def test_analyze_strategies_write_error():
@@ -1608,36 +1469,3 @@ def test_display_results_with_rule_objects():
         mock_console.print.assert_called()
 
 
-def test_execute_command_pipeline_db_close():
-    """Test _execute_command_pipeline database connection close in finally block."""
-    with runner.isolated_filesystem() as fs:
-        fs_path = Path(fs)
-        (fs_path / "config").mkdir()
-        (fs_path / "data").mkdir()
-        
-        universe_path = fs_path / "data" / "universe.csv"
-        universe_path.write_text("symbol\nTEST\n")
-        
-        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
-        config_dict["universe_path"] = str(universe_path)
-        
-        config_path = fs_path / "config.yaml"
-        config_path.write_text(yaml.dump(config_dict))
-        
-        rules_path = fs_path / "config" / "rules.yaml"
-        rules_path.write_text(VALID_RULES_YAML)
-        
-        # Mock to force exception and test finally block
-        with patch('kiss_signal.data.refresh_market_data', side_effect=Exception("Refresh failed")), \
-             patch('kiss_signal.cli.logger') as mock_logger:
-            
-            result = runner.invoke(app, [
-                "--config", str(config_path),
-                "--rules", str(rules_path),
-                "run"
-            ])
-            
-            assert result.exit_code == 1
-            # Should log database connection closed message
-            log_calls = [str(call) for call in mock_logger.info.call_args_list]
-            assert any("Database connection closed" in call for call in log_calls)

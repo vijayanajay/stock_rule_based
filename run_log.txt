@@ -1,4 +1,4 @@
-[2025-08-11 23:02:29] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:47:55] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -19,7 +19,7 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-11 23:02:29] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:47:55] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -44,14 +44,14 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2024-01-01.md 
 * Report generated: reports\signals_2024-01-01.md
-                      INFO     full_backtest completed in 0.01s                
+                      INFO     full_backtest completed in 0.02s                
 
 Performance Summary:
 Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-11 23:02:30] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:47:55] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -69,18 +69,18 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-01-01.md 
 * Report generated: reports\signals_2025-01-01.md
-                      INFO     full_backtest completed in 0.01s                
+                      INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-11 23:02:30] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:47:55] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-11 23:02:30] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:47:55] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at data\kiss_signal.db        
-                      INFO     Successfully created database at                
+[2025-08-11 23:47:56] INFO     Successfully created database at                
                                data\kiss_signal.db                             
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
@@ -148,5 +148,5 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 8 open positions.                       
                       INFO     Report generated: reports\signals_2025-08-11.md 
 * Report generated: reports\signals_2025-08-11.md
-                      INFO     full_backtest completed in 0.27s                
+                      INFO     full_backtest completed in 0.32s                
                       INFO     Database connection closed.                     
