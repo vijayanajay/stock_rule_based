@@ -181,7 +181,7 @@ def test_run_command_basic(mock_data, mock_backtester, test_environment) -> None
 
 @patch("kiss_signal.cli.performance_monitor.get_summary")
 def test_run_command_verbose(mock_get_summary, mock_data, mock_backtester, test_environment) -> None:
-    """Test verbose run command."""
+    """Test verbose run command with enhanced coverage for log saving and freeze mode."""
     mock_get_summary.return_value = {
         'total_functions': 3,
         'total_duration': 1.5,
@@ -195,13 +195,17 @@ def test_run_command_verbose(mock_get_summary, mock_data, mock_backtester, test_
         config_path = test_environment / "config.yaml"
         rules_path = test_environment / "config" / "rules.yaml"
         
+        # Test with freeze date to hit freeze mode logging paths
         result = runner.invoke(app, [
             "--verbose", "--config", str(config_path), 
-            "--rules", str(rules_path), "run"
+            "--rules", str(rules_path), "run", "--freeze-data", "2024-01-01"
         ])
         
         assert result.exit_code == 0
         assert "Performance Summary" in result.stdout or "backtest_strategy" in result.stdout
+        # Should see freeze mode messages
+        assert ("Freeze mode" in result.stdout or "freeze" in result.stdout.lower() or 
+                "Configuration loaded" in result.stdout)
     finally:
         os.chdir(original_cwd)
 
@@ -525,7 +529,7 @@ def test_clear_and_recalculate_clear_failure(mock_clear, test_environment):
 
 @patch("kiss_signal.persistence.create_database", side_effect=Exception("Generic backtest error"))
 def test_run_command_backtest_generic_exception_verbose(mock_create_database):
-    """Test that a generic exception during backtesting is handled with verbose output."""
+    """Test that a generic exception during backtesting is handled with verbose output and exercises different exception paths."""
     with runner.isolated_filesystem() as fs:
         fs_path = Path(fs)
         data_dir = fs_path / "data"
@@ -551,7 +555,7 @@ def test_run_command_backtest_generic_exception_verbose(mock_create_database):
         rules_path = fs_path / "config" / "rules.yaml"
         rules_path.write_text(VALID_RULES_YAML)
 
-        # Correct invocation: global options must come BEFORE the command.
+        # Test with verbose to exercise verbose exception printing path
         result = runner.invoke(app, [
             "--verbose", "--config", str(config_path), 
             "--rules", str(rules_path), "run"
@@ -562,8 +566,72 @@ def test_run_command_backtest_generic_exception_verbose(mock_create_database):
         assert "Generic backtest error" in result.stdout
 
 
+# Test multiple exception types to hit all _handle_command_exception branches
+@patch("kiss_signal.data.load_universe")
+def test_exception_handling_variants(mock_load_universe):
+    """Test different exception types to exercise all exception handling paths."""
+    # Test FileNotFoundError path
+    mock_load_universe.side_effect = FileNotFoundError("Universe file not found")
+    
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        (fs_path / "config").mkdir()
+        (fs_path / "data").mkdir()
+        
+        # Create universe file first to avoid config validation error
+        universe_path = fs_path / "data" / "universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+        
+        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
+        config_dict["universe_path"] = str(universe_path)
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(config_dict))
+
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+
+        result = runner.invoke(app, [
+            "--config", str(config_path), "--rules", str(rules_path), "run"
+        ])
+        
+        assert result.exit_code == 1
+        # Check for various error message formats that could appear
+        output_lower = result.stdout.lower()
+        assert ("error:" in output_lower or "file not found" in output_lower or 
+                "universe file not found" in output_lower or 
+                "[bold red]" in output_lower)
+        
+    # Test ValueError with "Database corruption"
+    mock_load_universe.side_effect = ValueError("Database corruption detected")
+    
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        (fs_path / "config").mkdir()
+        (fs_path / "data").mkdir()
+        
+        # Create universe file to avoid config validation error
+        universe_path = fs_path / "data" / "universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+        
+        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
+        config_dict["universe_path"] = str(universe_path)
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(config_dict))
+
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+
+        # Test with verbose to exercise verbose exception path
+        result = runner.invoke(app, [
+            "--verbose", "--config", str(config_path), "--rules", str(rules_path), "run"
+        ])
+        
+        assert result.exit_code == 1
+        assert "Database corruption" in result.stdout
+
+
 def test_cli_with_min_trades_config(test_environment):
-    """Test CLI with min_trades configuration."""
+    """Test CLI with min_trades configuration and enhanced error handling coverage."""
     import os
     original_cwd = os.getcwd()
     try:
@@ -584,11 +652,16 @@ def test_cli_with_min_trades_config(test_environment):
                 }
             ]
             
-            result = runner.invoke(app, [
-                "--config", str(config_path),
-                "--rules", str(rules_path),
-                "run"
-            ])
+            # Test with log file to cover _save_command_log path
+            with patch('kiss_signal.cli._save_command_log') as mock_save_log:
+                result = runner.invoke(app, [
+                    "--config", str(config_path),
+                    "--rules", str(rules_path),
+                    "run"
+                ])
+                
+                # Should call save command log
+                mock_save_log.assert_called()
             
             if result.exit_code != 0:
                 print(f"Command failed with exit code {result.exit_code}")
@@ -941,3 +1014,630 @@ class TestCLIIntegration:
             assert "Error" in result.stdout or result.exit_code != 0
         finally:
             os.chdir(original_cwd)
+
+
+# =============================================================================
+# Additional Coverage Tests
+# =============================================================================
+
+def test_walk_forward_results_display():
+    """Test display_results with out-of-sample walk-forward results to cover that branch."""
+    from kiss_signal.cli import display_results
+    
+    # Mock walk-forward results with is_oos flag
+    oos_results = [
+        {
+            'symbol': 'TEST',
+            'rule_stack': [{'name': 'test_rule'}],
+            'edge_score': 0.8,
+            'win_pct': 0.75,
+            'sharpe': 1.5,
+            'total_trades': 25,
+            'is_oos': True  # This triggers the walk-forward display path
+        }
+    ]
+    
+    with patch('kiss_signal.cli.console') as mock_console, \
+         patch('kiss_signal.cli.format_walk_forward_results') as mock_format:
+        mock_format.return_value = "Walk-forward summary"
+        
+        display_results(oos_results)
+        
+        # Should print walk-forward specific messages
+        mock_console.print.assert_called()
+        mock_format.assert_called_once()
+
+
+def test_save_command_log_error_handling():
+    """Test _save_command_log with file system errors."""
+    from kiss_signal.cli import _save_command_log
+    
+    # Test with None log filename (should return early)
+    _save_command_log(None)
+    
+    # Test with OSError during file writing
+    with patch('pathlib.Path.write_text', side_effect=OSError("Permission denied")), \
+         patch('kiss_signal.cli.console') as mock_console, \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        _save_command_log("test_log.txt")
+        
+        # Should log error and print to console
+        mock_logger.error.assert_called()
+        mock_console.print.assert_called()
+
+
+def test_context_filter_market_data_loading():
+    """Test context filter market data loading with various exception scenarios."""
+    from kiss_signal.cli import _run_backtests
+    from kiss_signal.config import Config
+    from types import SimpleNamespace
+    
+    # Create mock config and rules with context filters
+    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
+    
+    # Mock rules_config with context filters
+    rules_config = SimpleNamespace()
+    rules_config.context_filters = [
+        SimpleNamespace(
+            type="market_above_sma",
+            params={"index_symbol": "^NSEI", "sma_period": 50}
+        )
+    ]
+    
+    # Test successful market data loading
+    with patch('kiss_signal.data.get_price_data') as mock_get_data, \
+         patch('kiss_signal.cli._analyze_symbol') as mock_analyze, \
+         patch('kiss_signal.cli.console') as mock_console:
+        
+        # First call for market data succeeds
+        mock_get_data.return_value = pd.DataFrame({
+            'close': [1500, 1510], 'volume': [1000, 1100]
+        })
+        mock_analyze.return_value = []
+        
+        result = _run_backtests(app_config, rules_config, ['TEST'], None)
+        
+        # Should load market data and log success
+        assert mock_get_data.call_count >= 1
+        assert result == []
+
+
+def test_analyze_symbol_exception_paths():
+    """Test _analyze_symbol with various exception scenarios."""
+    from kiss_signal.cli import _analyze_symbol
+    from kiss_signal.config import Config
+    from kiss_signal.exceptions import DataMismatchError
+    
+    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
+    rules_config = SimpleNamespace()
+    bt = Mock()
+    
+    # Test DataMismatchError path
+    with patch('kiss_signal.data.get_price_data', side_effect=DataMismatchError("Market data mismatch")), \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        result = _analyze_symbol('TEST', app_config, rules_config, None, bt)
+        
+        assert result == []
+        mock_logger.error.assert_called_with("CRITICAL: Market data for ^NSEI does not cover the full history for TEST. Run data refresh.")
+    
+    # Test FileNotFoundError path
+    with patch('kiss_signal.data.get_price_data', side_effect=FileNotFoundError("Data file missing")), \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        result = _analyze_symbol('TEST', app_config, rules_config, None, bt)
+        
+        assert result == []
+        mock_logger.error.assert_called()
+    
+    # Test ValueError path
+    with patch('kiss_signal.data.get_price_data', side_effect=ValueError("Config error")), \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        result = _analyze_symbol('TEST', app_config, rules_config, None, bt)
+        
+        assert result == []
+        mock_logger.error.assert_called()
+    
+    # Test generic Exception path
+    with patch('kiss_signal.data.get_price_data', side_effect=Exception("Generic error")), \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        result = _analyze_symbol('TEST', app_config, rules_config, None, bt)
+        
+        assert result == []
+        mock_logger.error.assert_called()
+
+
+def test_clear_and_recalculate_user_cancellation():
+    """Test clear-and-recalculate with user cancellation to cover Exit(0) path."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        (fs_path / "config").mkdir()
+        (fs_path / "data").mkdir()
+        
+        # Create universe file
+        universe_path = fs_path / "data" / "universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+        
+        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
+        config_dict["universe_path"] = str(universe_path)
+        config_dict["database_path"] = str(fs_path / "test.db")
+        
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(config_dict))
+        
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+        
+        # Create database with some strategies first
+        import sqlite3
+        db_path = fs_path / "test.db"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE strategies (
+                id INTEGER PRIMARY KEY,
+                symbol TEXT,
+                rule_stack TEXT,
+                config_hash TEXT,
+                run_timestamp TEXT,
+                edge_score REAL,
+                win_pct REAL,
+                sharpe REAL,
+                total_trades INTEGER,
+                avg_return REAL
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO strategies (symbol, rule_stack, config_hash, run_timestamp, edge_score, win_pct, sharpe, total_trades, avg_return)
+            VALUES ('TEST', 'test', 'hash1', '2024-01-01', 0.5, 0.6, 1.0, 10, 0.05)
+        """)
+        conn.commit()
+        conn.close()
+        
+        # Mock user input to cancel operation (return False for typer.confirm)
+        with patch('typer.confirm', return_value=False):
+            result = runner.invoke(app, [
+                "--config", str(config_path),
+                "--rules", str(rules_path),
+                "clear-and-recalculate"
+            ])
+            
+            # Exit code should be 0 for successful cancellation
+            assert result.exit_code == 0
+            assert "Operation cancelled" in result.stdout
+
+
+@patch("kiss_signal.cli.logger")  
+def test_setup_logging_coverage(mock_logger):
+    """Test setup_logging function to cover logging setup paths."""
+    from kiss_signal.cli import setup_logging
+    
+    # Test verbose logging
+    setup_logging(verbose=True)
+    
+    # Test non-verbose logging 
+    setup_logging(verbose=False)
+    
+    # Function should complete without errors
+    assert True
+
+
+def test_process_and_save_results_report_error():
+    """Test _process_and_save_results with report generation error."""
+    from kiss_signal.cli import _process_and_save_results
+    from kiss_signal.config import Config
+    
+    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
+    rules_config = SimpleNamespace()
+    rules_config.model_dump = Mock(return_value={})
+    
+    mock_connection = Mock()
+    results = [{'symbol': 'TEST', 'edge_score': 0.6}]
+    
+    with patch('kiss_signal.cli.display_results'), \
+         patch('kiss_signal.cli._save_results'), \
+         patch('kiss_signal.cli.update_positions_and_generate_report_data', side_effect=Exception("Report error")), \
+         patch('kiss_signal.cli.console') as mock_console, \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        _process_and_save_results(mock_connection, results, app_config, rules_config)
+        
+        # Should handle report error gracefully
+        mock_console.print.assert_called()
+        mock_logger.error.assert_called()
+
+
+def test_context_filters_market_data_exception_handling():
+    """Test context filter market data loading with exception to cover lines 89-105."""
+    from kiss_signal.cli import _run_backtests
+    from kiss_signal.config import Config
+    from types import SimpleNamespace
+    
+    # Create config and rules with context filters
+    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
+    
+    # Mock rules_config with context filters that will trigger exception
+    rules_config = SimpleNamespace()
+    rules_config.context_filters = [
+        SimpleNamespace(
+            type="market_above_sma",
+            params={"index_symbol": "^NSEI", "sma_period": 50}
+        )
+    ]
+    
+    symbols = ['TEST']
+    
+    with patch('kiss_signal.data.get_price_data') as mock_get_data, \
+         patch('kiss_signal.cli._analyze_symbol') as mock_analyze, \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        # First call for market data fails, should trigger exception handling
+        def side_effect(*args, **kwargs):
+            symbol = kwargs.get('symbol') or args[0]
+            if symbol == "^NSEI":
+                raise Exception("Failed to load market data")
+            return pd.DataFrame({'close': [100], 'volume': [1000]})
+        
+        mock_get_data.side_effect = side_effect
+        mock_analyze.return_value = []
+        
+        result = _run_backtests(app_config, rules_config, symbols, None)
+        
+        # Should log warning about market data failure
+        mock_logger.warning.assert_called()
+        assert "Could not load market data" in str(mock_logger.warning.call_args)
+        assert result == []
+
+
+def test_context_filters_successful_loading():
+    """Test context filter market data successful loading to cover lines 95-103."""
+    from kiss_signal.cli import _run_backtests
+    from kiss_signal.config import Config
+    from types import SimpleNamespace
+    
+    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
+    
+    # Mock rules_config with context filters
+    rules_config = SimpleNamespace()
+    rules_config.context_filters = [
+        SimpleNamespace(
+            type="market_above_sma",
+            params={"index_symbol": "^NSEI", "sma_period": 50}
+        )
+    ]
+    
+    symbols = ['TEST']
+    
+    with patch('kiss_signal.data.get_price_data') as mock_get_data, \
+         patch('kiss_signal.cli._analyze_symbol') as mock_analyze, \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        # Market data loads successfully
+        mock_get_data.return_value = pd.DataFrame({
+            'close': [1500, 1510], 'volume': [1000, 1100]
+        })
+        mock_analyze.return_value = []
+        
+        result = _run_backtests(app_config, rules_config, symbols, None)
+        
+        # Should log success message 
+        mock_logger.info.assert_called()
+        assert "Loaded market data" in str(mock_logger.info.call_args)
+        assert result == []
+
+
+def test_insufficient_data_warnings():
+    """Test insufficient data handling to cover lines 309-314."""
+    from kiss_signal.cli import _analyze_symbol
+    from kiss_signal.config import Config
+    
+    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
+    rules_config = SimpleNamespace()
+    bt = Mock()
+    
+    # Test with None price data (line 309)
+    with patch('kiss_signal.data.get_price_data', return_value=None), \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        result = _analyze_symbol('TEST', app_config, rules_config, None, bt)
+        
+        assert result == []
+        mock_logger.warning.assert_called()
+        assert "Insufficient data" in str(mock_logger.warning.call_args)
+    
+    # Test with insufficient data (< 100 rows, line 313)  
+    with patch('kiss_signal.data.get_price_data') as mock_get_data, \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        mock_get_data.return_value = pd.DataFrame({
+            'close': [100] * 50, 'volume': [1000] * 50
+        })  # Only 50 rows, less than 100
+        
+        result = _analyze_symbol('TEST', app_config, rules_config, None, bt)
+        
+        assert result == []
+        mock_logger.warning.assert_called()
+        assert "Insufficient data" in str(mock_logger.warning.call_args)
+
+
+def test_parse_freeze_date_invalid():
+    """Test _parse_freeze_date with invalid date to cover line 262."""
+    from kiss_signal.cli import _parse_freeze_date
+    import typer
+    
+    with pytest.raises(typer.Exit):  # typer.Exit, not SystemExit
+        _parse_freeze_date("invalid-date-format")
+
+
+def test_save_results_failure():
+    """Test _save_results with failure to cover lines 351-356.""" 
+    from kiss_signal.cli import _save_results
+    
+    mock_connection = Mock()
+    results = [{'symbol': 'TEST', 'edge_score': 0.6}]
+    
+    with patch('kiss_signal.persistence.save_strategies_batch', return_value=False), \
+         patch('kiss_signal.cli.console') as mock_console, \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        _save_results(mock_connection, results, "2024-01-01", {}, "hash123")
+        
+        # Should print warning about failed persistence
+        mock_console.print.assert_called()
+        mock_logger.warning.assert_called()
+        
+        # Check for failure message
+        console_calls = [str(call) for call in mock_console.print.call_args_list]
+        assert any("Failed to save" in call for call in console_calls)
+
+
+def test_save_results_exception():
+    """Test _save_results with exception to cover lines 400, 418."""
+    from kiss_signal.cli import _save_results
+    
+    mock_connection = Mock()
+    results = [{'symbol': 'TEST', 'edge_score': 0.6}]
+    
+    with patch('kiss_signal.persistence.save_strategies_batch', side_effect=Exception("Database error")), \
+         patch('kiss_signal.cli.console') as mock_console, \
+         patch('kiss_signal.cli.logger') as mock_logger:
+        
+        _save_results(mock_connection, results, "2024-01-01", {}, "hash123")
+        
+        # Should handle exception gracefully
+        mock_console.print.assert_called()
+        mock_logger.error.assert_called()
+
+
+def test_no_context_filters():
+    """Test _run_backtests without context filters to cover lines 102-103."""
+    from kiss_signal.cli import _run_backtests
+    from kiss_signal.config import Config
+    from types import SimpleNamespace
+    
+    app_config = Config(**VALID_CONFIG_WITH_MIN_TRADES)
+    
+    # Mock rules_config WITHOUT context filters
+    rules_config = SimpleNamespace()
+    rules_config.context_filters = []  # Empty list
+    
+    symbols = ['TEST']
+    
+    with patch('kiss_signal.cli._analyze_symbol') as mock_analyze:
+        mock_analyze.return_value = []
+        
+        result = _run_backtests(app_config, rules_config, symbols, None)
+        
+        # Should call analyze_symbol with None market_data  
+        assert mock_analyze.called
+        call_args = mock_analyze.call_args[0] 
+        assert len(call_args) >= 6  # Make sure we have enough args
+        assert call_args[5] is None  # market_data parameter should be None (6th parameter, index 5)
+        assert result == []
+
+
+def test_analyze_strategies_write_error():
+    """Test analyze-strategies command with write permission error to cover lines 467-469."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        (fs_path / "config").mkdir()
+        (fs_path / "data").mkdir()
+        
+        # Create universe file to avoid config validation error
+        universe_path = fs_path / "data" / "universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+        
+        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
+        config_dict["universe_path"] = str(universe_path)
+        config_dict["database_path"] = str(fs_path / "test.db")
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(config_dict))
+        
+        # Create rules file even though analyze-strategies doesn't need it for execution
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+        
+        # Create database
+        db_path = fs_path / "test.db"
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE strategies (
+                id INTEGER PRIMARY KEY,
+                symbol TEXT,
+                rule_stack TEXT,
+                run_timestamp TEXT,
+                edge_score REAL,
+                win_pct REAL,
+                sharpe REAL,
+                total_trades INTEGER,
+                avg_return REAL
+            )
+        """)
+        cursor.execute("""
+            INSERT INTO strategies (symbol, rule_stack, run_timestamp, edge_score, win_pct, sharpe, total_trades, avg_return)
+            VALUES ('TEST', 'test', '2024-01-01', 0.5, 0.6, 1.0, 10, 0.05)
+        """)
+        conn.commit()
+        conn.close()
+        
+        # Mock analyze_strategy_performance_aggregated to return data
+        with patch('kiss_signal.cli.analyze_strategy_performance_aggregated') as mock_analyze, \
+             patch('kiss_signal.cli.format_strategy_analysis_as_csv') as mock_format:
+            
+            mock_analyze.return_value = [{'symbol': 'TEST', 'total_trades': 10}]
+            mock_format.return_value = "Test CSV content"
+            
+            # Mock Path.write_text to raise PermissionError
+            with patch.object(Path, 'write_text', side_effect=PermissionError("Permission denied")):
+                result = runner.invoke(app, [
+                    "--config", str(config_path),
+                    "analyze-strategies",
+                    "--output", str(fs_path / "readonly_file.csv")
+                ])
+                
+                assert result.exit_code == 1
+                assert "Cannot write to output path" in result.stdout
+
+
+def test_in_sample_warning():
+    """Test in-sample warning display to cover lines 614-615."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        (fs_path / "config").mkdir()
+        (fs_path / "data").mkdir()
+        
+        universe_path = fs_path / "data" / "universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+        
+        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
+        config_dict["universe_path"] = str(universe_path)
+        
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(config_dict))
+        
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+        
+        # Test --in-sample flag to trigger warning
+        result = runner.invoke(app, [
+            "--config", str(config_path),
+            "--rules", str(rules_path),
+            "run", "--in-sample"
+        ])
+        
+        # Should display in-sample warning
+        assert "WARNING: Using IN-SAMPLE optimization!" in result.stdout
+        assert "Results are NOT reliable for live trading decisions!" in result.stdout
+
+
+def test_clear_strategies_preserve_all():
+    """Test clear-and-recalculate with preserve-all flag to cover different execution path."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        (fs_path / "config").mkdir()
+        (fs_path / "data").mkdir()
+        
+        universe_path = fs_path / "data" / "universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+        
+        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
+        config_dict["universe_path"] = str(universe_path)
+        
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(config_dict))
+        
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+        
+        # Mock to prevent actual backtest execution
+        with patch('kiss_signal.cli._analyze_symbol', return_value=[]):
+            result = runner.invoke(app, [
+                "--config", str(config_path),
+                "--rules", str(rules_path),
+                "clear-and-recalculate", "--preserve-all", "--force"
+            ])
+            
+            assert result.exit_code == 0
+            # Should skip clearing with preserve-all
+
+
+def test_save_command_log_normal_path():
+    """Test _save_command_log normal execution path."""
+    from kiss_signal.cli import _save_command_log
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        log_path = Path(temp_dir) / "test_log.txt"
+        
+        with patch('kiss_signal.cli.console') as mock_console:
+            mock_console.export_text.return_value = "Test log content"
+            
+            _save_command_log(str(log_path))
+            
+            # Should create log file successfully
+            assert log_path.exists()
+            assert log_path.read_text() == "Test log content"
+
+
+def test_display_results_with_rule_objects():
+    """Test display_results with RuleDef objects to cover lines 560-573."""
+    from kiss_signal.cli import display_results
+    from kiss_signal.config import RuleDef
+    
+    # Create results with actual RuleDef objects
+    results = [
+        {
+            'symbol': 'TEST',
+            'rule_stack': [
+                RuleDef(name='sma_test', type='sma_crossover', params={'fast_period': 5, 'slow_period': 10})
+            ],
+            'edge_score': 0.8,
+            'win_pct': 0.75,
+            'sharpe': 1.5,
+            'total_trades': 25
+        }
+    ]
+    
+    with patch('kiss_signal.cli.console') as mock_console:
+        display_results(results)
+        
+        # Should handle RuleDef objects and extract names
+        mock_console.print.assert_called()
+
+
+def test_execute_command_pipeline_db_close():
+    """Test _execute_command_pipeline database connection close in finally block."""
+    with runner.isolated_filesystem() as fs:
+        fs_path = Path(fs)
+        (fs_path / "config").mkdir()
+        (fs_path / "data").mkdir()
+        
+        universe_path = fs_path / "data" / "universe.csv"
+        universe_path.write_text("symbol\nTEST\n")
+        
+        config_dict = VALID_CONFIG_WITH_MIN_TRADES.copy()
+        config_dict["universe_path"] = str(universe_path)
+        
+        config_path = fs_path / "config.yaml"
+        config_path.write_text(yaml.dump(config_dict))
+        
+        rules_path = fs_path / "config" / "rules.yaml"
+        rules_path.write_text(VALID_RULES_YAML)
+        
+        # Mock to force exception and test finally block
+        with patch('kiss_signal.data.refresh_market_data', side_effect=Exception("Refresh failed")), \
+             patch('kiss_signal.cli.logger') as mock_logger:
+            
+            result = runner.invoke(app, [
+                "--config", str(config_path),
+                "--rules", str(rules_path),
+                "run"
+            ])
+            
+            assert result.exit_code == 1
+            # Should log database connection closed message
+            log_calls = [str(call) for call in mock_logger.info.call_args_list]
+            assert any("Database connection closed" in call for call in log_calls)

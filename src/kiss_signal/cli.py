@@ -345,6 +345,10 @@ def _save_command_log(log_filename: Optional[str]) -> None:
 
 def _handle_command_exception(e: Exception, verbose: bool, context: str = "") -> None:
     """Handle command exceptions with appropriate logging."""
+    # Preserve typer.Exit exceptions with their original exit codes
+    if isinstance(e, typer.Exit):
+        raise e
+    
     if isinstance(e, FileNotFoundError):
         console.print(f"[red]Error: {e}[/red]")
     elif isinstance(e, ValueError) and "Database corruption" in str(e):

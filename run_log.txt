@@ -1,4 +1,4 @@
-[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:02:29] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -19,7 +19,7 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:02:29] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -33,8 +33,8 @@ No valid strategies found. Check data quality and rule configurations.
                       DEBUG    Set database version to 2                       
                       INFO     Successfully created database at test.db        
 [1/4] Configuration loaded.
-                      INFO     Refreshing market data                          
-[2/4] Refreshing market data...
+                      INFO     Freeze mode active: 2024-01-01                  
+[2/4] Skipping data refresh (freeze mode).
 [3/4] Analyzing strategies for each ticker...
                       WARNING  Insufficient data for RELIANCE, skipping        
                       WARNING  Insufficient data for INFY, skipping            
@@ -42,16 +42,16 @@ No valid strategies found. Check data quality and rule configurations.
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 0 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-11.md 
-* Report generated: reports\signals_2025-08-11.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     Report generated: reports\signals_2024-01-01.md 
+* Report generated: reports\signals_2024-01-01.md
+                      INFO     full_backtest completed in 0.01s                
 
 Performance Summary:
 Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:02:30] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -72,9 +72,9 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.01s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:02:30] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-11 01:17:48] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-11 23:02:30] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -146,7 +146,7 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 8 open positions.                       
-[2025-08-11 01:17:49] INFO     Report generated: reports\signals_2025-08-11.md 
+                      INFO     Report generated: reports\signals_2025-08-11.md 
 * Report generated: reports\signals_2025-08-11.md
                       INFO     full_backtest completed in 0.27s                
                       INFO     Database connection closed.                     
