@@ -189,6 +189,17 @@ def add_new_positions_from_signals(db_path: Path, signals: List[Dict[str, Any]])
                     logger.info(f"Skipping new position for {symbol} as one is already open.")
                     continue
                 
+                # FIX: Validate signal data before inserting
+                entry_price = signal.get('entry_price')
+                if not entry_price or float(entry_price) <= 0:
+                    logger.error(f"CORRUPTION PREVENTION: Rejecting signal for {symbol} with invalid entry_price: {entry_price}")
+                    continue
+                
+                entry_date = signal.get('date')
+                if not entry_date:
+                    logger.error(f"CORRUPTION PREVENTION: Rejecting signal for {symbol} with missing entry_date")
+                    continue
+                
                 rule_stack_json = signal.get('rule_stack_used', json.dumps([signal.get('rule_stack', 'unknown')]))
 
                 cursor.execute(insert_sql, (
@@ -217,8 +228,12 @@ def get_open_positions(db_path: Path) -> List[Dict[str, Any]]:
             for row in cursor.fetchall():
                 pos = dict(row)
                 # Ensure numeric columns are properly typed (fix for string division errors)
+                # FIX: Validate entry_price - never allow invalid prices to be returned
                 if 'entry_price' in pos:
-                    pos['entry_price'] = float(pos['entry_price']) if pos['entry_price'] is not None else 0.0
+                    if pos['entry_price'] is None or float(pos['entry_price']) <= 0:
+                        logger.error(f"CORRUPTION DETECTED: Position {pos.get('id')} for {pos.get('symbol')} has invalid entry_price: {pos['entry_price']}. Skipping position.")
+                        continue
+                    pos['entry_price'] = float(pos['entry_price'])
                 positions.append(pos)
             logger.info(f"Fetched {len(positions)} open positions.")
             return positions

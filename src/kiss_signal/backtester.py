@@ -289,31 +289,44 @@ class Backtester:
         training_days: int, 
         testing_days: int, 
         step_days: int
-    ) -> List[pd.Timestamp]:
-        """Generate rolling period start dates for walk-forward analysis."""
-        periods: List[pd.Timestamp] = []
-        min_required_data = training_days + testing_days
+    ) -> List[Tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp]]:
+        """
+        Generate rolling period boundaries using TRADING DAY counts for robustness.
         
-        if len(data) < min_required_data:
-            logger.warning(f"Insufficient data: {len(data)} days < {min_required_data} required")
+        Returns:
+            List of tuples, where each tuple is (training_start, training_end, testing_end)
+        """
+        # Convert calendar days from config to trading days using standard approximation
+        # This is pragmatic and reliable - no fancy date arithmetic that breaks on holidays
+        TRADING_DAYS_PER_YEAR = 252
+        CALENDAR_DAYS_PER_YEAR = 365
+        ratio = TRADING_DAYS_PER_YEAR / CALENDAR_DAYS_PER_YEAR
+        
+        train_window_size = int(training_days * ratio)
+        test_window_size = int(testing_days * ratio)
+        step_size = int(step_days * ratio)
+        
+        periods = []
+        total_rows = len(data)
+        min_required_rows = train_window_size + test_window_size
+        
+        if total_rows < min_required_rows:
+            logger.warning(f"Insufficient data: {total_rows} trading days < {min_required_rows} required")
             return periods
         
-        # Start from the first possible training period
-        current_start = data.index[0]
-        data_end = data.index[-1]
+        # Generate periods using integer slicing - bulletproof approach
+        for i in range(0, total_rows - min_required_rows + 1, step_size):
+            train_start_idx = i
+            train_end_idx = i + train_window_size
+            test_end_idx = train_end_idx + test_window_size
+            
+            # Get actual dates from DataFrame index - no date arithmetic
+            train_start_date = data.index[train_start_idx]
+            train_end_date = data.index[train_end_idx - 1]  # -1 because slicing is exclusive
+            test_end_date = data.index[test_end_idx - 1]
+            
+            periods.append((train_start_date, train_end_date, test_end_date))
         
-        while True:
-            # Calculate the end of testing period for this window
-            training_end = current_start + pd.Timedelta(days=training_days)
-            testing_end = training_end + pd.Timedelta(days=testing_days)
-            
-            # Check if we have enough data for this complete window
-            if testing_end > data_end:
-                break
-                
-            periods.append(current_start)
-            current_start += pd.Timedelta(days=step_days)
-            
         return periods
     def walk_forward_backtest(
         self,
@@ -357,13 +370,7 @@ class Backtester:
             return []
         
         # Roll through time periods
-        for i, period_start in enumerate(periods):
-            # Calculate all period boundaries upfront
-            training_start = period_start
-            training_end = period_start + pd.Timedelta(days=training_days)
-            test_start = training_end
-            test_end = test_start + pd.Timedelta(days=testing_days)
-            
+        for i, (training_start, training_end, testing_end) in enumerate(periods):
             # 1. Training phase - find best strategy on training data only
             train_data = data[training_start:training_end]
             train_data = _ensure_frequency(train_data)  # Restore frequency for vectorbt
@@ -392,7 +399,7 @@ class Backtester:
             
             # 2. Testing phase - apply strategy to unseen out-of-sample data
             test_start = training_end
-            test_end = test_start + pd.Timedelta(days=testing_days)
+            test_end = testing_end
             test_data = data[test_start:test_end]
             test_data = _ensure_frequency(test_data)  # Restore frequency for vectorbt
             
@@ -409,7 +416,7 @@ class Backtester:
             # 3. Record ONLY out-of-sample performance
             oos_performance = self._backtest_single_strategy_oos(
                 test_data, best_strategy["rule_stack"], rules_config, 
-                edge_score_weights, symbol, period_start, test_start, test_end, sliced_test_market_data
+                edge_score_weights, symbol, training_start, test_start, test_end, sliced_test_market_data
             )
             
             if oos_performance and oos_performance["total_trades"] >= walk_forward_config.min_trades_per_period:

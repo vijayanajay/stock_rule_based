@@ -1745,8 +1745,8 @@ class TestBacktesterEdgeCases:
         """Test walk_forward_backtest with empty training period."""
         with patch.object(edge_case_backtester, '_get_rolling_periods') as mock_periods:
             # Mock to return periods that will result in empty training data slice
-            # Return a timestamp that will create empty training data when sliced
-            mock_periods.return_value = [pd.Timestamp('2023-12-31')]  # Near end of data
+            # Return tuple format: (training_start, training_end, testing_end) 
+            mock_periods.return_value = [(pd.Timestamp('2023-12-31'), pd.Timestamp('2023-12-31'), pd.Timestamp('2023-12-31'))]  # Near end of data
             
             result = edge_case_backtester.walk_forward_backtest(
                 edge_case_data, walk_forward_config, edge_rules_config, "TEST"
@@ -1775,8 +1775,8 @@ class TestBacktesterEdgeCases:
         """Test walk-forward with empty testing period."""
         with patch.object(edge_case_backtester, '_get_rolling_periods') as mock_periods:
             # Mock periods where testing data slice will be empty
-            # Return a timestamp near the very end so testing period goes beyond data range
-            mock_periods.return_value = [pd.Timestamp('2023-12-30')]
+            # Return tuple format: (training_start, training_end, testing_end)
+            mock_periods.return_value = [(pd.Timestamp('2023-12-30'), pd.Timestamp('2023-12-30'), pd.Timestamp('2023-12-30'))]
             
             result = edge_case_backtester.walk_forward_backtest(
                 edge_case_data, walk_forward_config, edge_rules_config, "TEST"

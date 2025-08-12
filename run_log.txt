@@ -1,4 +1,4 @@
-[2025-08-12 23:04:09] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-13 01:12:43] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -13,13 +13,15 @@
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
-[2025-08-12 23:04:10] INFO     Fetched 0 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-12.md 
-* Report generated: reports\signals_2025-08-12.md
-                      INFO     full_backtest completed in 0.07s                
+                      WARNING  No trading results provided to                  
+                               update_positions_and_generate_report_data       
+                      INFO     Fetched 0 open positions.                       
+                      INFO     Report generated: reports\signals_2025-08-13.md 
+* Report generated: reports\signals_2025-08-13.md
+                      INFO     full_backtest completed in 0.03s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-13 01:12:43] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -41,17 +43,19 @@ No valid strategies found. Check data quality and rule configurations.
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
+                      WARNING  No trading results provided to                  
+                               update_positions_and_generate_report_data       
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2024-01-01.md 
 * Report generated: reports\signals_2024-01-01.md
-                      INFO     full_backtest completed in 0.01s                
+                      INFO     full_backtest completed in 0.02s                
 
 Performance Summary:
 Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-13 01:12:43] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -66,15 +70,17 @@ Slowest Function: backtest_strategy
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
+                      WARNING  No trading results provided to                  
+                               update_positions_and_generate_report_data       
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-01-01.md 
 * Report generated: reports\signals_2025-01-01.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     full_backtest completed in 0.01s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-13 01:12:43] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-13 01:12:43] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -90,37 +96,39 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
                       INFO     Loaded 13 symbols from universe                 
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=5, initial_capital=100000.0          
-[2025-08-12 23:04:11] WARNING  No valid out-of-sample periods for RELIANCE     
-                      INFO     find_optimal_strategies completed in 0.90s      
-[2025-08-12 23:04:12] WARNING  No valid out-of-sample periods for INFY         
-                      INFO     find_optimal_strategies completed in 0.78s      
-[2025-08-12 23:04:13] WARNING  No valid out-of-sample periods for TCS          
-                      INFO     find_optimal_strategies completed in 0.88s      
-[2025-08-12 23:04:14] WARNING  No valid out-of-sample periods for HDFCBANK     
-                      INFO     find_optimal_strategies completed in 0.72s      
-[2025-08-12 23:04:15] WARNING  No valid out-of-sample periods for ICICIBANK    
-                      INFO     find_optimal_strategies completed in 0.94s      
-[2025-08-12 23:04:16] WARNING  No valid out-of-sample periods for SBIN         
-                      INFO     find_optimal_strategies completed in 1.03s      
-[2025-08-12 23:04:19] WARNING  No valid out-of-sample periods for WIPRO        
-                      INFO     find_optimal_strategies completed in 0.86s      
-[2025-08-12 23:04:20] WARNING  No valid out-of-sample periods for HCLTECH      
-                      INFO     find_optimal_strategies completed in 0.89s      
-[2025-08-12 23:04:21] WARNING  No valid out-of-sample periods for TECHM        
-                      INFO     find_optimal_strategies completed in 1.21s      
-[2025-08-12 23:04:23] WARNING  No valid out-of-sample periods for LTIM         
-                      INFO     find_optimal_strategies completed in 0.97s      
-                      WARNING  No valid out-of-sample periods for BHARTIARTL   
-                      INFO     find_optimal_strategies completed in 0.86s      
-[2025-08-12 23:04:24] WARNING  No valid out-of-sample periods for KOTAKBANK    
+[2025-08-13 01:12:44] WARNING  No valid out-of-sample periods for RELIANCE     
+                      INFO     find_optimal_strategies completed in 0.81s      
+[2025-08-13 01:12:45] WARNING  No valid out-of-sample periods for INFY         
+                      INFO     find_optimal_strategies completed in 0.84s      
+[2025-08-13 01:12:46] WARNING  No valid out-of-sample periods for TCS          
+                      INFO     find_optimal_strategies completed in 0.87s      
+[2025-08-13 01:12:47] WARNING  No valid out-of-sample periods for HDFCBANK     
                       INFO     find_optimal_strategies completed in 0.85s      
-[2025-08-12 23:04:25] WARNING  No valid out-of-sample periods for AXISBANK     
-                      INFO     find_optimal_strategies completed in 0.69s      
+[2025-08-13 01:12:48] WARNING  No valid out-of-sample periods for ICICIBANK    
+                      INFO     find_optimal_strategies completed in 0.94s      
+[2025-08-13 01:12:49] WARNING  No valid out-of-sample periods for SBIN         
+                      INFO     find_optimal_strategies completed in 0.84s      
+                      WARNING  No valid out-of-sample periods for WIPRO        
+                      INFO     find_optimal_strategies completed in 0.74s      
+[2025-08-13 01:12:50] WARNING  No valid out-of-sample periods for HCLTECH      
+                      INFO     find_optimal_strategies completed in 0.81s      
+[2025-08-13 01:12:51] WARNING  No valid out-of-sample periods for TECHM        
+                      INFO     find_optimal_strategies completed in 0.76s      
+[2025-08-13 01:12:52] WARNING  No valid out-of-sample periods for LTIM         
+                      INFO     find_optimal_strategies completed in 0.76s      
+                      WARNING  No valid out-of-sample periods for BHARTIARTL   
+                      INFO     find_optimal_strategies completed in 0.74s      
+[2025-08-13 01:12:53] WARNING  No valid out-of-sample periods for KOTAKBANK    
+                      INFO     find_optimal_strategies completed in 0.70s      
+[2025-08-13 01:12:54] WARNING  No valid out-of-sample periods for AXISBANK     
+                      INFO     find_optimal_strategies completed in 0.77s      
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
+                      WARNING  No trading results provided to                  
+                               update_positions_and_generate_report_data       
                       INFO     Fetched 7 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-12.md 
-* Report generated: reports\signals_2025-08-12.md
-                      INFO     full_backtest completed in 15.33s               
+                      INFO     Report generated: reports\signals_2025-08-13.md 
+* Report generated: reports\signals_2025-08-13.md
+                      INFO     full_backtest completed in 11.27s               
                       INFO     Database connection closed.                     
