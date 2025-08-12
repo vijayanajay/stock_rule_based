@@ -306,13 +306,21 @@ class Backtester:
         test_window_size = int(testing_days * ratio)
         step_size = int(step_days * ratio)
         
+        logger.debug(f"Period conversion: {training_days}d→{train_window_size}td, "
+                    f"{testing_days}d→{test_window_size}td, step={step_size}td")
+        
         periods = []
         total_rows = len(data)
         min_required_rows = train_window_size + test_window_size
         
         if total_rows < min_required_rows:
-            logger.warning(f"Insufficient data: {total_rows} trading days < {min_required_rows} required")
-            return periods
+            error_msg = (
+                f"INSUFFICIENT DATA: Dataset has {total_rows} trading days but requires "
+                f"≥{min_required_rows} days (training={train_window_size} + testing={test_window_size}). "
+                f"Increase data history or reduce walk-forward periods."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         # Generate periods using integer slicing - bulletproof approach
         for i in range(0, total_rows - min_required_rows + 1, step_size):
@@ -366,8 +374,13 @@ class Backtester:
         periods = self._get_rolling_periods(data, training_days, testing_days, step_days)
         
         if not periods:
-            logger.warning(f"No valid periods for walk-forward analysis on {symbol}")
-            return []
+            error_msg = (
+                f"WALK-FORWARD FAILURE: No valid periods for analysis on {symbol}. "
+                f"Check data length vs configured periods: training={walk_forward_config.training_period}, "
+                f"testing={walk_forward_config.testing_period}. Data has {len(data)} rows."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         
         # Roll through time periods
         for i, (training_start, training_end, testing_end) in enumerate(periods):
@@ -426,8 +439,13 @@ class Backtester:
         
         # Final metrics come from concatenated out-of-sample periods only
         if not oos_results:
-            logger.warning(f"No valid out-of-sample periods for {symbol}")
-            return []
+            error_msg = (
+                f"WALK-FORWARD FAILURE: No valid out-of-sample results for {symbol}. "
+                f"All {len(periods)} periods failed to produce tradeable strategies. "
+                "Check rules configuration and data quality."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
             
         consolidated_result = self._consolidate_oos_results(oos_results, symbol, edge_score_weights)
         return [consolidated_result] if consolidated_result else []
@@ -766,17 +784,16 @@ class Backtester:
         if edge_score_weights is None:
             edge_score_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
             
-        # Always use walk-forward analysis
-        walk_forward_config = WalkForwardConfig(
-            enabled=True,
-            training_period='30d',  # Shorter for test data
-            testing_period='10d',   # Shorter for test data  
-            step_size='10d',        # Shorter for test data
-            min_trades_per_period=1  # Lower threshold for test data
-        )
-        
-        if config and config.walk_forward.enabled:
-            walk_forward_config = config.walk_forward
+        # FAIL LOUDLY if walk-forward is not properly configured
+        if not config or not config.walk_forward.enabled:
+            error_msg = (
+                f"Walk-forward analysis is not enabled or config is missing for {symbol}. "
+                "This is required for professional backtesting. Check your config.yaml."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
+        walk_forward_config = config.walk_forward
             
         return self.walk_forward_backtest(
             price_data, walk_forward_config, rules_config, symbol,

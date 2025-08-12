@@ -470,7 +470,7 @@ Name                                   Stmts   Miss Branch BrPart  Cover
 src\kiss_signal\__init__.py                5      0      0      0   100%
 src\kiss_signal\adapters\__init__.py       1      0      0      0   100%
 src\kiss_signal\adapters\yfinance.py      55      0     20      0   100%
-src\kiss_signal\backtester.py            501     73    210     25    84%
+src\kiss_signal\backtester.py            507     76    210     26    83%
 src\kiss_signal\cli.py                   270     18     62      7    91%
 src\kiss_signal\config.py                 90      3     14      2    95%
 src\kiss_signal\data.py                  207     22     82     10    89%
@@ -480,5 +480,5 @@ src\kiss_signal\persistence.py           252     14     46      7    93%
 src\kiss_signal\reporter.py              455    107    144     12    75%
 src\kiss_signal\rules.py                 311     12    110      7    95%
 ------------------------------------------------------------------------
-TOTAL                                   2194    249    692     70    87%
-======================= 455 passed in 146.07s (0:02:26) =======================
+TOTAL                                   2200    252    692     71    87%
+======================= 455 passed in 140.09s (0:02:20) =======================
