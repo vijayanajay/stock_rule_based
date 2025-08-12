@@ -119,6 +119,27 @@ def get_price_data(
     if data.empty:
         raise ValueError(f"No data available for {symbol} in requested date range")
     
+    # Try to infer and set frequency for vectorbt compatibility
+    if len(data) > 1:
+        try:
+            inferred_freq = pd.infer_freq(data.index)
+            if inferred_freq:
+                data.index.freq = inferred_freq
+                logger.debug(f"Inferred frequency '{inferred_freq}' for {symbol}")
+            else:
+                # For irregular data (missing weekends/holidays), vectorbt needs frequency hint
+                # Try business daily frequency for stock data
+                logger.debug(f"Could not infer frequency for {symbol}. Forcing business day frequency ('B').")
+                try:
+                    # Business day frequency accounts for weekends being missing
+                    data.index.freq = 'B'
+                except ValueError:
+                    # If business day doesn't work, leave as None and let vectorbt handle it
+                    logger.debug(f"Business day frequency doesn't fit {symbol} data. Using irregular frequency.")
+        except Exception as e:
+            # If frequency setting fails, continue without it
+            logger.debug(f"Frequency inference failed for {symbol}: {e}. Continuing with irregular frequency.")
+    
     # Log warnings for limited data (with same logic as before)
     is_position_tracking = start_date is not None and end_date is not None
     if len(data) < 50 and not symbol.startswith('^NSEI') and not is_position_tracking:

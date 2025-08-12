@@ -24,6 +24,43 @@ __all__ = ["Backtester"]
 
 logger = logging.getLogger(__name__)
 
+# Configure vectorbt to handle irregular frequencies
+try:
+    import vectorbt as vbt
+    # Set global frequency for array wrapper to handle irregular data
+    vbt.settings.array_wrapper['freq'] = 'B'  # Business day frequency for stock data
+    logger.debug("Configured vectorbt with business day frequency for irregular data")
+except Exception as e:
+    logger.warning(f"Could not configure vectorbt frequency settings: {e}")
+
+def _ensure_frequency(data: pd.DataFrame) -> pd.DataFrame:
+    """Ensure DataFrame has frequency information for vectorbt compatibility.
+    
+    Args:
+        data: DataFrame with DatetimeIndex
+        
+    Returns:
+        DataFrame with frequency information set
+    """
+    if isinstance(data.index, pd.DatetimeIndex) and data.index.freq is None:
+        try:
+            # Try to infer frequency
+            inferred_freq = pd.infer_freq(data.index)
+            if inferred_freq:
+                data.index.freq = inferred_freq
+            else:
+                # Try business day frequency for stock data with missing weekends
+                try:
+                    data.index.freq = 'B'
+                except ValueError:
+                    # If business day doesn't fit, leave as None - vectorbt global config will handle it
+                    pass
+        except Exception:
+            # If inference fails, leave as None - vectorbt global config will handle it
+            pass
+    return data
+
+
 class Backtester:
     """Handles strategy backtesting and edge score calculation."""
 
@@ -37,6 +74,14 @@ class Backtester:
         self.hold_period = hold_period
         self.min_trades_threshold = min_trades_threshold
         self.initial_capital = initial_capital
+        
+        # Set global frequency for vectorbt to handle irregular data
+        try:
+            import vectorbt as vbt
+            vbt.settings.array_wrapper['freq'] = 'D'  # Default to daily frequency
+        except Exception:
+            pass  # Continue if vectorbt settings can't be set
+        
         logger.info(
             f"Backtester initialized: hold_period={hold_period}, "
             f"min_trades={min_trades_threshold}, initial_capital={initial_capital}"
@@ -107,6 +152,9 @@ class Backtester:
         market_data: Optional[pd.DataFrame] = None,
     ) -> Optional[Dict[str, Any]]:
         """Backtest a single rule combination and return its performance metrics."""
+        # Ensure frequency is set for vectorbt compatibility
+        price_data = _ensure_frequency(price_data)
+        
         try:
             # NEW: Apply preconditions first - if stock personality doesn't fit, skip entirely
             if rules_config.preconditions:
@@ -318,6 +366,7 @@ class Backtester:
             
             # 1. Training phase - find best strategy on training data only
             train_data = data[training_start:training_end]
+            train_data = _ensure_frequency(train_data)  # Restore frequency for vectorbt
             
             if train_data.empty:
                 logger.warning(f"Empty training data for period {i+1}, skipping")
@@ -345,6 +394,7 @@ class Backtester:
             test_start = training_end
             test_end = test_start + pd.Timedelta(days=testing_days)
             test_data = data[test_start:test_end]
+            test_data = _ensure_frequency(test_data)  # Restore frequency for vectorbt
             
             if test_data.empty:
                 logger.warning(f"Empty testing data for period {i+1}, skipping")
@@ -473,6 +523,7 @@ class Backtester:
         try:
             # Normalize column names to lowercase for consistent data contract
             test_data = test_data.copy()
+            test_data = _ensure_frequency(test_data)  # Ensure frequency for vectorbt
             if len(test_data.columns) > 0:
                 test_data.columns = test_data.columns.str.lower()
                 

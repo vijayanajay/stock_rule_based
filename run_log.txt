@@ -1,4 +1,4 @@
-[2025-08-12 00:20:17] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-12 23:04:09] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -13,13 +13,13 @@
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
-                      INFO     Fetched 0 open positions.                       
+[2025-08-12 23:04:10] INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-08-12.md 
 * Report generated: reports\signals_2025-08-12.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     full_backtest completed in 0.07s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-12 00:20:17] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -44,14 +44,14 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2024-01-01.md 
 * Report generated: reports\signals_2024-01-01.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     full_backtest completed in 0.01s                
 
 Performance Summary:
 Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-12 00:20:17] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -72,15 +72,15 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-12 00:20:17] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-12 00:20:17] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-12 23:04:10] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at data\kiss_signal.db        
-[2025-08-12 00:20:18] INFO     Successfully created database at                
+                      INFO     Successfully created database at                
                                data\kiss_signal.db                             
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
@@ -90,557 +90,37 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
                       INFO     Loaded 13 symbols from universe                 
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=5, initial_capital=100000.0          
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for RELIANCE     
-                      INFO     find_optimal_strategies completed in 0.62s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-[2025-08-12 00:20:19] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for INFY         
-                      INFO     find_optimal_strategies completed in 0.58s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for TCS          
-                      INFO     find_optimal_strategies completed in 0.58s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-[2025-08-12 00:20:20] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for HDFCBANK     
-                      INFO     find_optimal_strategies completed in 0.57s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for ICICIBANK    
-                      INFO     find_optimal_strategies completed in 0.57s      
-[2025-08-12 00:20:21] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for SBIN         
-                      INFO     find_optimal_strategies completed in 0.57s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-[2025-08-12 00:20:22] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for WIPRO        
-                      INFO     find_optimal_strategies completed in 0.64s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for HCLTECH      
-                      INFO     find_optimal_strategies completed in 0.77s      
-[2025-08-12 00:20:23] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for TECHM        
-                      INFO     find_optimal_strategies completed in 0.59s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-[2025-08-12 00:20:24] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for LTIM         
-                      INFO     find_optimal_strategies completed in 0.60s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
+[2025-08-12 23:04:11] WARNING  No valid out-of-sample periods for RELIANCE     
+                      INFO     find_optimal_strategies completed in 0.90s      
+[2025-08-12 23:04:12] WARNING  No valid out-of-sample periods for INFY         
+                      INFO     find_optimal_strategies completed in 0.78s      
+[2025-08-12 23:04:13] WARNING  No valid out-of-sample periods for TCS          
+                      INFO     find_optimal_strategies completed in 0.88s      
+[2025-08-12 23:04:14] WARNING  No valid out-of-sample periods for HDFCBANK     
+                      INFO     find_optimal_strategies completed in 0.72s      
+[2025-08-12 23:04:15] WARNING  No valid out-of-sample periods for ICICIBANK    
+                      INFO     find_optimal_strategies completed in 0.94s      
+[2025-08-12 23:04:16] WARNING  No valid out-of-sample periods for SBIN         
+                      INFO     find_optimal_strategies completed in 1.03s      
+[2025-08-12 23:04:19] WARNING  No valid out-of-sample periods for WIPRO        
+                      INFO     find_optimal_strategies completed in 0.86s      
+[2025-08-12 23:04:20] WARNING  No valid out-of-sample periods for HCLTECH      
+                      INFO     find_optimal_strategies completed in 0.89s      
+[2025-08-12 23:04:21] WARNING  No valid out-of-sample periods for TECHM        
+                      INFO     find_optimal_strategies completed in 1.21s      
+[2025-08-12 23:04:23] WARNING  No valid out-of-sample periods for LTIM         
+                      INFO     find_optimal_strategies completed in 0.97s      
                       WARNING  No valid out-of-sample periods for BHARTIARTL   
-                      INFO     find_optimal_strategies completed in 0.56s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-[2025-08-12 00:20:25] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for KOTAKBANK    
-                      INFO     find_optimal_strategies completed in 0.67s      
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 1   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 2   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 3   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 4   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 5   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 6   
-                      ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 7   
-[2025-08-12 00:20:26] ERROR    Error testing rule simple_sma_crossover in      
-                               training: Index frequency is None. Pass it as   
-                               `freq` or define it globally under              
-                               `settings.array_wrapper`.                       
-                      WARNING  No viable strategy found in training period 8   
-                      WARNING  No valid out-of-sample periods for AXISBANK     
-                      INFO     find_optimal_strategies completed in 0.57s      
+                      INFO     find_optimal_strategies completed in 0.86s      
+[2025-08-12 23:04:24] WARNING  No valid out-of-sample periods for KOTAKBANK    
+                      INFO     find_optimal_strategies completed in 0.85s      
+[2025-08-12 23:04:25] WARNING  No valid out-of-sample periods for AXISBANK     
+                      INFO     find_optimal_strategies completed in 0.69s      
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
 [5/5] Generating report...
                       INFO     Fetched 7 open positions.                       
                       INFO     Report generated: reports\signals_2025-08-12.md 
 * Report generated: reports\signals_2025-08-12.md
-                      INFO     full_backtest completed in 8.19s                
+                      INFO     full_backtest completed in 15.33s               
                       INFO     Database connection closed.                     
