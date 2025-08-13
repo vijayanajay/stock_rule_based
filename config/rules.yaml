@@ -1,23 +1,32 @@
+# config/rules.yaml - A PROFESSIONAL BASELINE
+
 # =============================================================================
-# SIMPLE SMA CROSSOVER BASELINE
-# 
-# Purpose: Generate reliable baseline performance data for trailing stop comparison
-# Uses the simplest possible strategy that we know generates trades
+# PRECONDITIONS: Filter the universe for stocks with the right "personality"
+# We only want to trade stocks that are already showing some signs of life.
 # =============================================================================
+preconditions:
+  - name: "stock_is_sufficiently_volatile"
+    type: "is_volatile"
+    description: "Stock must have some daily volatility for the strategy to work."
+    params:
+      period: 14
+      atr_threshold_pct: 0.01 # Require at least 1% daily ATR/price volatility
 
-# -----------------------------------------------------------------------------
-# PRECONDITIONS: None - remove all barriers
-# -----------------------------------------------------------------------------
-preconditions: []
+# =============================================================================
+# CONTEXT FILTERS: Don't fight the tape. Only trade when the market agrees.
+# =============================================================================
+context_filters:
+  - name: "filter_market_is_bullish"
+    type: "market_above_sma"
+    description: "The NIFTY 50 index must be above its 50-day SMA."
+    params:
+      index_symbol: "^NSEI"
+      period: 50
 
-# -----------------------------------------------------------------------------
-# CONTEXT FILTERS: None - remove all filters to maximize trade generation
-# -----------------------------------------------------------------------------
-context_filters: []
-
-# -----------------------------------------------------------------------------
-# ENTRY SIGNALS: Simple SMA crossover only
-# -----------------------------------------------------------------------------
+# =============================================================================
+# ENTRY SIGNALS: A confluence of signals, not just one.
+# The system will find the best-performing combination for each stock.
+# =============================================================================
 entry_signals:
   - name: "simple_sma_crossover"
     type: "sma_crossover"
@@ -25,15 +34,30 @@ entry_signals:
     params:
       fast_period: 10
       slow_period: 20
-
-# -----------------------------------------------------------------------------
-# EXIT CONDITIONS: BASELINE - Fixed take-profit for comparison
-# -----------------------------------------------------------------------------
-exit_conditions:
-  # --- BASELINE: Fixed Take-Profit ---
-  - name: "atr_take_profit_3x"
-    type: "take_profit_atr"
-    description: "BASELINE: Fixed take-profit at 3x ATR"
+  - name: "confirm_with_rsi"
+    type: "rsi_oversold"
+    description: "Confirmation: RSI is recovering from oversold or showing momentum"
     params:
       period: 14
-      multiplier: 3.0
+      oversold_threshold: 40.0
+
+# =============================================================================
+# EXIT CONDITIONS: Professional risk management.
+# Protect capital with a hard stop and let winners run with a trailing stop.
+# =============================================================================
+exit_conditions:
+  # --- Risk Management: Non-negotiable hard stop ---
+  - name: "atr_stop_loss_2x"
+    type: "stop_loss_atr"
+    description: "RISK: Exit if price drops 2x ATR from entry"
+    params:
+      period: 14
+      multiplier: 2.0
+
+  # --- Profit Protection: Volatility-based trailing stop ---
+  - name: "chandelier_exit_22_3x"
+    type: "chandelier_exit"
+    description: "PROFIT: Use a Chandelier Exit to trail profits"
+    params:
+      atr_period: 22
+      atr_multiplier: 3.0

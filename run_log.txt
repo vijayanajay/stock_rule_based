@@ -1,4 +1,4 @@
-[2025-08-13 02:17:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 00:25:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -16,12 +16,12 @@ No valid strategies found. Check data quality and rule configurations.
                       WARNING  No trading results provided to                  
                                update_positions_and_generate_report_data       
                       INFO     Fetched 0 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-13.md 
-* Report generated: reports\signals_2025-08-13.md
-                      INFO     full_backtest completed in 0.03s                
+                      INFO     Report generated: reports\signals_2025-08-14.md 
+* Report generated: reports\signals_2025-08-14.md
+                      INFO     full_backtest completed in 0.04s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-13 02:17:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 00:25:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -55,7 +55,7 @@ Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-13 02:17:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 00:25:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -78,161 +78,43 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-13 02:17:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 00:25:48] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-13 02:17:57] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 00:25:48] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at data\kiss_signal.db        
-                      INFO     Successfully created database at                
+[2025-08-14 00:25:49] INFO     Successfully created database at                
                                data\kiss_signal.db                             
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
                       INFO     Loaded 13 symbols from universe                 
-                      INFO     All symbols are fresh, no refresh needed        
+                      INFO     Refreshing 13 symbols                           
+[2025-08-14 00:25:59] INFO     Successfully refreshed 13/13 symbols            
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 13 symbols from universe                 
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=5, initial_capital=100000.0          
-[2025-08-13 02:17:58] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for RELIANCE. All 7 periods failed to   
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 1.18s      
-                      ERROR    Configuration error for RELIANCE: WALK-FORWARD  
-                               FAILURE: No valid out-of-sample results for     
-                               RELIANCE. All 7 periods failed to produce       
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
-[2025-08-13 02:18:00] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for INFY. All 7 periods failed to       
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 1.99s      
-                      ERROR    Configuration error for INFY: WALK-FORWARD      
-                               FAILURE: No valid out-of-sample results for     
-                               INFY. All 7 periods failed to produce tradeable 
-                               strategies. Check rules configuration and data  
-                               quality.                                        
-[2025-08-13 02:18:02] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for TCS. All 7 periods failed to produce
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
-                      INFO     find_optimal_strategies completed in 1.06s      
-                      ERROR    Configuration error for TCS: WALK-FORWARD       
-                               FAILURE: No valid out-of-sample results for TCS.
-                               All 7 periods failed to produce tradeable       
-                               strategies. Check rules configuration and data  
-                               quality.                                        
-                      ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for HDFCBANK. All 7 periods failed to   
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 0.87s      
-                      ERROR    Configuration error for HDFCBANK: WALK-FORWARD  
-                               FAILURE: No valid out-of-sample results for     
-                               HDFCBANK. All 7 periods failed to produce       
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
-[2025-08-13 02:18:04] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for ICICIBANK. All 7 periods failed to  
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 1.36s      
-                      ERROR    Configuration error for ICICIBANK: WALK-FORWARD 
-                               FAILURE: No valid out-of-sample results for     
-                               ICICIBANK. All 7 periods failed to produce      
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
-[2025-08-13 02:18:05] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for SBIN. All 7 periods failed to       
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 0.91s      
-                      ERROR    Configuration error for SBIN: WALK-FORWARD      
-                               FAILURE: No valid out-of-sample results for     
-                               SBIN. All 7 periods failed to produce tradeable 
-                               strategies. Check rules configuration and data  
-                               quality.                                        
-[2025-08-13 02:18:06] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for WIPRO. All 7 periods failed to      
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 0.85s      
-                      ERROR    Configuration error for WIPRO: WALK-FORWARD     
-                               FAILURE: No valid out-of-sample results for     
-                               WIPRO. All 7 periods failed to produce tradeable
-                               strategies. Check rules configuration and data  
-                               quality.                                        
-[2025-08-13 02:18:07] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for HCLTECH. All 7 periods failed to    
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 0.97s      
-                      ERROR    Configuration error for HCLTECH: WALK-FORWARD   
-                               FAILURE: No valid out-of-sample results for     
-                               HCLTECH. All 7 periods failed to produce        
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
-[2025-08-13 02:18:08] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for TECHM. All 7 periods failed to      
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 0.90s      
-                      ERROR    Configuration error for TECHM: WALK-FORWARD     
-                               FAILURE: No valid out-of-sample results for     
-                               TECHM. All 7 periods failed to produce tradeable
-                               strategies. Check rules configuration and data  
-                               quality.                                        
-[2025-08-13 02:18:09] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for LTIM. All 7 periods failed to       
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 1.12s      
-                      ERROR    Configuration error for LTIM: WALK-FORWARD      
-                               FAILURE: No valid out-of-sample results for     
-                               LTIM. All 7 periods failed to produce tradeable 
-                               strategies. Check rules configuration and data  
-                               quality.                                        
-[2025-08-13 02:18:10] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for BHARTIARTL. All 7 periods failed to 
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 0.87s      
-                      ERROR    Configuration error for BHARTIARTL: WALK-FORWARD
-                               FAILURE: No valid out-of-sample results for     
-                               BHARTIARTL. All 7 periods failed to produce     
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
-[2025-08-13 02:18:11] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for KOTAKBANK. All 7 periods failed to  
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 0.99s      
-                      ERROR    Configuration error for KOTAKBANK: WALK-FORWARD 
-                               FAILURE: No valid out-of-sample results for     
-                               KOTAKBANK. All 7 periods failed to produce      
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
-[2025-08-13 02:18:12] ERROR    WALK-FORWARD FAILURE: No valid out-of-sample    
-                               results for AXISBANK. All 7 periods failed to   
-                               produce tradeable strategies. Check rules       
-                               configuration and data quality.                 
-                      INFO     find_optimal_strategies completed in 1.02s      
-                      ERROR    Configuration error for AXISBANK: WALK-FORWARD  
-                               FAILURE: No valid out-of-sample results for     
-                               AXISBANK. All 7 periods failed to produce       
-                               tradeable strategies. Check rules configuration 
-                               and data quality.                               
+                      INFO     Downloading fresh data for ^NSEI                
+                      INFO     Loaded market data for ^NSEI                    
+[2025-08-14 00:26:01] INFO     find_optimal_strategies completed in 1.52s      
+[2025-08-14 00:26:02] INFO     find_optimal_strategies completed in 1.58s      
+[2025-08-14 00:26:04] INFO     find_optimal_strategies completed in 1.46s      
+[2025-08-14 00:26:05] INFO     find_optimal_strategies completed in 1.51s      
+[2025-08-14 00:26:07] INFO     find_optimal_strategies completed in 1.31s      
+[2025-08-14 00:26:08] INFO     find_optimal_strategies completed in 1.36s      
+[2025-08-14 00:26:09] INFO     find_optimal_strategies completed in 1.32s      
+[2025-08-14 00:26:11] INFO     find_optimal_strategies completed in 1.39s      
+[2025-08-14 00:26:12] INFO     find_optimal_strategies completed in 1.43s      
+[2025-08-14 00:26:14] INFO     find_optimal_strategies completed in 1.31s      
+[2025-08-14 00:26:15] INFO     find_optimal_strategies completed in 1.39s      
+[2025-08-14 00:26:16] INFO     find_optimal_strategies completed in 1.33s      
+[2025-08-14 00:26:18] INFO     find_optimal_strategies completed in 1.38s      
 [4/4] Analysis complete. Results summary:
-No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-                      WARNING  No trading results provided to                  
-                               update_positions_and_generate_report_data       
-                      INFO     Fetched 7 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-13.md 
-* Report generated: reports\signals_2025-08-13.md
-                      INFO     full_backtest completed in 14.97s               
+Walk-Forward Analysis Results (Out-of-Sample Only)
+                      INFO     full_backtest completed in 29.22s               
+An unexpected error occurred during run pipeline: 'RuleDef' object has no 
+attribute 'get'
                       INFO     Database connection closed.                     

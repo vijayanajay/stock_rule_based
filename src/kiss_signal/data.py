@@ -81,9 +81,46 @@ def get_price_data(
         FileNotFoundError: If cache doesn't exist in freeze mode
     """
     cache_file = _get_cache_filepath(symbol, cache_dir)
-    
-    # Fetch data if refresh needed and not in freeze mode
-    if _needs_refresh(cache_file) and not freeze_date:
+    data = None
+    should_fetch = True
+
+    if not _needs_refresh(cache_file):
+        try:
+            data = _load_cache(symbol, cache_dir)
+            
+            # In freeze mode, use cached data if it exists and is valid
+            if freeze_date:
+                should_fetch = False  # Use whatever cache we have in freeze mode
+            else:
+                # NEW: In normal mode, validate if cached data is sufficient for requested history
+                temp_data = data.copy()
+                
+                # Apply same datetime index logic as below to check coverage
+                if "date" in temp_data.columns:
+                    temp_data["date"] = pd.to_datetime(temp_data["date"], errors="coerce", format="mixed")
+                    temp_data = temp_data.dropna(subset=["date"]).set_index("date")
+                elif not isinstance(temp_data.index, pd.DatetimeIndex):
+                    temp_data.index = pd.to_datetime(temp_data.index, errors="coerce", format="mixed")
+                    temp_data = temp_data.dropna()
+                
+                if not temp_data.empty and isinstance(temp_data.index, pd.DatetimeIndex):
+                    end_date_ref = date.today()
+                    required_start_date = end_date_ref - timedelta(days=years * 365)
+
+                    # Add a 7-day buffer for weekends/holidays
+                    if temp_data.index.min().date() <= (required_start_date + timedelta(days=7)):
+                        should_fetch = False  # Cache is valid and sufficient
+                    else:
+                        logger.info(f"Cache for {symbol} is insufficient. Re-fetching.")
+                else:
+                    logger.info(f"Cache for {symbol} has invalid date format. Re-fetching.")
+        except (FileNotFoundError, ValueError, AttributeError):
+            logger.warning(f"Could not load or validate cache for {symbol}. Re-fetching.")
+
+    if should_fetch:
+        if freeze_date:
+            raise FileNotFoundError(f"Cached data not found for {symbol} (freeze mode)")
+
         logger.info(f"Downloading fresh data for {symbol}")
         symbol_with_suffix = _add_ns_suffix(symbol)
         fetched_data = _fetch_symbol_data(symbol_with_suffix, years, freeze_date)
@@ -92,13 +129,10 @@ def get_price_data(
             data = fetched_data
         else:
             raise ValueError(f"Failed to fetch or validate data for {symbol}")
-    elif not cache_file.exists():
-        if freeze_date:
-            raise FileNotFoundError(f"Cached data not found for {symbol} (freeze mode)")
-        else:
-            raise FileNotFoundError(f"Cached data not found for {symbol}")
-    else:
-        data = _load_cache(symbol, cache_dir)
+    
+    # At this point, data should never be None
+    if data is None:
+        raise ValueError(f"No data available for {symbol}")
     
     # Ensure proper datetime index
     if "date" in data.columns:
