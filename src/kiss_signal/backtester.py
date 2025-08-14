@@ -33,30 +33,42 @@ except Exception as e:
     logger.warning(f"Could not configure vectorbt frequency settings: {e}")
 
 def _ensure_frequency(data: pd.DataFrame) -> pd.DataFrame:
-    """Ensure DataFrame has frequency information for vectorbt compatibility.
+    """Ensure DataFrame has a consistent business day frequency.
+    
+    Standardizes the frequency of price data by resampling to business day frequency
+    and forward-filling missing values. This eliminates frequency warnings and makes
+    the data pipeline more predictable for vectorbt.
     
     Args:
         data: DataFrame with DatetimeIndex
         
     Returns:
-        DataFrame with frequency information set
+        DataFrame with consistent business day frequency
     """
-    if isinstance(data.index, pd.DatetimeIndex) and data.index.freq is None:
+    if not isinstance(data.index, pd.DatetimeIndex):
+        return data
+    
+    # If data already has proper frequency, return as-is
+    if data.index.freq is not None:
+        return data
+    
+    try:
+        # Resample to Business Day frequency and forward-fill gaps (weekends, holidays)
+        data = data.asfreq('B').ffill()
+        
+        # Handle any remaining NaN values at the start of the series
+        if data.isnull().any().any():
+            data = data.bfill()  # Backward fill if forward fill leaves NaNs at start
+            
+    except Exception as e:
+        # If resampling fails, try to at least set frequency metadata
+        logger.debug(f"Could not resample data to business frequency: {e}")
         try:
-            # Try to infer frequency
-            inferred_freq = pd.infer_freq(data.index)
-            if inferred_freq:
-                data.index.freq = inferred_freq
-            else:
-                # Try business day frequency for stock data with missing weekends
-                try:
-                    data.index.freq = 'B'
-                except ValueError:
-                    # If business day doesn't fit, leave as None - vectorbt global config will handle it
-                    pass
-        except Exception:
-            # If inference fails, leave as None - vectorbt global config will handle it
+            data.index.freq = 'B'
+        except ValueError:
+            # If even metadata setting fails, continue without frequency
             pass
+    
     return data
 
 
@@ -707,7 +719,6 @@ class Backtester:
         except Exception as e:
             logger.error(f"OOS backtest failed for {symbol}: {e}")
             return None
-
     def _create_rule_stack_signature(self, rule_stack: List[Any]) -> str:
         """Create a signature for rule stack comparison.
         

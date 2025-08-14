@@ -306,7 +306,20 @@ class TestBacktesterCore:
                 config=test_config
             )
 
-
+    def test_ensure_frequency_standardization(self, sample_price_data_no_freq):
+        """Test that _ensure_frequency properly standardizes irregular data."""
+        from kiss_signal.backtester import _ensure_frequency
+        
+        # Verify input has no frequency
+        assert sample_price_data_no_freq.index.freq is None
+        
+        # Apply frequency standardization  
+        result = _ensure_frequency(sample_price_data_no_freq)
+        
+        # Should have business day frequency and no NaNs
+        assert result.index.freq is not None
+        assert 'Business' in str(result.index.freq)  # Works with both 'B' and '<BusinessDay>'
+        assert not result.isnull().any().any()
 # ================================================================================================
 # CONTEXT FILTER TESTS
 # ================================================================================================

@@ -153,6 +153,28 @@ class TestDataBasicOperations:
         result = data._validate_data_quality(test_data, "RELIANCE")
         assert result is expected
 
+    def test_frequency_standardization_in_get_price_data(self, temp_cache_dir):
+        """Test frequency standardization using direct _ensure_frequency function."""
+        from kiss_signal.backtester import _ensure_frequency
+        
+        # Create irregular data (no frequency set) 
+        irregular_dates = pd.to_datetime(['2024-01-01', '2024-01-03', '2024-01-05', '2024-01-08'])
+        test_data = pd.DataFrame({
+            'open': [100, 101, 102, 103], 'high': [105, 106, 107, 108], 
+            'low': [95, 96, 97, 98], 'close': [103, 104, 105, 106], 'volume': [1000, 1100, 1200, 1300]
+        }, index=irregular_dates)
+        
+        # Verify no initial frequency
+        assert test_data.index.freq is None
+        
+        # Apply frequency standardization  
+        result = _ensure_frequency(test_data)
+        
+        # Should have business day frequency after standardization
+        assert result.index.freq is not None
+        assert 'B' in str(result.index.freq) or 'BusinessDay' in str(result.index.freq)
+        assert not result.isnull().any().any()
+
 
 # ================================================================================================
 # CACHE OPERATIONS TESTS  
