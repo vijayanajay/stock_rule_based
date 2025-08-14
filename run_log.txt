@@ -1,9 +1,9 @@
-[2025-08-15 01:23:34] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:57:28] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
-[2025-08-15 01:23:35] INFO     Creating database at test.db                    
+                      INFO     Creating database at test.db                    
                       INFO     Successfully created database at test.db        
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
@@ -24,7 +24,7 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:57:28] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -54,14 +54,14 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2024-01-01.md 
 * Report generated: reports\signals_2024-01-01.md
-                      INFO     full_backtest completed in 0.03s                
+                      INFO     full_backtest completed in 0.01s                
 
 Performance Summary:
 Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:57:28] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -84,12 +84,12 @@ No valid strategies found. Check data quality and rule configurations.
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-01-01.md 
 * Report generated: reports\signals_2025-01-01.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     full_backtest completed in 0.01s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:57:28] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:57:28] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -106,76 +106,76 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=3, initial_capital=100000.0          
                       INFO     Loaded market data for ^NSEI                    
-[2025-08-15 01:23:36] WARNING  Sharpe ratio for RELIANCE is 'inf' due to zero  
+[2025-08-15 01:57:29] WARNING  Sharpe ratio for RELIANCE is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-15 01:23:37] INFO     Consolidated 5 OOS periods for RELIANCE: 5 total
+[2025-08-15 01:57:30] INFO     Consolidated 5 OOS periods for RELIANCE: 5 total
                                trades, 40.0% win rate, 0.23 Sharpe, 40.0%      
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 2.01s      
-[2025-08-15 01:23:39] INFO     Consolidated 5 OOS periods for INFY: 6 total    
+                      INFO     find_optimal_strategies completed in 1.14s      
+[2025-08-15 01:57:31] INFO     Consolidated 5 OOS periods for INFY: 6 total    
                                trades, 50.0% win rate, -1.27 Sharpe, 60.0%     
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.95s      
-[2025-08-15 01:23:40] WARNING  Sharpe ratio for TCS is 'inf' due to zero       
+                      INFO     find_optimal_strategies completed in 1.15s      
+                      WARNING  Sharpe ratio for TCS is 'inf' due to zero       
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-15 01:23:41] INFO     Consolidated 4 OOS periods for TCS: 4 total     
+[2025-08-15 01:57:32] INFO     Consolidated 4 OOS periods for TCS: 4 total     
                                trades, 25.0% win rate, -1.42 Sharpe, 25.0%     
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.72s      
+                      INFO     find_optimal_strategies completed in 0.89s      
                       WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-15 01:23:42] WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
+[2025-08-15 01:57:33] WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
                       INFO     Consolidated 3 OOS periods for HDFCBANK: 3 total
                                trades, 33.3% win rate, 0.16 Sharpe, 33.3%      
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.49s      
+                      INFO     find_optimal_strategies completed in 0.84s      
                       WARNING  Sharpe ratio for ICICIBANK is 'inf' due to zero 
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-15 01:23:44] INFO     Consolidated 3 OOS periods for ICICIBANK: 3     
+[2025-08-15 01:57:34] INFO     Consolidated 3 OOS periods for ICICIBANK: 3     
                                total trades, 66.7% win rate, -0.60 Sharpe,     
                                66.7% consistency                               
-                      INFO     find_optimal_strategies completed in 1.72s      
-[2025-08-15 01:23:45] INFO     Consolidated 3 OOS periods for SBIN: 3 total    
+                      INFO     find_optimal_strategies completed in 0.89s      
+                      INFO     Consolidated 3 OOS periods for SBIN: 3 total    
                                trades, 66.7% win rate, 0.19 Sharpe, 66.7%      
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.41s      
-[2025-08-15 01:23:46] WARNING  Sharpe ratio for WIPRO is 'inf' due to zero     
+                      INFO     find_optimal_strategies completed in 0.79s      
+[2025-08-15 01:57:35] WARNING  Sharpe ratio for WIPRO is 'inf' due to zero     
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-15 01:23:47] INFO     Consolidated 3 OOS periods for WIPRO: 3 total   
+                      INFO     Consolidated 3 OOS periods for WIPRO: 3 total   
                                trades, 33.3% win rate, -0.12 Sharpe, 33.3%     
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.59s      
-[2025-08-15 01:23:49] INFO     Consolidated 5 OOS periods for HCLTECH: 5 total 
+                      INFO     find_optimal_strategies completed in 0.85s      
+[2025-08-15 01:57:36] INFO     Consolidated 5 OOS periods for HCLTECH: 5 total 
                                trades, 60.0% win rate, 0.46 Sharpe, 60.0%      
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.55s      
-[2025-08-15 01:23:50] INFO     Consolidated 3 OOS periods for TECHM: 3 total   
+                      INFO     find_optimal_strategies completed in 0.92s      
+[2025-08-15 01:57:37] INFO     Consolidated 3 OOS periods for TECHM: 3 total   
                                trades, 100.0% win rate, 1.38 Sharpe, 100.0%    
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.46s      
-[2025-08-15 01:23:51] INFO     Consolidated 1 OOS periods for LTIM: 1 total    
+                      INFO     find_optimal_strategies completed in 0.78s      
+[2025-08-15 01:57:38] INFO     Consolidated 1 OOS periods for LTIM: 1 total    
                                trades, 0.0% win rate, -2.05 Sharpe, 0.0%       
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.34s      
-[2025-08-15 01:23:53] INFO     Consolidated 2 OOS periods for BHARTIARTL: 2    
+                      INFO     find_optimal_strategies completed in 0.77s      
+                      INFO     Consolidated 2 OOS periods for BHARTIARTL: 2    
                                total trades, 50.0% win rate, -0.27 Sharpe,     
                                50.0% consistency                               
-                      INFO     find_optimal_strategies completed in 1.39s      
-[2025-08-15 01:23:54] INFO     Consolidated 3 OOS periods for KOTAKBANK: 3     
+                      INFO     find_optimal_strategies completed in 0.76s      
+[2025-08-15 01:57:40] INFO     Consolidated 3 OOS periods for KOTAKBANK: 3     
                                total trades, 33.3% win rate, -0.78 Sharpe,     
                                33.3% consistency                               
-                      INFO     find_optimal_strategies completed in 1.51s      
-[2025-08-15 01:23:56] INFO     Consolidated 8 OOS periods for AXISBANK: 8 total
+                      INFO     find_optimal_strategies completed in 1.16s      
+[2025-08-15 01:57:41] INFO     Consolidated 8 OOS periods for AXISBANK: 8 total
                                trades, 37.5% win rate, -0.77 Sharpe, 37.5%     
                                consistency                                     
-                      INFO     find_optimal_strategies completed in 1.74s      
+                      INFO     find_optimal_strategies completed in 1.15s      
 [4/4] Analysis complete. Results summary:
 Walk-Forward Analysis Results (Out-of-Sample Only)
 WALK-FORWARD ANALYSIS SUMMARY
@@ -490,10 +490,10 @@ WARNING: These are the ONLY metrics that matter for live trading.
 [5/5] Generating report...
                       INFO     Generating signals from validated strategies in 
                                database                                        
-[2025-08-15 01:23:57] INFO     Loaded 13 validated strategies from database    
+                      INFO     Loaded 13 validated strategies from database    
                       INFO     Found 13 signal candidates                      
                       INFO     Fetched 48 open positions.                      
-[2025-08-15 01:23:59] INFO     Fetched 48 open positions.                      
+[2025-08-15 01:57:44] INFO     Fetched 48 open positions.                      
                       INFO     Found 13 symbols with existing open positions:  
                                ['AXISBANK', 'BHARTIARTL', 'HCLTECH',           
                                'HDFCBANK', 'ICICIBANK', 'INFY', 'KOTAKBANK',   
@@ -504,5 +504,5 @@ WARNING: These are the ONLY metrics that matter for live trading.
                                positions)                                      
                       INFO     Report generated: reports\signals_2025-08-15.md 
 * Report generated: reports\signals_2025-08-15.md
-                      INFO     full_backtest completed in 24.11s               
+                      INFO     full_backtest completed in 15.44s               
                       INFO     Database connection closed.                     
