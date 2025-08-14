@@ -860,8 +860,11 @@ def test_process_open_positions_hold(mock_open, mock_price, mock_data, tmp_path:
 @patch("kiss_signal.persistence.close_positions_batch")
 @patch("kiss_signal.cli.get_position_pricing")
 @patch("kiss_signal.persistence.get_open_positions")
-def test_update_positions_and_generate_report_data(mock_open, mock_price, mock_close, mock_add, mock_data, tmp_path: Path) -> None:
+@patch("kiss_signal.reporter._get_validated_strategies_from_db")
+def test_update_positions_and_generate_report_data(mock_db_strategies, mock_open, mock_price, mock_close, mock_add, mock_data, tmp_path: Path) -> None:
     """Test the complete position update workflow."""
+    # Mock validated strategies from database 
+    mock_db_strategies.return_value = [{'symbol': 'NEW', 'entry_price': 50.0, 'rule_stack': ['test'], 'edge_score': 0.8, 'latest_close': 50.0}]
     mock_open.return_value = [{'id': 1, 'symbol': 'HOLD', 'entry_price': 100.0, 'entry_date': '2024-01-01'}]
     mock_price.return_value = {
         'current_price': 105.0, 
@@ -897,8 +900,7 @@ def test_update_positions_and_generate_report_data(mock_open, mock_price, mock_c
             tmp_path / "test.db",
             "2024-01-01_10:00:00", 
             config,
-            rules_config,  # Proper rules config object
-            all_results
+            rules_config  # Proper rules config object
         )
         
         # Check the actual return keys from the function

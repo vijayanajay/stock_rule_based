@@ -479,9 +479,98 @@ class Backtester:
             logger.error(error_msg)
             raise ValueError(error_msg)
             
-        # Return raw period-by-period results directly.
-        # The reporter is responsible for consolidation and display.
-        return oos_results
+        # Consolidate OOS results into a single trustworthy strategy result
+        consolidated_result = self._consolidate_oos_results(oos_results, symbol)
+        return [consolidated_result]  # Return single consolidated result
+
+    def _consolidate_oos_results(
+        self,
+        oos_results: List[Dict[str, Any]],
+        symbol: str
+    ) -> Dict[str, Any]:
+        """Consolidate multiple OOS period results into a single strategy result.
+        
+        The purpose of walk-forward analysis is to produce ONE reliable performance
+        profile per strategy, not dozens of mini-results that get confused as
+        separate strategies by downstream systems.
+        
+        Args:
+            oos_results: List of OOS period dictionaries
+            symbol: Stock symbol for logging
+            
+        Returns:
+            Single consolidated dictionary with aggregated metrics
+        """
+        if not oos_results:
+            raise ValueError(f"Cannot consolidate empty OOS results for {symbol}")
+            
+        # All periods should have the same rule_stack - use the first one
+        consolidated = {
+            "symbol": symbol,
+            "rule_stack": oos_results[0]["rule_stack"],
+            "is_oos": True,
+            "consolidated_periods": len(oos_results)
+        }
+        
+        # Sum total trades across all periods
+        total_trades = sum(result["total_trades"] for result in oos_results)
+        consolidated["total_trades"] = total_trades
+        
+        if total_trades == 0:
+            # Edge case: no trades at all across periods
+            consolidated.update({
+                "win_pct": 0.0,
+                "sharpe": 0.0,
+                "consistency_score": 0.0,
+                "edge_score": 0.0,
+                "avg_return": 0.0
+            })
+        else:
+            # Weighted average of win percentages by number of trades per period
+            weighted_win_pct = sum(
+                result["win_pct"] * result["total_trades"] 
+                for result in oos_results
+            ) / total_trades
+            consolidated["win_pct"] = weighted_win_pct
+            
+            # Weighted average of Sharpe ratios by number of trades per period
+            weighted_sharpe = sum(
+                result["sharpe"] * result["total_trades"]
+                for result in oos_results
+            ) / total_trades
+            consolidated["sharpe"] = weighted_sharpe
+            
+            # Consistency score: percentage of profitable periods
+            profitable_periods = sum(
+                1 for result in oos_results 
+                if result.get("avg_return", 0) > 0
+            )
+            consolidated["consistency_score"] = profitable_periods / len(oos_results)
+            
+            # Weighted average returns
+            weighted_returns = sum(
+                result.get("avg_return", 0.0) * result["total_trades"]
+                for result in oos_results
+            ) / total_trades
+            consolidated["avg_return"] = weighted_returns
+            
+            # Calculate final consolidated edge score using the same weights
+            # as the individual periods (we'll use default weights here)
+            win_weight = 0.6  # Default from EdgeScoreWeights
+            sharpe_weight = 0.4
+            consolidated["edge_score"] = (
+                weighted_win_pct * win_weight + weighted_sharpe * sharpe_weight
+            )
+        
+        logger.info(
+            f"Consolidated {len(oos_results)} OOS periods for {symbol}: "
+            f"{total_trades} total trades, "
+            f"{consolidated['win_pct']:.1%} win rate, "
+            f"{consolidated['sharpe']:.2f} Sharpe, "
+            f"{consolidated['consistency_score']:.1%} consistency"
+        )
+        
+        return consolidated
     
     def _find_best_strategy_training(
         self,

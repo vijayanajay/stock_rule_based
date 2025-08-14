@@ -1,9 +1,9 @@
-[2025-08-14 23:23:27] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:23:34] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
-                      INFO     Creating database at test.db                    
+[2025-08-15 01:23:35] INFO     Creating database at test.db                    
                       INFO     Successfully created database at test.db        
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
@@ -12,21 +12,19 @@
                       WARNING  Insufficient data for INFY, skipping            
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
-[4.5/5] No strategies meet validation criteria - no signals will be generated
-                      WARNING  No strategies met edge score threshold of 0.50  
-[5/5] Generating report from validated strategies...
-                      INFO     NEW MODE: Generating signals from validated     
-                               strategies in database only                     
+[5/5] Generating report...
+                      INFO     Generating signals from validated strategies in 
+                               database                                        
                       INFO     Loaded 0 validated strategies from database     
                       INFO     No signal candidates found - no new signals will
                                be generated                                    
                       INFO     Fetched 0 open positions.                       
-                      INFO     Report generated: reports\signals_2025-08-14.md 
-* Report generated: reports\signals_2025-08-14.md
+                      INFO     Report generated: reports\signals_2025-08-15.md 
+* Report generated: reports\signals_2025-08-15.md
                       INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-14 23:23:27] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -47,31 +45,29 @@ No valid strategies found. Check data quality and rule configurations.
                       WARNING  Insufficient data for INFY, skipping            
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
-[4.5/5] No strategies meet validation criteria - no signals will be generated
-                      WARNING  No strategies met edge score threshold of 0.50  
-[5/5] Generating report from validated strategies...
-                      INFO     NEW MODE: Generating signals from validated     
-                               strategies in database only                     
+[5/5] Generating report...
+                      INFO     Generating signals from validated strategies in 
+                               database                                        
                       INFO     Loaded 0 validated strategies from database     
                       INFO     No signal candidates found - no new signals will
                                be generated                                    
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2024-01-01.md 
 * Report generated: reports\signals_2024-01-01.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     full_backtest completed in 0.03s                
 
 Performance Summary:
 Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-14 23:23:27] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at test.db                    
-[2025-08-14 23:23:28] INFO     Successfully created database at test.db        
+                      INFO     Successfully created database at test.db        
 [1/4] Configuration loaded.
 [2/4] Skipping data refresh (freeze mode).
 [3/4] Analyzing strategies for each ticker...
@@ -79,23 +75,21 @@ Slowest Function: backtest_strategy
                       WARNING  Insufficient data for INFY, skipping            
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
-[4.5/5] No strategies meet validation criteria - no signals will be generated
-                      WARNING  No strategies met edge score threshold of 0.50  
-[5/5] Generating report from validated strategies...
-                      INFO     NEW MODE: Generating signals from validated     
-                               strategies in database only                     
+[5/5] Generating report...
+                      INFO     Generating signals from validated strategies in 
+                               database                                        
                       INFO     Loaded 0 validated strategies from database     
                       INFO     No signal candidates found - no new signals will
                                be generated                                    
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-01-01.md 
 * Report generated: reports\signals_2025-01-01.md
-                      INFO     full_backtest completed in 0.01s                
+                      INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-14 23:23:28] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-14 23:23:28] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-15 01:23:35] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -112,37 +106,76 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
                       INFO     Backtester initialized: hold_period=20,         
                                min_trades=3, initial_capital=100000.0          
                       INFO     Loaded market data for ^NSEI                    
-[2025-08-14 23:23:29] WARNING  Sharpe ratio for RELIANCE is 'inf' due to zero  
+[2025-08-15 01:23:36] WARNING  Sharpe ratio for RELIANCE is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-                      INFO     find_optimal_strategies completed in 1.35s      
-[2025-08-14 23:23:30] INFO     find_optimal_strategies completed in 0.90s      
-                      WARNING  Sharpe ratio for TCS is 'inf' due to zero       
+[2025-08-15 01:23:37] INFO     Consolidated 5 OOS periods for RELIANCE: 5 total
+                               trades, 40.0% win rate, 0.23 Sharpe, 40.0%      
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 2.01s      
+[2025-08-15 01:23:39] INFO     Consolidated 5 OOS periods for INFY: 6 total    
+                               trades, 50.0% win rate, -1.27 Sharpe, 60.0%     
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.95s      
+[2025-08-15 01:23:40] WARNING  Sharpe ratio for TCS is 'inf' due to zero       
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 23:23:31] INFO     find_optimal_strategies completed in 0.81s      
+[2025-08-15 01:23:41] INFO     Consolidated 4 OOS periods for TCS: 4 total     
+                               trades, 25.0% win rate, -1.42 Sharpe, 25.0%     
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.72s      
                       WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 23:23:32] WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
+[2025-08-15 01:23:42] WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-                      INFO     find_optimal_strategies completed in 0.95s      
+                      INFO     Consolidated 3 OOS periods for HDFCBANK: 3 total
+                               trades, 33.3% win rate, 0.16 Sharpe, 33.3%      
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.49s      
                       WARNING  Sharpe ratio for ICICIBANK is 'inf' due to zero 
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 23:23:33] INFO     find_optimal_strategies completed in 0.84s      
-[2025-08-14 23:23:34] INFO     find_optimal_strategies completed in 0.81s      
-                      WARNING  Sharpe ratio for WIPRO is 'inf' due to zero     
+[2025-08-15 01:23:44] INFO     Consolidated 3 OOS periods for ICICIBANK: 3     
+                               total trades, 66.7% win rate, -0.60 Sharpe,     
+                               66.7% consistency                               
+                      INFO     find_optimal_strategies completed in 1.72s      
+[2025-08-15 01:23:45] INFO     Consolidated 3 OOS periods for SBIN: 3 total    
+                               trades, 66.7% win rate, 0.19 Sharpe, 66.7%      
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.41s      
+[2025-08-15 01:23:46] WARNING  Sharpe ratio for WIPRO is 'inf' due to zero     
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-                      INFO     find_optimal_strategies completed in 0.77s      
-[2025-08-14 23:23:35] INFO     find_optimal_strategies completed in 0.83s      
-[2025-08-14 23:23:36] INFO     find_optimal_strategies completed in 0.75s      
-[2025-08-14 23:23:37] INFO     find_optimal_strategies completed in 0.76s      
-                      INFO     find_optimal_strategies completed in 0.73s      
-[2025-08-14 23:23:38] INFO     find_optimal_strategies completed in 0.91s      
-[2025-08-14 23:23:39] INFO     find_optimal_strategies completed in 0.93s      
+[2025-08-15 01:23:47] INFO     Consolidated 3 OOS periods for WIPRO: 3 total   
+                               trades, 33.3% win rate, -0.12 Sharpe, 33.3%     
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.59s      
+[2025-08-15 01:23:49] INFO     Consolidated 5 OOS periods for HCLTECH: 5 total 
+                               trades, 60.0% win rate, 0.46 Sharpe, 60.0%      
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.55s      
+[2025-08-15 01:23:50] INFO     Consolidated 3 OOS periods for TECHM: 3 total   
+                               trades, 100.0% win rate, 1.38 Sharpe, 100.0%    
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.46s      
+[2025-08-15 01:23:51] INFO     Consolidated 1 OOS periods for LTIM: 1 total    
+                               trades, 0.0% win rate, -2.05 Sharpe, 0.0%       
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.34s      
+[2025-08-15 01:23:53] INFO     Consolidated 2 OOS periods for BHARTIARTL: 2    
+                               total trades, 50.0% win rate, -0.27 Sharpe,     
+                               50.0% consistency                               
+                      INFO     find_optimal_strategies completed in 1.39s      
+[2025-08-15 01:23:54] INFO     Consolidated 3 OOS periods for KOTAKBANK: 3     
+                               total trades, 33.3% win rate, -0.78 Sharpe,     
+                               33.3% consistency                               
+                      INFO     find_optimal_strategies completed in 1.51s      
+[2025-08-15 01:23:56] INFO     Consolidated 8 OOS periods for AXISBANK: 8 total
+                               trades, 37.5% win rate, -0.77 Sharpe, 37.5%     
+                               consistency                                     
+                      INFO     find_optimal_strategies completed in 1.74s      
 [4/4] Analysis complete. Results summary:
 Walk-Forward Analysis Results (Out-of-Sample Only)
 WALK-FORWARD ANALYSIS SUMMARY
@@ -155,24 +188,16 @@ Symbol: RELIANCE
 Strategy: confirm_with_rsi
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2024-01-23 to 2024-04-18): EdgeScore -0.44, Sharpe -1.11, Win% 0.0%,
-Trades: 1
-Period  2 (2024-04-18 to 2024-07-15): EdgeScore 1.97, Sharpe 3.43, Win% 100.0%,
-Trades: 1
-Period  3 (2024-07-15 to 2024-10-09): EdgeScore -0.92, Sharpe -2.30, Win% 0.0%,
-Trades: 1
-Period  4 (2025-01-03 to 2025-04-01): EdgeScore -0.38, Sharpe -0.96, Win% 0.0%,
-Trades: 1
-Period  5 (2025-04-01 to 2025-06-26): EdgeScore 1.43, Sharpe 2.09, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 0.33, Sharpe 0.23, Win% 40.0%, 
+Trades: 5
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 0.333 (realistic expectation)
 - Win Rate: 40.0% (realistic expectation)
 - Sharpe Ratio: 0.23 (realistic expectation)
 - Average Return: 0.14% (realistic expectation)
-- Total Trades: 5 across 5 periods
-- Consistency Score: 2/5 periods profitable (40.0%)
+- Total Trades: 5 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -186,24 +211,16 @@ Symbol: INFY
 Strategy: confirm_with_rsi
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2023-08-02 to 2023-10-27): EdgeScore -1.28, Sharpe -3.21, Win% 0.0%,
-Trades: 1
-Period  2 (2023-10-27 to 2024-01-23): EdgeScore 1.53, Sharpe 2.33, Win% 100.0%,
-Trades: 1
-Period  3 (2024-07-15 to 2024-10-09): EdgeScore 1.40, Sharpe 2.00, Win% 100.0%,
-Trades: 1
-Period  4 (2024-10-09 to 2025-01-03): EdgeScore -2.02, Sharpe -5.04, Win% 0.0%,
-Trades: 2
-Period  5 (2025-04-01 to 2025-06-26): EdgeScore 1.14, Sharpe 1.35, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore -0.21, Sharpe -1.27, Win% 50.0%, 
+Trades: 6
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: -0.208 (realistic expectation)
 - Win Rate: 50.0% (realistic expectation)
 - Sharpe Ratio: -1.27 (realistic expectation)
-- Average Return: 1.34% (realistic expectation)
-- Total Trades: 6 across 5 periods
-- Consistency Score: 3/5 periods profitable (60.0%)
+- Average Return: 0.63% (realistic expectation)
+- Total Trades: 6 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -217,22 +234,16 @@ Symbol: TCS
 Strategy: simple_sma_crossover
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2023-08-02 to 2023-10-27): EdgeScore -0.96, Sharpe -2.41, Win% 0.0%,
-Trades: 1
-Period  2 (2023-10-27 to 2024-01-23): EdgeScore -0.34, Sharpe -0.86, Win% 0.0%,
-Trades: 1
-Period  3 (2025-01-03 to 2025-04-01): EdgeScore -1.12, Sharpe -2.81, Win% 0.0%,
-Trades: 1
-Period  4 (2025-04-01 to 2025-06-26): EdgeScore 0.76, Sharpe 0.39, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore -0.42, Sharpe -1.42, Win% 25.0%, 
+Trades: 4
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: -0.418 (realistic expectation)
 - Win Rate: 25.0% (realistic expectation)
 - Sharpe Ratio: -1.42 (realistic expectation)
 - Average Return: -0.79% (realistic expectation)
-- Total Trades: 4 across 4 periods
-- Consistency Score: 1/4 periods profitable (25.0%)
+- Total Trades: 4 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -246,20 +257,16 @@ Symbol: HDFCBANK
 Strategy: simple_sma_crossover
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2024-01-23 to 2024-04-18): EdgeScore 0.79, Sharpe 0.49, Win% 100.0%,
-Trades: 1
-Period  2 (2025-01-03 to 2025-04-01): EdgeScore -0.00, Sharpe -0.01, Win% 0.0%,
-Trades: 1
-Period  3 (2025-04-01 to 2025-06-26): EdgeScore 0.00, Sharpe 0.00, Win% 0.0%, 
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 0.26, Sharpe 0.16, Win% 33.3%, 
+Trades: 3
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 0.263 (realistic expectation)
 - Win Rate: 33.3% (realistic expectation)
 - Sharpe Ratio: 0.16 (realistic expectation)
 - Average Return: 0.26% (realistic expectation)
-- Total Trades: 3 across 3 periods
-- Consistency Score: 1/3 periods profitable (33.3%)
+- Total Trades: 3 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -273,20 +280,16 @@ Symbol: ICICIBANK
 Strategy: simple_sma_crossover
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2023-10-27 to 2024-01-23): EdgeScore 1.56, Sharpe 2.41, Win% 100.0%,
-Trades: 1
-Period  2 (2024-04-18 to 2024-07-15): EdgeScore 0.84, Sharpe 0.59, Win% 100.0%,
-Trades: 1
-Period  3 (2024-07-15 to 2024-10-09): EdgeScore -1.92, Sharpe -4.79, Win% 0.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 0.16, Sharpe -0.60, Win% 66.7%, 
+Trades: 3
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 0.161 (realistic expectation)
 - Win Rate: 66.7% (realistic expectation)
 - Sharpe Ratio: -0.60 (realistic expectation)
 - Average Return: -1.14% (realistic expectation)
-- Total Trades: 3 across 3 periods
-- Consistency Score: 2/3 periods profitable (66.7%)
+- Total Trades: 3 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -300,20 +303,16 @@ Symbol: SBIN
 Strategy: simple_sma_crossover
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2024-01-23 to 2024-04-18): EdgeScore -0.57, Sharpe -1.41, Win% 0.0%,
-Trades: 1
-Period  2 (2024-04-18 to 2024-07-15): EdgeScore 1.37, Sharpe 1.93, Win% 100.0%,
-Trades: 1
-Period  3 (2024-07-15 to 2024-10-09): EdgeScore 0.62, Sharpe 0.05, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 0.47, Sharpe 0.19, Win% 66.7%, 
+Trades: 3
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 0.475 (realistic expectation)
 - Win Rate: 66.7% (realistic expectation)
 - Sharpe Ratio: 0.19 (realistic expectation)
 - Average Return: 0.22% (realistic expectation)
-- Total Trades: 3 across 3 periods
-- Consistency Score: 2/3 periods profitable (66.7%)
+- Total Trades: 3 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -327,20 +326,16 @@ Symbol: WIPRO
 Strategy: confirm_with_rsi
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2024-07-15 to 2024-10-09): EdgeScore -0.36, Sharpe -0.90, Win% 0.0%,
-Trades: 1
-Period  2 (2024-10-09 to 2025-01-03): EdgeScore -0.90, Sharpe -2.25, Win% 0.0%,
-Trades: 1
-Period  3 (2025-04-01 to 2025-06-26): EdgeScore 1.71, Sharpe 2.77, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 0.15, Sharpe -0.12, Win% 33.3%, 
+Trades: 3
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 0.150 (realistic expectation)
 - Win Rate: 33.3% (realistic expectation)
 - Sharpe Ratio: -0.12 (realistic expectation)
 - Average Return: -0.90% (realistic expectation)
-- Total Trades: 3 across 3 periods
-- Consistency Score: 1/3 periods profitable (33.3%)
+- Total Trades: 3 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -354,24 +349,16 @@ Symbol: HCLTECH
 Strategy: confirm_with_rsi
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2023-08-02 to 2023-10-27): EdgeScore 0.89, Sharpe 0.73, Win% 100.0%,
-Trades: 1
-Period  2 (2023-10-27 to 2024-01-23): EdgeScore -0.06, Sharpe -0.15, Win% 0.0%,
-Trades: 1
-Period  3 (2024-07-15 to 2024-10-09): EdgeScore 1.38, Sharpe 1.94, Win% 100.0%,
-Trades: 1
-Period  4 (2025-01-03 to 2025-04-01): EdgeScore -0.93, Sharpe -2.33, Win% 0.0%,
-Trades: 1
-Period  5 (2025-04-01 to 2025-06-26): EdgeScore 1.44, Sharpe 2.11, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 0.54, Sharpe 0.46, Win% 60.0%, 
+Trades: 5
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 0.543 (realistic expectation)
 - Win Rate: 60.0% (realistic expectation)
 - Sharpe Ratio: 0.46 (realistic expectation)
 - Average Return: 0.80% (realistic expectation)
-- Total Trades: 5 across 5 periods
-- Consistency Score: 3/5 periods profitable (60.0%)
+- Total Trades: 5 across 1 periods
+- Consistency Score: 1/1 periods profitable (100.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -385,20 +372,16 @@ Symbol: TECHM
 Strategy: simple_sma_crossover
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2023-10-27 to 2024-01-23): EdgeScore 1.36, Sharpe 1.91, Win% 100.0%,
-Trades: 1
-Period  2 (2024-07-15 to 2024-10-09): EdgeScore 1.02, Sharpe 1.04, Win% 100.0%,
-Trades: 1
-Period  3 (2025-04-01 to 2025-06-26): EdgeScore 1.08, Sharpe 1.20, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 1.15, Sharpe 1.38, Win% 100.0%, 
+Trades: 3
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 1.152 (realistic expectation)
 - Win Rate: 100.0% (realistic expectation)
 - Sharpe Ratio: 1.38 (realistic expectation)
 - Average Return: 2.38% (realistic expectation)
-- Total Trades: 3 across 3 periods
-- Consistency Score: 3/3 periods profitable (100.0%)
+- Total Trades: 3 across 1 periods
+- Consistency Score: 1/1 periods profitable (100.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -412,7 +395,7 @@ Symbol: LTIM
 Strategy: confirm_with_rsi
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2024-07-15 to 2024-10-09): EdgeScore -0.82, Sharpe -2.05, Win% 0.0%,
+Period  1 (Unknown to Unknown): EdgeScore -0.82, Sharpe -2.05, Win% 0.0%, 
 Trades: 1
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
@@ -435,18 +418,16 @@ Symbol: BHARTIARTL
 Strategy: confirm_with_rsi
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2024-01-23 to 2024-04-18): EdgeScore 1.31, Sharpe 1.77, Win% 100.0%,
-Trades: 1
-Period  2 (2024-07-15 to 2024-10-09): EdgeScore -0.93, Sharpe -2.31, Win% 0.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore 0.19, Sharpe -0.27, Win% 50.0%, 
+Trades: 2
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: 0.192 (realistic expectation)
 - Win Rate: 50.0% (realistic expectation)
 - Sharpe Ratio: -0.27 (realistic expectation)
 - Average Return: -0.08% (realistic expectation)
-- Total Trades: 2 across 2 periods
-- Consistency Score: 1/2 periods profitable (50.0%)
+- Total Trades: 2 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -460,20 +441,16 @@ Symbol: KOTAKBANK
 Strategy: simple_sma_crossover
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2023-08-02 to 2023-10-27): EdgeScore -0.98, Sharpe -2.45, Win% 0.0%,
-Trades: 1
-Period  2 (2023-10-27 to 2024-01-23): EdgeScore -1.05, Sharpe -2.63, Win% 0.0%,
-Trades: 1
-Period  3 (2025-04-01 to 2025-06-26): EdgeScore 1.70, Sharpe 2.76, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore -0.11, Sharpe -0.78, Win% 33.3%, 
+Trades: 3
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: -0.111 (realistic expectation)
 - Win Rate: 33.3% (realistic expectation)
 - Sharpe Ratio: -0.78 (realistic expectation)
 - Average Return: -1.41% (realistic expectation)
-- Total Trades: 3 across 3 periods
-- Consistency Score: 1/3 periods profitable (33.3%)
+- Total Trades: 3 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -487,30 +464,16 @@ Symbol: AXISBANK
 Strategy: confirm_with_rsi
 
 Period-by-Period Out-of-Sample Performance:
-Period  1 (2023-08-02 to 2023-10-27): EdgeScore -0.63, Sharpe -1.57, Win% 0.0%,
-Trades: 1
-Period  2 (2023-10-27 to 2024-01-23): EdgeScore -0.54, Sharpe -1.35, Win% 0.0%,
-Trades: 1
-Period  3 (2024-01-23 to 2024-04-18): EdgeScore -0.93, Sharpe -2.33, Win% 0.0%,
-Trades: 1
-Period  4 (2024-04-18 to 2024-07-15): EdgeScore 1.10, Sharpe 1.24, Win% 100.0%,
-Trades: 1
-Period  5 (2024-07-15 to 2024-10-09): EdgeScore -0.92, Sharpe -2.29, Win% 0.0%,
-Trades: 1
-Period  6 (2024-10-09 to 2025-01-03): EdgeScore -0.96, Sharpe -2.41, Win% 0.0%,
-Trades: 1
-Period  7 (2025-01-03 to 2025-04-01): EdgeScore 1.24, Sharpe 1.61, Win% 100.0%,
-Trades: 1
-Period  8 (2025-04-01 to 2025-06-26): EdgeScore 0.97, Sharpe 0.92, Win% 100.0%,
-Trades: 1
+Period  1 (Unknown to Unknown): EdgeScore -0.08, Sharpe -0.77, Win% 37.5%, 
+Trades: 8
 
 CONSOLIDATED OUT-OF-SAMPLE METRICS:
 - Edge Score: -0.084 (realistic expectation)
 - Win Rate: 37.5% (realistic expectation)
 - Sharpe Ratio: -0.77 (realistic expectation)
 - Average Return: -1.21% (realistic expectation)
-- Total Trades: 8 across 8 periods
-- Consistency Score: 3/8 periods profitable (37.5%)
+- Total Trades: 8 across 1 periods
+- Consistency Score: 0/1 periods profitable (0.0%)
 
 WARNING: These are the ONLY metrics that matter for live trading.
          In-sample optimization metrics are discarded.
@@ -519,58 +482,27 @@ WARNING: These are the ONLY metrics that matter for live trading.
 
 
 
-* Analysis complete. Found 48 valid strategies across 13 symbols.
-                      INFO     ✗ RELIANCE: Consolidated edge score 0.333 <     
-                               0.500 - NOT generating signals                  
-                      INFO     ✗ INFY: Consolidated edge score -0.208 < 0.500 -
-                               NOT generating signals                          
-                      INFO     ✗ TCS: Consolidated edge score -0.418 < 0.500 - 
-                               NOT generating signals                          
-                      INFO     ✗ HDFCBANK: Consolidated edge score 0.263 <     
-                               0.500 - NOT generating signals                  
-                      INFO     ✗ ICICIBANK: Consolidated edge score 0.161 <    
-                               0.500 - NOT generating signals                  
-                      INFO     ✗ SBIN: Consolidated edge score 0.475 < 0.500 - 
-                               NOT generating signals                          
-                      INFO     ✗ WIPRO: Consolidated edge score 0.150 < 0.500 -
-                               NOT generating signals                          
-                      INFO     ✓ HCLTECH: Consolidated edge score 0.543 >=     
-                               0.500 (5 periods, 5 trades)                     
-                      INFO     ✓ TECHM: Consolidated edge score 1.152 >= 0.500 
-                               (3 periods, 3 trades)                           
-                      INFO     ✗ LTIM: Consolidated edge score -0.822 < 0.500 -
-                               NOT generating signals                          
-                      INFO     ✗ BHARTIARTL: Consolidated edge score 0.192 <   
-                               0.500 - NOT generating signals                  
-                      INFO     ✗ KOTAKBANK: Consolidated edge score -0.111 <   
-                               0.500 - NOT generating signals                  
-                      INFO     ✗ AXISBANK: Consolidated edge score -0.084 <    
-                               0.500 - NOT generating signals                  
-                      INFO     Strategy validation complete: 2 of 13 symbols   
-                               meet criteria                                   
-[4.5/5] Saving 2 validated strategies (edge score >= 0.50)
+* Analysis complete. Found 13 valid strategies across 13 symbols.
 [5/5] Saving results...
-                      INFO     Saving 2 strategies to the database.            
-                      INFO     Successfully saved 2 strategies                 
-                      INFO     Saved 2 strategies to the database.             
-                      INFO     Saved 2 validated strategies out of 48 raw      
-                               results                                         
-[5/5] Generating report from validated strategies...
-                      INFO     NEW MODE: Generating signals from validated     
-                               strategies in database only                     
-[2025-08-14 23:23:40] INFO     Loaded 18 validated strategies from database    
-                      INFO     Found 18 signal candidates                      
+                      INFO     Saving 13 strategies to the database.           
+                      INFO     Successfully saved 13 strategies                
+                      INFO     Saved 13 strategies to the database.            
+[5/5] Generating report...
+                      INFO     Generating signals from validated strategies in 
+                               database                                        
+[2025-08-15 01:23:57] INFO     Loaded 13 validated strategies from database    
+                      INFO     Found 13 signal candidates                      
                       INFO     Fetched 48 open positions.                      
-[2025-08-14 23:23:42] INFO     Fetched 48 open positions.                      
+[2025-08-15 01:23:59] INFO     Fetched 48 open positions.                      
                       INFO     Found 13 symbols with existing open positions:  
                                ['AXISBANK', 'BHARTIARTL', 'HCLTECH',           
                                'HDFCBANK', 'ICICIBANK', 'INFY', 'KOTAKBANK',   
                                'LTIM', 'RELIANCE', 'SBIN', 'TCS', 'TECHM',     
                                'WIPRO']                                        
-                      INFO     No new signals generated. Evaluated 18 potential
-                               signals, all 18 were filtered (existing         
+                      INFO     No new signals generated. Evaluated 13 potential
+                               signals, all 13 were filtered (existing         
                                positions)                                      
-                      INFO     Report generated: reports\signals_2025-08-14.md 
-* Report generated: reports\signals_2025-08-14.md
-                      INFO     full_backtest completed in 13.96s               
+                      INFO     Report generated: reports\signals_2025-08-15.md 
+* Report generated: reports\signals_2025-08-15.md
+                      INFO     full_backtest completed in 24.11s               
                       INFO     Database connection closed.                     

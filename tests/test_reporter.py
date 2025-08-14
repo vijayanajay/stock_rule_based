@@ -1309,8 +1309,9 @@ class TestPositionProcessing:
     @patch('kiss_signal.data.get_price_data')
     @patch('kiss_signal.persistence.close_positions_batch')
     @patch('kiss_signal.persistence.add_new_positions_from_signals')
+    @patch('kiss_signal.reporter._get_validated_strategies_from_db')
     def test_update_positions_and_generate_report_data(
-        self, mock_add_positions, mock_close_positions, mock_get_price_data, tmp_path
+        self, mock_db_strategies, mock_add_positions, mock_close_positions, mock_get_price_data, tmp_path
     ):
         """Test the main update positions and generate report data function."""
         config = Mock()
@@ -1326,7 +1327,8 @@ class TestPositionProcessing:
             'close': [18000, 18100]
         }, index=pd.date_range('2023-01-01', periods=2))
         
-        all_results = [
+        # Mock validated strategies from database
+        mock_db_strategies.return_value = [
             {
                 'symbol': 'TEST',
                 'rule_stack': [Mock(name='test_rule', type='test')],
@@ -1338,7 +1340,7 @@ class TestPositionProcessing:
         with patch.object(reporter, 'process_open_positions', return_value=([], [])):
             with patch.object(reporter, 'identify_new_signals', return_value=[{'ticker': 'TEST'}]):
                 result = reporter.update_positions_and_generate_report_data(
-                    tmp_path / "test.db", "test_run", config, rules_config, all_results
+                    tmp_path / "test.db", "test_run", config, rules_config
                 )
         
         assert 'new_buys' in result
@@ -1346,9 +1348,11 @@ class TestPositionProcessing:
         assert 'closed' in result
     
     @patch('kiss_signal.data.get_price_data')
-    def test_update_positions_nifty_data_error(self, mock_get_price_data, tmp_path):
+    @patch('kiss_signal.reporter._get_validated_strategies_from_db')
+    def test_update_positions_nifty_data_error(self, mock_db_strategies, mock_get_price_data, tmp_path):
         """Test update positions when NIFTY data loading fails."""
         mock_get_price_data.side_effect = Exception("NIFTY data error")
+        mock_db_strategies.return_value = []  # No strategies from DB
         
         config = Mock()
         config.cache_dir = str(tmp_path)
@@ -1361,7 +1365,7 @@ class TestPositionProcessing:
         with patch.object(reporter, 'process_open_positions', return_value=([], [])):
             with patch.object(reporter, 'identify_new_signals', return_value=[]):
                 result = reporter.update_positions_and_generate_report_data(
-                    tmp_path / "test.db", "test_run", config, rules_config, []
+                    tmp_path / "test.db", "test_run", config, rules_config
                 )
         
         assert result is not None

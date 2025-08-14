@@ -371,14 +371,19 @@ def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, curre
     # Filter out signals for stocks that already have open positions
     new_signals = []
     filtered_count = 0
+    symbols_in_this_run = set()  # CRITICAL FIX: Track symbols already added in this run
     if current_date is None:
         current_date = date.today()
     
     for result in all_results:
         symbol = result['symbol']
         
-        if symbol in open_symbols:
-            logger.debug(f"Skipping signal for {symbol} - position already open")
+        # CRITICAL FIX: Check both existing positions AND symbols already processed in this run
+        if symbol in open_symbols or symbol in symbols_in_this_run:
+            if symbol in open_symbols:
+                logger.debug(f"Skipping signal for {symbol} - position already open")
+            else:
+                logger.debug(f"Skipping signal for {symbol} - duplicate signal in this run")
             filtered_count += 1
             continue
 
@@ -423,6 +428,7 @@ def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, curre
             'edge_score': result['edge_score'],
         }
         new_signals.append(signal)
+        symbols_in_this_run.add(symbol)  # CRITICAL FIX: Track symbol to prevent future duplicates
         
     # Clear, unambiguous logging
     if len(all_results) == 0:
@@ -440,46 +446,26 @@ def update_positions_and_generate_report_data(
     run_timestamp: str,
     config: Config,
     rules_config: Any,
-    all_results: Optional[List[Dict[str, Any]]] = None,
-    validated_strategies_only: bool = False,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Handles all position management and prepares data for the report.
+    
+    The database is the single source of truth. Only validated strategies 
+    that passed walk-forward analysis and are stored in the database
+    are used for signal generation.
     
     Args:
         db_path: Path to the database
         run_timestamp: Current run timestamp  
         config: Application configuration
         rules_config: Rules configuration
-        all_results: Legacy mode - raw results from backtester (DEPRECATED)
-        validated_strategies_only: New mode - only generate signals from validated strategies in DB
     
     Returns:
         Dictionary with new_buys, open, and closed positions
     """
     
-    # CRITICAL FIX: Choose signal source based on mode
-    if validated_strategies_only:
-        # NEW MODE: Only generate signals from validated strategies stored in database
-        logger.info("NEW MODE: Generating signals from validated strategies in database only")
-        signal_candidates = _get_validated_strategies_from_db(db_path, run_timestamp, config)
-    else:
-        # LEGACY MODE: Use raw results from backtester (DEPRECATED - bypasses validation)
-        logger.warning("LEGACY MODE: Using raw backtester results - this bypasses validation!")
-        signal_candidates = all_results or []
-        
-        # FIX: Validate input data for legacy mode
-        if signal_candidates:
-            # Check for corrupt signals in input
-            valid_results = []
-            for result in signal_candidates:
-                if not result.get('latest_close') or float(result.get('latest_close', 0)) <= 0:
-                    logger.error(f"CORRUPTION DETECTED: Skipping result for {result.get('symbol')} with invalid latest_close: {result.get('latest_close')}")
-                    continue
-                valid_results.append(result)
-            
-            if len(valid_results) < len(signal_candidates):
-                logger.warning(f"Filtered out {len(signal_candidates) - len(valid_results)} corrupt signals from input")
-                signal_candidates = valid_results
+    # Only generate signals from validated strategies stored in database
+    logger.info("Generating signals from validated strategies in database")
+    signal_candidates = _get_validated_strategies_from_db(db_path, run_timestamp, config)
     
     if not signal_candidates:
         logger.info("No signal candidates found - no new signals will be generated")

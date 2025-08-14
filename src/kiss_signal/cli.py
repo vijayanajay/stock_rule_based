@@ -302,7 +302,7 @@ def _process_and_save_results(
     console.print("[5/5] Generating report...", style="blue")
     try:
         report_data = update_positions_and_generate_report_data(
-            Path(app_config.database_path), run_timestamp, app_config, rules_config, all_results
+            Path(app_config.database_path), run_timestamp, app_config, rules_config
         )
 
         # Call the new, simpler reporter
