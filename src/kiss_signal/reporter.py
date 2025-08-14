@@ -40,8 +40,13 @@ def check_exit_conditions(
     
     # Check stop loss conditions
     for condition in exit_conditions:
-        condition_type = condition.get('type') if isinstance(condition, dict) else getattr(condition, 'type', None)
-        condition_params = condition.get('params', {}) if isinstance(condition, dict) else getattr(condition, 'params', {})
+        logger.debug(f"Processing exit condition: {type(condition)}, {condition}")
+        try:
+            condition_type = condition.get('type') if isinstance(condition, dict) else getattr(condition, 'type', None)
+            condition_params = condition.get('params', {}) if isinstance(condition, dict) else getattr(condition, 'params', {})
+        except AttributeError as e:
+            logger.error(f"Error processing exit condition {condition}: {e}")
+            continue
         
         if condition_type == 'stop_loss_pct':
             stop_pct = condition_params.get('percentage', 0.05)
@@ -215,7 +220,7 @@ def process_open_positions(
             price_data = data.get_price_data(
                 symbol=symbol,
                 cache_dir=Path(app_config.cache_dir),
-                years=1,
+                years=app_config.historical_data_years,
                 freeze_date=app_config.freeze_date,
             )
         
@@ -355,7 +360,19 @@ def update_positions_and_generate_report_data(
             all_results = valid_results
     
     # Get exit conditions from rules config
-    exit_conditions = getattr(rules_config, 'exit_conditions', [])
+    exit_conditions_raw = getattr(rules_config, 'exit_conditions', [])
+    # Convert RuleDef objects to dicts for compatibility with check_exit_conditions
+    exit_conditions = []
+    for condition in exit_conditions_raw:
+        if hasattr(condition, 'type') and hasattr(condition, 'params'):
+            # It's a RuleDef object, convert to dict
+            exit_conditions.append({
+                'type': condition.type,
+                'params': condition.params
+            })
+        else:
+            # It's already a dict
+            exit_conditions.append(condition)
     
     # Load NIFTY data for benchmark comparison
     nifty_data = None
@@ -802,13 +819,26 @@ class WalkForwardReport:
         # Get strategy name from first result
         first_result = self.oos_results[0]
         rule_stack = first_result.get("rule_stack", [])
-        strategy_name = " + ".join([r.get("name", r.get("type", "unknown")) for r in rule_stack])
+        
+        # Extract rule names, handling both RuleDef objects and dicts
+        rule_names = []
+        for r in rule_stack:
+            if hasattr(r, 'name'):  # RuleDef object
+                name = r.name or r.type  # Use type if name is empty
+                rule_names.append(name)
+            elif isinstance(r, dict):  # Dictionary
+                name = r.get("name") or r.get("type", "unknown")
+                rule_names.append(name)
+            else:
+                rule_names.append("unknown")
+        
+        strategy_name = " + ".join(rule_names) if rule_names else "unknown"
         
         report = StringIO()
         report.write("WALK-FORWARD ANALYSIS RESULTS (Out-of-Sample Only)\n")
         report.write("=" * 60 + "\n\n")
         report.write(f"Symbol: {symbol}\n")
-        report.write(f"Strategy: [{strategy_name}]\n\n")
+        report.write(f"Strategy: {strategy_name}\n\n")
         
         # Period-by-period results
         report.write("Period-by-Period Out-of-Sample Performance:\n")
@@ -841,7 +871,7 @@ class WalkForwardReport:
         report.write(f"- Edge Score: {metrics['avg_edge_score']:.3f} (realistic expectation)\n")
         report.write(f"- Win Rate: {metrics['avg_win_pct']:.1%} (realistic expectation)\n")
         report.write(f"- Sharpe Ratio: {metrics['avg_sharpe']:.2f} (realistic expectation)\n")
-        report.write(f"- Average Return: {metrics['avg_return']:.2f} (realistic expectation)\n")
+        report.write(f"- Average Return: {metrics['avg_return']:.2f}% (realistic expectation)\n")
         report.write(f"- Total Trades: {metrics['total_trades']} across {metrics['total_periods']} periods\n")
         report.write(f"- Consistency Score: {metrics['profitable_periods']}/{metrics['total_periods']} periods profitable ({metrics['consistency_score']:.1%})\n\n")
         

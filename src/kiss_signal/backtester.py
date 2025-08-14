@@ -6,7 +6,6 @@ This module handles backtesting of rule combinations and edge score calculation.
 import logging
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
-from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -256,8 +255,29 @@ class Backtester:
             return None
 
         win_pct = portfolio.trades.win_rate()
-        sharpe = portfolio.sharpe_ratio()
-        avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
+        
+        # Calculate Sharpe ratio with proper inf/nan handling
+        try:
+            sharpe = portfolio.sharpe_ratio()
+            # Handle edge cases: NaN or infinite values should become 0.0
+            if not (sharpe == sharpe):  # NaN check (NaN != NaN)
+                sharpe = 0.0
+            elif sharpe == float('inf') or sharpe == float('-inf'):  # Inf check
+                logger.warning(
+                    f"Sharpe ratio for {symbol} is 'inf' due to zero volatility of returns. "
+                    f"This is common with few trades. Setting to 0.0 for calculations."
+                )
+                sharpe = 0.0
+        except Exception:
+            # Fallback: if sharpe calculation fails completely, use 0.0
+            sharpe = 0.0
+        
+        # Use .returns for percentage, not .pnl for absolute value. Multiply by 100.
+        try:
+            returns_mean = portfolio.trades.returns.mean()
+            avg_return = returns_mean * 100 if total_trades > 0 and (returns_mean == returns_mean) else 0.0
+        except Exception:
+            avg_return = 0.0
 
         edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
         return {
@@ -447,8 +467,9 @@ class Backtester:
             logger.error(error_msg)
             raise ValueError(error_msg)
             
-        consolidated_result = self._consolidate_oos_results(oos_results, symbol, edge_score_weights)
-        return [consolidated_result] if consolidated_result else []
+        # Return raw period-by-period results directly.
+        # The reporter is responsible for consolidation and display.
+        return oos_results
     
     def _find_best_strategy_training(
         self,
@@ -510,7 +531,23 @@ class Backtester:
                     continue
                     
                 win_pct = portfolio.trades.win_rate()
-                sharpe = portfolio.sharpe_ratio()
+                
+                # Calculate Sharpe ratio with proper inf/nan handling  
+                try:
+                    sharpe = portfolio.sharpe_ratio()
+                    # Handle edge cases: NaN or infinite values should become 0.0
+                    if not (sharpe == sharpe):  # NaN check (NaN != NaN)
+                        sharpe = 0.0
+                    elif sharpe == float('inf') or sharpe == float('-inf'):  # Inf check
+                        logger.warning(
+                            f"Sharpe ratio for {symbol} is 'inf' due to zero volatility of returns. "
+                            f"This is common with few trades. Setting to 0.0 for calculations."
+                        )
+                        sharpe = 0.0
+                except Exception:
+                    # Fallback: if sharpe calculation fails completely, use 0.0
+                    sharpe = 0.0
+                
                 edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
                 
                 strategy = {
@@ -624,24 +661,32 @@ class Backtester:
             )
             
             total_trades = len(portfolio.trades.records_readable)
-            if total_trades < self.min_trades_threshold:
-                return {
-                    "symbol": symbol,
-                    "rule_stack": rule_stack,
-                    "edge_score": 0.0,
-                    "win_pct": 0.0,
-                    "sharpe": 0.0,
-                    "total_trades": total_trades,
-                    "avg_return": 0.0,
-                    "oos_period_start": period_start,
-                    "oos_test_start": test_start,
-                    "oos_test_end": test_end,
-                    "is_oos": True
-                }
-
-            win_pct = portfolio.trades.win_rate()
-            sharpe = portfolio.sharpe_ratio()
-            avg_return = portfolio.trades.pnl.mean() if not np.isnan(portfolio.trades.pnl.mean()) else 0.0
+            
+            # Calculate performance metrics - no filtering here, that's walk_forward's job
+            win_pct = portfolio.trades.win_rate() if total_trades > 0 else 0.0
+            
+            # Calculate Sharpe ratio with proper inf/nan handling
+            try:
+                sharpe = portfolio.sharpe_ratio()
+                # Handle edge cases: NaN or infinite values should become 0.0
+                if not (sharpe == sharpe):  # NaN check (NaN != NaN)
+                    sharpe = 0.0
+                elif sharpe == float('inf') or sharpe == float('-inf'):  # Inf check
+                    logger.warning(
+                        f"Sharpe ratio for {symbol} is 'inf' due to zero volatility of returns. "
+                        f"This is common with few trades. Setting to 0.0 for calculations."
+                    )
+                    sharpe = 0.0
+            except Exception:
+                # Fallback: if sharpe calculation fails completely, use 0.0
+                sharpe = 0.0
+            
+            # Use .returns for percentage, not .pnl for absolute value. Multiply by 100.
+            try:
+                returns_mean = portfolio.trades.returns.mean()
+                avg_return = returns_mean * 100 if total_trades > 0 and (returns_mean == returns_mean) else 0.0
+            except Exception:
+                avg_return = 0.0
 
             edge_score = (win_pct * edge_score_weights.win_pct) + (sharpe * edge_score_weights.sharpe)
             
@@ -662,67 +707,6 @@ class Backtester:
         except Exception as e:
             logger.error(f"OOS backtest failed for {symbol}: {e}")
             return None
-    
-    def _consolidate_oos_results(
-        self, 
-        oos_results: List[Dict[str, Any]], 
-        symbol: str,
-        edge_score_weights: Optional[EdgeScoreWeights] = None
-    ) -> Optional[Dict[str, Any]]:
-        """Consolidate multiple out-of-sample results into final metrics.
-        
-        Uses mathematically correct aggregation:
-        - Win percentage: weighted by trade count (total_wins / total_trades)
-        - Sharpe ratio: trade-weighted average (approximation)
-        - Average return: weighted by trade count
-        - Edge score: recalculated from consolidated metrics
-        """
-        if not oos_results:
-            return None
-            
-        if edge_score_weights is None:
-            edge_score_weights = EdgeScoreWeights(win_pct=0.6, sharpe=0.4)
-            
-        # Calculate trade-weighted consolidation
-        total_trades = sum(r["total_trades"] for r in oos_results)
-        
-        # Win percentage: total wins / total trades (not simple average)
-        total_wins = sum(r["win_pct"] * r["total_trades"] for r in oos_results)
-        consolidated_win_pct = total_wins / total_trades if total_trades > 0 else 0.0
-        
-        # Sharpe ratio: trade-weighted average (best approximation without individual returns)
-        weighted_sharpe_sum = sum(r["sharpe"] * r["total_trades"] for r in oos_results)
-        consolidated_sharpe = weighted_sharpe_sum / total_trades if total_trades > 0 else 0.0
-        
-        # Average return: trade-weighted average
-        weighted_return_sum = sum(r["avg_return"] * r["total_trades"] for r in oos_results)
-        consolidated_avg_return = weighted_return_sum / total_trades if total_trades > 0 else 0.0
-        
-        # Edge score: recalculate from consolidated metrics
-        consolidated_edge_score = (
-            consolidated_win_pct * edge_score_weights.win_pct + 
-            consolidated_sharpe * edge_score_weights.sharpe
-        )
-        
-        # Find the most common rule stack by its signature
-        signatures = [self._create_rule_stack_signature(r["rule_stack"]) for r in oos_results]
-        most_common_sig = Counter(signatures).most_common(1)[0][0]
-        representative_stack = next(
-            r["rule_stack"] for r in oos_results 
-            if self._create_rule_stack_signature(r["rule_stack"]) == most_common_sig
-        )
-        
-        return {
-            "symbol": symbol,
-            "rule_stack": representative_stack,
-            "edge_score": consolidated_edge_score,
-            "win_pct": consolidated_win_pct,
-            "sharpe": consolidated_sharpe,
-            "total_trades": total_trades,
-            "avg_return": consolidated_avg_return,
-            "oos_periods": len(oos_results),
-            "is_oos": True
-        }
 
     def _create_rule_stack_signature(self, rule_stack: List[Any]) -> str:
         """Create a signature for rule stack comparison.

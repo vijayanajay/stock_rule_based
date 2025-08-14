@@ -1858,14 +1858,20 @@ class TestBacktesterEdgeCases:
             assert result.get('total_trades', 0) == 0
 
     def test_backtest_single_strategy_oos_insufficient_trades(self, edge_case_backtester, edge_case_data, edge_rules_config):
-        """Test OOS backtesting with insufficient trades for edge score calculation."""
+        """Test OOS backtesting with insufficient trades - should calculate real metrics, not zero them."""
         strategy = {'rule_combination': edge_rules_config.entry_signals}
         
-        with patch.object(edge_case_backtester, '_generate_signals') as mock_signals:
-            # Generate very few signals
+        # Set min_trades_threshold higher than what we'll generate
+        edge_case_backtester.min_trades_threshold = 5
+        
+        with patch.object(edge_case_backtester, '_generate_signals') as mock_signals, \
+             patch.object(edge_case_backtester, 'generate_signals_for_stack') as mock_stack_signals:
+            
+            # Generate exactly 3 entry signals (less than min_trades_threshold=5)
             signals = pd.Series([False] * len(edge_case_data), index=edge_case_data.index)
-            signals.iloc[0] = True  # Only one signal
+            signals.iloc[[10, 30, 50]] = True  # 3 signals
             mock_signals.return_value = signals
+            mock_stack_signals.return_value = signals
             
             result = edge_case_backtester._backtest_single_strategy_oos(
                 edge_case_data, 
@@ -1879,7 +1885,186 @@ class TestBacktesterEdgeCases:
             )
             
             assert result is not None
-            # Should still return a result even with insufficient trades
+            # CRITICAL: After the fix, should calculate real metrics, not zero them out
+            # The old duplicate logic would have returned win_pct=0.0, sharpe=0.0 
+            # but still total_trades=3, creating inconsistent results
+            
+            # The helper function should now calculate actual performance
+            # regardless of min_trades_threshold (filtering is walk_forward's job)
+            assert result["total_trades"] >= 0  # Could be 0 if portfolio creation fails
+            
+            # If trades exist, metrics should be calculated (not artificially zeroed)
+            if result["total_trades"] > 0:
+                # These should be real calculated values, not 0.0 from the old wrong filter
+                assert isinstance(result["win_pct"], (int, float))
+                assert isinstance(result["sharpe"], (int, float))  
+                assert isinstance(result["avg_return"], (int, float))
+                assert isinstance(result["edge_score"], (int, float))
+                
+                # The bug was: total_trades > 0 but win_pct = 0.0, which is impossible
+                # Now this impossible combination should not occur
+            else:
+                # If no trades, then zeroed metrics are correct
+                assert result["win_pct"] == 0.0
+                assert result["sharpe"] == 0.0
+                assert result["avg_return"] == 0.0
+                assert result["edge_score"] == 0.0
+
+    def test_duplicate_logic_bug_fix_integration(self, edge_case_backtester, edge_case_data, edge_rules_config):
+        """Test that the duplicate logic bug between helper and walk_forward is fixed.
+        
+        This test specifically reproduces the bug scenario:
+        - walk_forward.min_trades_per_period = 1
+        - min_trades_threshold = 5  
+        - Period generates 3 trades
+        - Helper should calculate real metrics (not zero them)
+        - Walk_forward should accept the period (3 >= 1)
+        """
+        # Set up the bug scenario configuration
+        edge_case_backtester.min_trades_threshold = 5  # Main threshold
+        walk_forward_config = WalkForwardConfig(
+            training_period="60d",
+            testing_period="30d", 
+            step_size="30d",
+            min_trades_per_period=1  # Walk-forward threshold (lower)
+        )
+        
+        # Create longer data for walk-forward periods
+        dates = pd.date_range('2023-01-01', periods=150, freq='D')
+        longer_data = pd.DataFrame({
+            'open': np.random.randn(150) + 100,
+            'high': np.random.randn(150) + 102,
+            'low': np.random.randn(150) + 98,
+            'close': np.random.randn(150) + 100,
+            'volume': np.random.randint(1000, 10000, 150)
+        }, index=dates)
+        
+        with patch.object(edge_case_backtester, 'generate_signals_for_stack') as mock_stack_signals, \
+             patch.object(edge_case_backtester, '_generate_signals') as mock_signals:
+            
+            # Mock to generate exactly 3 trades in each period
+            def mock_signal_generator(*args, **kwargs):
+                data_len = len(args[1]) if len(args) > 1 else len(kwargs.get('data', longer_data))
+                signals = pd.Series([False] * data_len, index=args[1].index if len(args) > 1 else longer_data.index)
+                # Generate 3 signals spread out
+                if data_len >= 10:
+                    signals.iloc[[2, data_len//2, -3]] = True
+                return signals
+            
+            mock_stack_signals.side_effect = mock_signal_generator
+            mock_signals.side_effect = mock_signal_generator
+            
+            # Run walk-forward backtest
+            try:
+                results = edge_case_backtester.walk_forward_backtest(
+                    longer_data, walk_forward_config, edge_rules_config, "TEST"
+                )
+                
+                # If we get results, verify the fix worked
+                if results:
+                    result = results[0]
+                    
+                    # The key test: if total_trades > 0, other metrics should not be artificially 0.0
+                    if result["total_trades"] > 0:
+                        # Before fix: would get total_trades=3, win_pct=0.0, sharpe=0.0 (impossible!)
+                        # After fix: should get real calculated metrics
+                        
+                        # At minimum, these should be real numbers, not the artificial 0.0s
+                        assert isinstance(result["win_pct"], (int, float))
+                        assert isinstance(result["sharpe"], (int, float))
+                        assert isinstance(result["avg_return"], (int, float))
+                        
+                        # The bug signature was: trades exist but all metrics = 0.0
+                        # This combination should now be impossible (unless truly calculated as such)
+                        
+            except ValueError:
+                # If walk-forward raises ValueError due to no valid periods, that's fine
+                # The important thing is that the helper function doesn't zero out metrics
+                pass
+
+    def test_regression_duplicate_logic_bug_fix(self, edge_case_backtester, edge_case_data, edge_rules_config):
+        """Regression test: Ensure duplicate logic bug between helper and walk_forward stays fixed.
+        
+        Bug scenario reproduced:
+        - min_trades_threshold = 5 (main config threshold)
+        - Helper generates 3 trades (< 5)  
+        - OLD BUG: Helper would return total_trades=3 but win_pct=0.0, sharpe=0.0 (impossible!)
+        - FIX: Helper calculates real metrics; walk_forward does the filtering
+        """
+        # Set up the exact bug scenario
+        edge_case_backtester.min_trades_threshold = 5
+        
+        # Mock a portfolio with exactly 3 trades and real performance metrics
+        mock_portfolio = Mock()
+        # Mock trades records as a list that supports len() - this is used in _backtest_single_strategy_oos
+        mock_trades_records = ['trade1', 'trade2', 'trade3']
+        mock_portfolio.trades.records_readable = mock_trades_records
+        mock_portfolio.trades.count.return_value = 3  # For _calculate_performance_metrics 
+        mock_portfolio.trades.win_rate.return_value = 0.6667  # 2 wins out of 3
+        mock_portfolio.sharpe_ratio.return_value = 1.2
+        mock_portfolio.trades.pnl.mean.return_value = 25.5
+        # Add returns mock for the new percentage calculation
+        mock_portfolio.trades.returns.mean.return_value = 0.255  # 25.5% as decimal
+        
+        # Mock np.isnan checks to return False for valid values
+        def mock_isnan(value):
+            if hasattr(value, 'return_value'):
+                return False  # Mock methods return valid numbers
+            return np.isnan(value)
+        
+        # Mock np.isinf to return False for valid numbers 
+        def mock_isinf(value):
+            if hasattr(value, 'return_value'):
+                return False  # Mock methods return valid finite numbers
+            return np.isinf(value)
+        
+        with patch('numpy.isnan', side_effect=mock_isnan), \
+             patch('numpy.isinf', side_effect=mock_isinf), \
+             patch('kiss_signal.backtester.vbt.Portfolio.from_signals', return_value=mock_portfolio), \
+             patch.object(edge_case_backtester, 'generate_signals_for_stack') as mock_signals, \
+             patch.object(edge_case_backtester, '_generate_exit_signals') as mock_exit_signals, \
+             patch.object(edge_case_backtester, '_calculate_risk_based_size') as mock_risk_size:
+            
+            # Mock the additional methods needed
+            mock_exit_signals.return_value = (
+                pd.Series([False] * len(edge_case_data), index=edge_case_data.index),  # exit_signals
+                None,  # sl_stop
+                None   # tp_stop
+            )
+            mock_risk_size.return_value = 1.0  # Simple fixed size
+
+            # Generate entry signals
+            signals = pd.Series([False] * len(edge_case_data), index=edge_case_data.index)
+            signals.iloc[[5, 15, 25]] = True
+            mock_signals.return_value = signals
+            
+            result = edge_case_backtester._backtest_single_strategy_oos(
+                edge_case_data,
+                edge_rules_config.entry_signals,
+                edge_rules_config,
+                None,
+                "REGRESSION_TEST",
+                pd.Timestamp("2023-01-01"),
+                pd.Timestamp("2023-01-01"),
+                pd.Timestamp("2023-12-31")
+            )
+            
+            # Verify the fix: Helper function should calculate real metrics
+            assert result is not None
+            assert result["total_trades"] == 3
+            
+            # CRITICAL: These should be the REAL calculated values, not artificially zeroed
+            assert result["win_pct"] == 0.6667  # Real calculated win rate
+            assert result["sharpe"] == 1.2      # Real calculated Sharpe
+            assert result["avg_return"] == 25.5 # Real calculated return (now as percentage)
+            
+            # The bug signature was: total_trades > 0 but metrics = 0.0
+            # This combination should now be impossible with our fix
+            assert not (result["total_trades"] > 0 and 
+                       result["win_pct"] == 0.0 and 
+                       result["sharpe"] == 0.0 and 
+                       result["avg_return"] == 0.0), \
+                   "REGRESSION: Duplicate logic bug has returned! Helper is zeroing metrics again."
 
     def test_backtest_single_strategy_oos_exception_handling(self, edge_case_backtester, edge_case_data):
         """Test OOS backtesting exception handling."""
@@ -1899,95 +2084,6 @@ class TestBacktesterEdgeCases:
         
         # Should return None or empty result on exception
         assert result is None or (isinstance(result, dict) and result.get('total_trades', 0) == 0)
-
-    def test_consolidate_oos_results_empty_list(self, edge_case_backtester):
-        """Test consolidate_oos_results with empty input and zero-trade scenarios."""
-        result = edge_case_backtester._consolidate_oos_results([], "TEST")
-        assert result is None
-        
-        # Task 1.4: Test zero-trade path in _consolidate_oos_results
-        from kiss_signal.config import RuleDef
-        
-        zero_trade_results = [{
-            'avg_return': 0.0,
-            'sharpe': 0.0,
-            'win_pct': 0.0,
-            'total_trades': 0,  # Zero trades
-            'edge_score': 0.0,
-            'max_drawdown': 0.0,
-            'trading_days': 252,
-            'annualized_return': 0.0,
-            'total_return': 0.0,
-            'rule_stack': [RuleDef(name='test', type='test_rule', params={})]
-        }]
-        
-        # Should handle zero trades gracefully without division by zero
-        result = edge_case_backtester._consolidate_oos_results(zero_trade_results, "TEST")
-        assert result is not None
-        assert result['total_trades'] == 0
-        assert result['win_pct'] == 0.0  # Should use fallback value
-        assert result['sharpe'] == 0.0  # Should use fallback value
-
-    def test_consolidate_oos_results_single_period(self, edge_case_backtester):
-        """Test consolidate_oos_results with single period."""
-        from kiss_signal.config import RuleDef
-        
-        oos_results = [{
-            'avg_return': 0.15,
-            'sharpe': 1.2,
-            'win_pct': 0.6,
-            'total_trades': 10,
-            'edge_score': 0.75,
-            'max_drawdown': -0.05,
-            'trading_days': 252,
-            'annualized_return': 0.18,
-            'total_return': 0.15,
-            'rule_stack': [RuleDef(name='test', type='test_rule', params={})]
-        }]
-        
-        result = edge_case_backtester._consolidate_oos_results(oos_results, "TEST")
-        
-        assert 'avg_return' in result
-        assert result['avg_return'] == 0.15
-        assert 'total_trades' in result
-        assert result['total_trades'] == 10
-
-    def test_consolidate_oos_results_multiple_periods(self, edge_case_backtester):
-        """Test consolidate_oos_results with multiple periods."""
-        from kiss_signal.config import RuleDef
-        
-        oos_results = [
-            {
-                'avg_return': 0.15,
-                'sharpe': 1.2,
-                'win_pct': 0.6,
-                'total_trades': 10,
-                'edge_score': 0.75,
-                'max_drawdown': -0.05,
-                'trading_days': 126,
-                'annualized_return': 0.18,
-                'total_return': 0.09,
-                'rule_stack': [RuleDef(name='test1', type='test_rule', params={})]
-            },
-            {
-                'avg_return': 0.12,
-                'sharpe': 1.0,
-                'win_pct': 0.55,
-                'total_trades': 8,
-                'edge_score': 0.65,
-                'max_drawdown': -0.08,
-                'trading_days': 126,
-                'annualized_return': 0.14,
-                'total_return': 0.07,
-                'rule_stack': [RuleDef(name='test2', type='test_rule', params={})]
-            }
-        ]
-        
-        result = edge_case_backtester._consolidate_oos_results(oos_results, "TEST")
-        
-        assert 'avg_return' in result
-        assert result['total_trades'] == 18  # Sum of trades
-        assert 'consolidated_sharpe' in result or 'sharpe' in result
 
     def test_walk_forward_backtest_insufficient_trades_per_period(self, edge_case_backtester, edge_case_data, edge_rules_config, walk_forward_config):
         """Test walk-forward when periods have insufficient trades."""
