@@ -21,6 +21,97 @@ from . import data, persistence
 logger = logging.getLogger(__name__)
 
 
+def _get_validated_strategies_from_db(db_path: Path, run_timestamp: str, config: Config) -> List[Dict[str, Any]]:
+    """
+    Get only validated strategies from the database for signal generation.
+    
+    This is the core fix: signals are only generated from strategies that have 
+    proven edge through walk-forward validation and are stored in the database.
+    
+    Args:
+        db_path: Path to database
+        run_timestamp: Current run timestamp to find latest strategies
+        config: App configuration for data loading
+        
+    Returns:
+        List of validated strategies ready for signal generation
+    """
+    import sqlite3
+    import json
+    from datetime import date
+    
+    strategies = []
+    
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            
+            # Get the latest validated strategies (those in database meet edge score threshold)
+            cursor = conn.execute("""
+                SELECT DISTINCT s1.symbol, s1.rule_stack, s1.edge_score, s1.win_pct, 
+                       s1.sharpe, s1.total_trades, s1.avg_return, s1.run_timestamp
+                FROM strategies s1
+                INNER JOIN (
+                    SELECT symbol, MAX(run_timestamp) as max_timestamp
+                    FROM strategies 
+                    WHERE run_timestamp <= ?
+                    GROUP BY symbol
+                ) s2 ON s1.symbol = s2.symbol AND s1.run_timestamp = s2.max_timestamp
+                ORDER BY s1.symbol
+            """, (run_timestamp,))
+            
+            for row in cursor.fetchall():
+                try:
+                    # Get current price for this symbol
+                    price_data = data.get_price_data(
+                        symbol=row['symbol'],
+                        cache_dir=Path(config.cache_dir),
+                        years=1,  # Just need recent data for current price
+                        freeze_date=config.freeze_date,
+                    )
+                    
+                    if price_data is None or len(price_data) == 0:
+                        logger.warning(f"No price data available for {row['symbol']}, skipping")
+                        continue
+                    
+                    latest_close = float(price_data['close'].iloc[-1])
+                    
+                    # Parse rule stack from JSON
+                    rule_stack_json = row['rule_stack']
+                    try:
+                        rule_stack = json.loads(rule_stack_json) if rule_stack_json else []
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Invalid rule_stack JSON for {row['symbol']}: {e}")
+                        continue
+                    
+                    # Reconstruct strategy dict in same format as backtester output
+                    strategy = {
+                        'symbol': row['symbol'],
+                        'rule_stack': rule_stack,
+                        'edge_score': float(row['edge_score']),
+                        'win_pct': float(row['win_pct']),
+                        'sharpe': float(row['sharpe']),
+                        'total_trades': int(row['total_trades']),
+                        'avg_return': float(row['avg_return']),
+                        'latest_close': latest_close,
+                        'from_validated_db': True  # Mark as validated
+                    }
+                    
+                    strategies.append(strategy)
+                    logger.debug(f"Loaded validated strategy for {row['symbol']}: edge_score={strategy['edge_score']:.3f}")
+                    
+                except Exception as e:
+                    logger.error(f"Error processing validated strategy for {row['symbol']}: {e}")
+                    continue
+                    
+    except sqlite3.Error as e:
+        logger.error(f"Database error loading validated strategies: {e}")
+        return []
+    
+    logger.info(f"Loaded {len(strategies)} validated strategies from database")
+    return strategies
+
+
 def check_exit_conditions(
     position: Dict[str, Any],
     price_data: pd.DataFrame,
@@ -210,7 +301,7 @@ def process_open_positions(
             continue
         
         # Reuse embedded price_data if test/mocked helper already supplied it (structural: prevent second fetch in freeze mode)
-        price_data = pricing.get('price_data') if isinstance(pricing, dict) else None  # type: ignore[assignment]
+        price_data = pricing.get('price_data') if isinstance(pricing, dict) else None
         if price_data is not None and not isinstance(price_data, pd.DataFrame):  # Defensive: wrong type
             logger.debug(f"Ignoring non-DataFrame price_data for {symbol} provided by pricing helper")
             price_data = None
@@ -275,9 +366,11 @@ def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, curre
     # Get symbols that already have open positions
     open_positions = persistence.get_open_positions(db_path)
     open_symbols = {pos['symbol'] for pos in open_positions}
+    logger.info(f"Found {len(open_symbols)} symbols with existing open positions: {sorted(open_symbols)}")
 
     # Filter out signals for stocks that already have open positions
     new_signals = []
+    filtered_count = 0
     if current_date is None:
         current_date = date.today()
     
@@ -285,25 +378,26 @@ def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, curre
         symbol = result['symbol']
         
         if symbol in open_symbols:
-            logger.info(f"Skipping new signal for {symbol} - position already open")
+            logger.debug(f"Skipping signal for {symbol} - position already open")
+            filtered_count += 1
             continue
 
         # Format for position tracking
         # Structural Fix: Make this robust to handle both RuleDef objects and strings
         # This resolves the data contract violation where tests passed a List[str].
-        def extract_rule_name(r):
+        def extract_rule_name(r: Any) -> str:
             """Extract rule name from various formats (dict, object, string)."""
             if isinstance(r, dict):
                 return r.get('name') or r.get('type') or str(r)
             else:
                 return getattr(r, 'name', getattr(r, 'type', str(r)))
         
-        def extract_rule_type(r):
+        def extract_rule_type(r: Any) -> str:
             """Extract rule type from various formats (dict, object, string)."""
             if isinstance(r, dict):
-                return r.get('type', str(r))
+                return str(r.get('type', str(r)))
             else:
-                return getattr(r, 'type', str(r))
+                return str(getattr(r, 'type', str(r)))
         
         rule_stack_names = " + ".join([extract_rule_name(r) for r in result['rule_stack']])
         rule_stack_used = json.dumps([
@@ -330,7 +424,14 @@ def identify_new_signals(all_results: List[Dict[str, Any]], db_path: Path, curre
         }
         new_signals.append(signal)
         
-    logger.info(f"Identified {len(new_signals)} new signals (filtered {len(all_results) - len(new_signals)} existing positions)")
+    # Clear, unambiguous logging
+    if len(all_results) == 0:
+        logger.info("No signals to evaluate")
+    elif len(new_signals) == 0:
+        logger.info(f"No new signals generated. Evaluated {len(all_results)} potential signals, all {filtered_count} were filtered (existing positions)")
+    else:
+        logger.info(f"Generated {len(new_signals)} new signals from {len(all_results)} evaluated. Filtered {filtered_count} due to existing positions")
+        
     return new_signals
 
 
@@ -339,25 +440,51 @@ def update_positions_and_generate_report_data(
     run_timestamp: str,
     config: Config,
     rules_config: Any,
-    all_results: List[Dict[str, Any]],
+    all_results: Optional[List[Dict[str, Any]]] = None,
+    validated_strategies_only: bool = False,
 ) -> Dict[str, List[Dict[str, Any]]]:
-    """Handles all position management and prepares data for the report."""
+    """Handles all position management and prepares data for the report.
     
-    # FIX: Validate input data
-    if not all_results:
-        logger.warning("No trading results provided to update_positions_and_generate_report_data")
+    Args:
+        db_path: Path to the database
+        run_timestamp: Current run timestamp  
+        config: Application configuration
+        rules_config: Rules configuration
+        all_results: Legacy mode - raw results from backtester (DEPRECATED)
+        validated_strategies_only: New mode - only generate signals from validated strategies in DB
+    
+    Returns:
+        Dictionary with new_buys, open, and closed positions
+    """
+    
+    # CRITICAL FIX: Choose signal source based on mode
+    if validated_strategies_only:
+        # NEW MODE: Only generate signals from validated strategies stored in database
+        logger.info("NEW MODE: Generating signals from validated strategies in database only")
+        signal_candidates = _get_validated_strategies_from_db(db_path, run_timestamp, config)
     else:
-        # Check for corrupt signals in input
-        valid_results = []
-        for result in all_results:
-            if not result.get('latest_close') or float(result.get('latest_close', 0)) <= 0:
-                logger.error(f"CORRUPTION DETECTED: Skipping result for {result.get('symbol')} with invalid latest_close: {result.get('latest_close')}")
-                continue
-            valid_results.append(result)
+        # LEGACY MODE: Use raw results from backtester (DEPRECATED - bypasses validation)
+        logger.warning("LEGACY MODE: Using raw backtester results - this bypasses validation!")
+        signal_candidates = all_results or []
         
-        if len(valid_results) < len(all_results):
-            logger.warning(f"Filtered out {len(all_results) - len(valid_results)} corrupt signals from input")
-            all_results = valid_results
+        # FIX: Validate input data for legacy mode
+        if signal_candidates:
+            # Check for corrupt signals in input
+            valid_results = []
+            for result in signal_candidates:
+                if not result.get('latest_close') or float(result.get('latest_close', 0)) <= 0:
+                    logger.error(f"CORRUPTION DETECTED: Skipping result for {result.get('symbol')} with invalid latest_close: {result.get('latest_close')}")
+                    continue
+                valid_results.append(result)
+            
+            if len(valid_results) < len(signal_candidates):
+                logger.warning(f"Filtered out {len(signal_candidates) - len(valid_results)} corrupt signals from input")
+                signal_candidates = valid_results
+    
+    if not signal_candidates:
+        logger.info("No signal candidates found - no new signals will be generated")
+    else:
+        logger.info(f"Found {len(signal_candidates)} signal candidates")
     
     # Get exit conditions from rules config
     exit_conditions_raw = getattr(rules_config, 'exit_conditions', [])
@@ -396,8 +523,8 @@ def update_positions_and_generate_report_data(
         persistence.close_positions_batch(db_path, positions_to_close)
         logger.info(f"Closed {len(positions_to_close)} positions")
     
-    # Identify new signals
-    new_signals = identify_new_signals(all_results, db_path)
+    # Identify new signals from validated candidates only
+    new_signals = identify_new_signals(signal_candidates, db_path)
     
     # Add new positions to database
     if new_signals:
@@ -749,10 +876,6 @@ def format_strategy_analysis_as_csv(analysis: List[Dict[str, Any]], aggregate: b
 def _fetch_best_strategies(db_path: Path, run_timestamp: str, edge_threshold: float) -> List[Dict[str, Any]]:
     """Fetch best strategies from database with edge score threshold."""
     try:
-        if db_path is None:
-            logger.error("Database path cannot be None")
-            return []
-        
         with sqlite3.connect(str(db_path)) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()

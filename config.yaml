@@ -14,7 +14,7 @@ cache_dir: "data"
 hold_period: 20
 
 # Minimum number of trades required for a strategy to be considered valid
-min_trades_threshold: 5
+min_trades_threshold: 3
 
 # Weights for calculating edge score (must sum to 1.0)
 edge_score_weights:

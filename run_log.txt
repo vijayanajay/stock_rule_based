@@ -1,4 +1,4 @@
-[2025-08-14 20:09:04] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 23:23:27] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -12,16 +12,21 @@
                       WARNING  Insufficient data for INFY, skipping            
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-                      WARNING  No trading results provided to                  
-                               update_positions_and_generate_report_data       
+[4.5/5] No strategies meet validation criteria - no signals will be generated
+                      WARNING  No strategies met edge score threshold of 0.50  
+[5/5] Generating report from validated strategies...
+                      INFO     NEW MODE: Generating signals from validated     
+                               strategies in database only                     
+                      INFO     Loaded 0 validated strategies from database     
+                      INFO     No signal candidates found - no new signals will
+                               be generated                                    
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-08-14.md 
 * Report generated: reports\signals_2025-08-14.md
-                      INFO     full_backtest completed in 0.05s                
+                      INFO     full_backtest completed in 0.02s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-14 20:09:04] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 23:23:27] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
@@ -42,9 +47,14 @@ No valid strategies found. Check data quality and rule configurations.
                       WARNING  Insufficient data for INFY, skipping            
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-                      WARNING  No trading results provided to                  
-                               update_positions_and_generate_report_data       
+[4.5/5] No strategies meet validation criteria - no signals will be generated
+                      WARNING  No strategies met edge score threshold of 0.50  
+[5/5] Generating report from validated strategies...
+                      INFO     NEW MODE: Generating signals from validated     
+                               strategies in database only                     
+                      INFO     Loaded 0 validated strategies from database     
+                      INFO     No signal candidates found - no new signals will
+                               be generated                                    
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2024-01-01.md 
 * Report generated: reports\signals_2024-01-01.md
@@ -55,13 +65,13 @@ Total Duration: 1.50s
 Slowest Function: backtest_strategy
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-14 20:09:04] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 23:23:27] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at test.db                    
-                      INFO     Successfully created database at test.db        
+[2025-08-14 23:23:28] INFO     Successfully created database at test.db        
 [1/4] Configuration loaded.
 [2/4] Skipping data refresh (freeze mode).
 [3/4] Analyzing strategies for each ticker...
@@ -69,24 +79,29 @@ Slowest Function: backtest_strategy
                       WARNING  Insufficient data for INFY, skipping            
 [4/4] Analysis complete. Results summary:
 No valid strategies found. Check data quality and rule configurations.
-[5/5] Generating report...
-                      WARNING  No trading results provided to                  
-                               update_positions_and_generate_report_data       
+[4.5/5] No strategies meet validation criteria - no signals will be generated
+                      WARNING  No strategies met edge score threshold of 0.50  
+[5/5] Generating report from validated strategies...
+                      INFO     NEW MODE: Generating signals from validated     
+                               strategies in database only                     
+                      INFO     Loaded 0 validated strategies from database     
+                      INFO     No signal candidates found - no new signals will
+                               be generated                                    
                       INFO     Fetched 0 open positions.                       
                       INFO     Report generated: reports\signals_2025-01-01.md 
 * Report generated: reports\signals_2025-01-01.md
-                      INFO     full_backtest completed in 0.02s                
+                      INFO     full_backtest completed in 0.01s                
                       INFO     Database connection closed.                     
                       INFO     Log file saved to run_log.txt                   
-[2025-08-14 20:09:04] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 23:23:28] INFO     === KISS Signal CLI Run Started ===             
 Error: Invalid isoformat string for freeze_date: 'invalid-date'
-[2025-08-14 20:09:04] INFO     === KISS Signal CLI Run Started ===             
+[2025-08-14 23:23:28] INFO     === KISS Signal CLI Run Started ===             
 ┌───────────────────────────────── QuickEdge ─────────────────────────────────┐
 │ KISS Signal CLI                                                             │
 │ Keep-It-Simple Data Foundation                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
                       INFO     Creating database at data\kiss_signal.db        
-[2025-08-14 20:09:05] INFO     Successfully created database at                
+                      INFO     Successfully created database at                
                                data\kiss_signal.db                             
 [1/4] Configuration loaded.
 [2/4] Refreshing market data...
@@ -95,39 +110,39 @@ Error: Invalid isoformat string for freeze_date: 'invalid-date'
 [3/4] Analyzing strategies for each ticker...
                       INFO     Loaded 13 symbols from universe                 
                       INFO     Backtester initialized: hold_period=20,         
-                               min_trades=5, initial_capital=100000.0          
+                               min_trades=3, initial_capital=100000.0          
                       INFO     Loaded market data for ^NSEI                    
-[2025-08-14 20:09:06] WARNING  Sharpe ratio for RELIANCE is 'inf' due to zero  
+[2025-08-14 23:23:29] WARNING  Sharpe ratio for RELIANCE is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 20:09:07] INFO     find_optimal_strategies completed in 1.99s      
-[2025-08-14 20:09:09] INFO     find_optimal_strategies completed in 2.44s      
-[2025-08-14 20:09:10] WARNING  Sharpe ratio for TCS is 'inf' due to zero       
+                      INFO     find_optimal_strategies completed in 1.35s      
+[2025-08-14 23:23:30] INFO     find_optimal_strategies completed in 0.90s      
+                      WARNING  Sharpe ratio for TCS is 'inf' due to zero       
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 20:09:11] INFO     find_optimal_strategies completed in 2.05s      
-[2025-08-14 20:09:12] WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
+[2025-08-14 23:23:31] INFO     find_optimal_strategies completed in 0.81s      
+                      WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 20:09:13] WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
+[2025-08-14 23:23:32] WARNING  Sharpe ratio for HDFCBANK is 'inf' due to zero  
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-                      INFO     find_optimal_strategies completed in 1.80s      
-[2025-08-14 20:09:14] WARNING  Sharpe ratio for ICICIBANK is 'inf' due to zero 
+                      INFO     find_optimal_strategies completed in 0.95s      
+                      WARNING  Sharpe ratio for ICICIBANK is 'inf' due to zero 
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 20:09:15] INFO     find_optimal_strategies completed in 1.72s      
-[2025-08-14 20:09:17] INFO     find_optimal_strategies completed in 1.52s      
+[2025-08-14 23:23:33] INFO     find_optimal_strategies completed in 0.84s      
+[2025-08-14 23:23:34] INFO     find_optimal_strategies completed in 0.81s      
                       WARNING  Sharpe ratio for WIPRO is 'inf' due to zero     
                                volatility of returns. This is common with few  
                                trades. Setting to 0.0 for calculations.        
-[2025-08-14 20:09:18] INFO     find_optimal_strategies completed in 1.63s      
-[2025-08-14 20:09:20] INFO     find_optimal_strategies completed in 1.86s      
-[2025-08-14 20:09:22] INFO     find_optimal_strategies completed in 1.56s      
-[2025-08-14 20:09:23] INFO     find_optimal_strategies completed in 1.24s      
-[2025-08-14 20:09:24] INFO     find_optimal_strategies completed in 1.33s      
-[2025-08-14 20:09:26] INFO     find_optimal_strategies completed in 1.64s      
-[2025-08-14 20:09:28] INFO     find_optimal_strategies completed in 1.69s      
+                      INFO     find_optimal_strategies completed in 0.77s      
+[2025-08-14 23:23:35] INFO     find_optimal_strategies completed in 0.83s      
+[2025-08-14 23:23:36] INFO     find_optimal_strategies completed in 0.75s      
+[2025-08-14 23:23:37] INFO     find_optimal_strategies completed in 0.76s      
+                      INFO     find_optimal_strategies completed in 0.73s      
+[2025-08-14 23:23:38] INFO     find_optimal_strategies completed in 0.91s      
+[2025-08-14 23:23:39] INFO     find_optimal_strategies completed in 0.93s      
 [4/4] Analysis complete. Results summary:
 Walk-Forward Analysis Results (Out-of-Sample Only)
 WALK-FORWARD ANALYSIS SUMMARY
@@ -505,112 +520,57 @@ WARNING: These are the ONLY metrics that matter for live trading.
 
 
 * Analysis complete. Found 48 valid strategies across 13 symbols.
+                      INFO     ✗ RELIANCE: Consolidated edge score 0.333 <     
+                               0.500 - NOT generating signals                  
+                      INFO     ✗ INFY: Consolidated edge score -0.208 < 0.500 -
+                               NOT generating signals                          
+                      INFO     ✗ TCS: Consolidated edge score -0.418 < 0.500 - 
+                               NOT generating signals                          
+                      INFO     ✗ HDFCBANK: Consolidated edge score 0.263 <     
+                               0.500 - NOT generating signals                  
+                      INFO     ✗ ICICIBANK: Consolidated edge score 0.161 <    
+                               0.500 - NOT generating signals                  
+                      INFO     ✗ SBIN: Consolidated edge score 0.475 < 0.500 - 
+                               NOT generating signals                          
+                      INFO     ✗ WIPRO: Consolidated edge score 0.150 < 0.500 -
+                               NOT generating signals                          
+                      INFO     ✓ HCLTECH: Consolidated edge score 0.543 >=     
+                               0.500 (5 periods, 5 trades)                     
+                      INFO     ✓ TECHM: Consolidated edge score 1.152 >= 0.500 
+                               (3 periods, 3 trades)                           
+                      INFO     ✗ LTIM: Consolidated edge score -0.822 < 0.500 -
+                               NOT generating signals                          
+                      INFO     ✗ BHARTIARTL: Consolidated edge score 0.192 <   
+                               0.500 - NOT generating signals                  
+                      INFO     ✗ KOTAKBANK: Consolidated edge score -0.111 <   
+                               0.500 - NOT generating signals                  
+                      INFO     ✗ AXISBANK: Consolidated edge score -0.084 <    
+                               0.500 - NOT generating signals                  
+                      INFO     Strategy validation complete: 2 of 13 symbols   
+                               meet criteria                                   
+[4.5/5] Saving 2 validated strategies (edge score >= 0.50)
 [5/5] Saving results...
-                      INFO     Saving 48 strategies to the database.           
-                      INFO     Successfully saved 48 strategies                
-                      INFO     Saved 48 strategies to the database.            
-[5/5] Generating report...
-                      INFO     Fetched 13 open positions.                      
-[2025-08-14 20:09:29] INFO     Fetched 13 open positions.                      
-                      INFO     Skipping new signal for RELIANCE - position     
-                               already open                                    
-                      INFO     Skipping new signal for RELIANCE - position     
-                               already open                                    
-                      INFO     Skipping new signal for RELIANCE - position     
-                               already open                                    
-                      INFO     Skipping new signal for RELIANCE - position     
-                               already open                                    
-                      INFO     Skipping new signal for RELIANCE - position     
-                               already open                                    
-                      INFO     Skipping new signal for INFY - position already 
-                               open                                            
-                      INFO     Skipping new signal for INFY - position already 
-                               open                                            
-                      INFO     Skipping new signal for INFY - position already 
-                               open                                            
-                      INFO     Skipping new signal for INFY - position already 
-                               open                                            
-                      INFO     Skipping new signal for INFY - position already 
-                               open                                            
-                      INFO     Skipping new signal for TCS - position already  
-                               open                                            
-                      INFO     Skipping new signal for TCS - position already  
-                               open                                            
-                      INFO     Skipping new signal for TCS - position already  
-                               open                                            
-                      INFO     Skipping new signal for TCS - position already  
-                               open                                            
-                      INFO     Skipping new signal for HDFCBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for HDFCBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for HDFCBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for ICICIBANK - position    
-                               already open                                    
-                      INFO     Skipping new signal for ICICIBANK - position    
-                               already open                                    
-                      INFO     Skipping new signal for ICICIBANK - position    
-                               already open                                    
-                      INFO     Skipping new signal for SBIN - position already 
-                               open                                            
-                      INFO     Skipping new signal for SBIN - position already 
-                               open                                            
-                      INFO     Skipping new signal for SBIN - position already 
-                               open                                            
-                      INFO     Skipping new signal for WIPRO - position already
-                               open                                            
-                      INFO     Skipping new signal for WIPRO - position already
-                               open                                            
-                      INFO     Skipping new signal for WIPRO - position already
-                               open                                            
-                      INFO     Skipping new signal for HCLTECH - position      
-                               already open                                    
-                      INFO     Skipping new signal for HCLTECH - position      
-                               already open                                    
-                      INFO     Skipping new signal for HCLTECH - position      
-                               already open                                    
-                      INFO     Skipping new signal for HCLTECH - position      
-                               already open                                    
-                      INFO     Skipping new signal for HCLTECH - position      
-                               already open                                    
-                      INFO     Skipping new signal for TECHM - position already
-                               open                                            
-                      INFO     Skipping new signal for TECHM - position already
-                               open                                            
-                      INFO     Skipping new signal for TECHM - position already
-                               open                                            
-                      INFO     Skipping new signal for LTIM - position already 
-                               open                                            
-                      INFO     Skipping new signal for BHARTIARTL - position   
-                               already open                                    
-                      INFO     Skipping new signal for BHARTIARTL - position   
-                               already open                                    
-                      INFO     Skipping new signal for KOTAKBANK - position    
-                               already open                                    
-                      INFO     Skipping new signal for KOTAKBANK - position    
-                               already open                                    
-                      INFO     Skipping new signal for KOTAKBANK - position    
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Skipping new signal for AXISBANK - position     
-                               already open                                    
-                      INFO     Identified 0 new signals (filtered 48 existing  
+                      INFO     Saving 2 strategies to the database.            
+                      INFO     Successfully saved 2 strategies                 
+                      INFO     Saved 2 strategies to the database.             
+                      INFO     Saved 2 validated strategies out of 48 raw      
+                               results                                         
+[5/5] Generating report from validated strategies...
+                      INFO     NEW MODE: Generating signals from validated     
+                               strategies in database only                     
+[2025-08-14 23:23:40] INFO     Loaded 18 validated strategies from database    
+                      INFO     Found 18 signal candidates                      
+                      INFO     Fetched 48 open positions.                      
+[2025-08-14 23:23:42] INFO     Fetched 48 open positions.                      
+                      INFO     Found 13 symbols with existing open positions:  
+                               ['AXISBANK', 'BHARTIARTL', 'HCLTECH',           
+                               'HDFCBANK', 'ICICIBANK', 'INFY', 'KOTAKBANK',   
+                               'LTIM', 'RELIANCE', 'SBIN', 'TCS', 'TECHM',     
+                               'WIPRO']                                        
+                      INFO     No new signals generated. Evaluated 18 potential
+                               signals, all 18 were filtered (existing         
                                positions)                                      
                       INFO     Report generated: reports\signals_2025-08-14.md 
 * Report generated: reports\signals_2025-08-14.md
-                      INFO     full_backtest completed in 24.18s               
+                      INFO     full_backtest completed in 13.96s               
                       INFO     Database connection closed.                     
